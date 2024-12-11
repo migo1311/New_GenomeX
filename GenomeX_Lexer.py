@@ -64,29 +64,35 @@ def parseLexer(input_stream):
     delim_1 = {' ', '('} 
     delim_2 = {' ', '{'} 
     delim_add = {'"', ' ', '^', '(', } 
-    delim_string = {' ', '\n', ',', '}', ')', '+', '\t'} 
+    delim_string = {' ', '\n', ',', '}', ')', '+', '\t', ';'} 
     delim_update = {' ', ';', ')'} 
-    delim_id = {' ', '=', '<', '>', ';', '!', '+', '[', '(', '&', '|', '-', '*', ','}
+    delim_id = {' ', '=', '<', '>', ';', '!', '[', '(', '&', '|', '-', '*', ',', ')', '/'}
     delim_logic = {' ', '(', '^'} | allval | upchar
     delim_comp = {' ', '(', '^'} | allval | upchar
     period_delim = {' ', '(', '^'} | allval | upchar
     terminator_delim = {'\n', ' '} | lowchar
-    open_parenthesis_delim = {'\n', '^', ' ', '"', '(', ',', ')'} | allval | allchar
+    open_parenthesis_delim = {'\n', '^', ' ', '(', ',', ')', '!'} 
     close_parenthesis_delim =  {')', ' ', '\n', '{', '}', '^', '+', '-', '/', '*', '%', '#', ';'}
-    open_braces_delim = {' ', '\\', '"'} | value | allchar
+    open_braces_delim = {' ', '\\', '"'} | allchar
     close_braces_delim = {' ', '\n', '#'}
     open_bracket_delim = value
-    close_bracket_delim = {' ', '='}
-
+    close_bracket_delim = {' ', '=', '['}
+    delim_num = {'+', '-', '*', '/', '%', '<', '>', '!=', '==', ' ', ',', '#', ')', '}', '&', '|', ";", "]"}
     lookahead_char = None
-    
+    token = None
+
     while True:
+        # print(state)
         if lookahead_char is not None:
+            # print(f"token before {token}")
             token = lookahead_char  # Use cached lookahead character
             lookahead_char = None  # Clear the cache
+            # print(f"token after {token}")
         else:
             try:
+                # print(f"token before {token}")
                 token = next(char_iter)
+                # print(f"token after {token}")
             except StopIteration:
                 # Handle end of stream if in error state
                 if state == 1000 and lexeme:
@@ -109,7 +115,9 @@ def parseLexer(input_stream):
             continue  # Skip further processing for delimiters
 
         try:
+            # print(f"lookahead_char before {lookahead_char}")
             lookahead_char = next(char_iter)  # Peek the next character
+            # print(f"lookahead_char after {lookahead_char}")
         except StopIteration:
             lookahead_char = None  # No more characters to proce
         
@@ -255,11 +263,11 @@ def parseLexer(input_stream):
                 elif lookahead_char == '=':
                     state = 149
                 else:
-                    print("ERROR IN STATE 143")
+                    print("ERROR IN STATE 147")
                     state = 1000  # Reset state to recover
 
             #<
-            elif token == '>':
+            elif token == '<':
                 state = 151
                 lexeme = token 
                 if lookahead_char in delim_comp or lookahead_char is None or lookahead_char == "\n":
@@ -269,7 +277,7 @@ def parseLexer(input_stream):
                 elif lookahead_char == '=':
                     state = 153
                 else:
-                    print("ERROR IN STATE 143")
+                    print("ERROR IN STATE 151")
                     state = 1000  # Reset state to recover
 
             #!
@@ -283,8 +291,9 @@ def parseLexer(input_stream):
                 elif lookahead_char == '=':
                     state = 157
                 else:
-                    print("ERROR IN STATE 143")
+                    print("ERROR IN STATE 155")
                     state = 1000  # Reset state to recover
+
 
             #.
             # elif token == '.':
@@ -317,11 +326,15 @@ def parseLexer(input_stream):
                 print("Passed state 167")
                 state = 167
                 lexeme = token 
-                if lookahead_char in open_parenthesis_delim or lookahead_char is None or lookahead_char == "\n":
+                if lookahead_char in open_parenthesis_delim or lookahead_char is None:
                     print("Passed state 168")
                     state = 168
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
+                elif lookahead_char in valchar or lookahead_char == '"':
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
                 else:
                     print("ERROR IN STATE 167")
                     state = 1000  # Reset state to recover
@@ -347,9 +360,10 @@ def parseLexer(input_stream):
                     state = 172
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-
+                elif lookahead_char in allval:
+                    state = 227
                 else:
-                    print("ERROR IN STATE 172")
+                    print("ERROR IN STATE 171")
                     state = 1000  # Reset state to recover
 
             #}
@@ -362,7 +376,7 @@ def parseLexer(input_stream):
                     lexeme = ""
 
                 else:
-                    print("ERROR IN STATE 172")
+                    print("ERROR IN STATE 173")
                     state = 1000  # Reset state to recover
 
             #[
@@ -401,6 +415,11 @@ def parseLexer(input_stream):
                     lexeme = ""
                 elif lookahead_char in valchar or lookahead_char in underscore:
                     state = 181
+                elif lookahead_char == "+":
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                    print("PASOK")
                 else:
                     print("ERROR IN STATE 179")
                     state = 1000  # Reset state to recover
@@ -408,6 +427,38 @@ def parseLexer(input_stream):
             elif token == '"':
                 state = 219
                 lexeme = token 
+            
+            #NUMLIT
+            elif token == "^" or token in allval or state == 227:
+                lexeme = token  # Start with '^'
+                if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":
+                    print("Passed state 228")
+                    state = 228
+                    tokens.append((lexeme, "numlit"))
+                    lexeme = ""
+                elif lookahead_char in valchar:  # Check for the following numeric part
+                    state = 242
+                elif lookahead_char == '.':
+                    state = 229
+                else:
+                    print("ERROR IN STATE 227")
+                    state = 1000  # Reset state to recover
+
+            #SINGLE LINE COMMENT
+            elif token == '#':
+                state = 411
+                lexeme = token 
+                lexeme += token
+                if lookahead_char in ascii:
+                    state = 411  # Stay in state 219 to continue processing ASCII characters
+                if lookahead_char == "\n":
+                    state = 112
+                    tokens.append((lexeme, "Single Line"))
+                    lexeme = ""
+
+                else:
+                    print("ERROR IN STATE 411")
+                    state = 1000  # Reset state to recover
 
             else:
                 state = 1000  # Reset state to recover
@@ -634,7 +685,6 @@ def parseLexer(input_stream):
                         print("ERROR IN STATE 37")
                         state = 1000  # Reset state to recover
                         lexeme += token
-
             else:
                 print("PRINT IN STATE 28")
                 state = 1000  # Reset state to recover
@@ -1781,10 +1831,15 @@ def parseLexer(input_stream):
         # STRING LITERALS
         elif state == 219:
             print("Passed state 219")
+            print(token)
             lexeme += token
             # Check if the next character is within ASCII range and not a double quote
             if lookahead_char in ascii:
                 state = 219  # Stay in state 219 to continue processing ASCII characters
+            elif lookahead_char.isspace():  # Handle spaces
+                print("Space encountered, handling within state 219")
+                # Decide what to do with spaces. For example:
+                state = 219  # Stay in the same state or transition to an appropriate one
             elif lookahead_char == '"':
                 state = 220  # Transition to the next state when a double quote is seen
             else:
@@ -1804,6 +1859,794 @@ def parseLexer(input_stream):
                 print(f"ERROR IN STATE 220: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
 
+        #float
+        elif state == 229:
+            print("Passed state 229")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if token == '.':     
+                state = 230
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 230:
+            print("Passed state 230")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 231")      
+                state = 231  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 232
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 232:
+            print("Passed state 232")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 233")      
+                state = 233  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 234
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 234:
+            print("Passed state 235")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 235")      
+                state = 235  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 236
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 236:
+            print("Passed state 236")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 237")      
+                state = 237  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 238
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 238:
+            print("Passed state 238")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 239")      
+                state = 239  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 240
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 240:
+            print("Passed state 240")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 241")      
+                state = 241  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        #numlit(2)
+        elif state == 242:
+            print("Passed state 230")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":  
+                print("Passed state 231")      
+                state = 243  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char == ".":
+                state = 244
+            elif lookahead_char in allval:
+                state = 257
+            else:
+                print(f"ERROR IN STATE 230: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 244:
+            print("Passed state 230")
+            lexeme += token
+            if token  == ".":
+                state = 245
+            else:
+                print(f"ERROR IN STATE 230: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 245:
+            print("Passed state 244")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 245")      
+                state = 246  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 247
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 247:
+            print("Passed state 232")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 233")      
+                state = 248  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 249
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 249:
+            print("Passed state 235")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 235")      
+                state = 250  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 251
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 251:
+            print("Passed state 236")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 237")      
+                state = 252  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 253
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 253:
+            print("Passed state 238")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 239")      
+                state = 254  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 255
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 255:
+            print("Passed state 240")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 256")      
+                state = 256  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        #numlit(3)
+        elif state == 257:
+            print("Passed state 257")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":  
+                    print("Passed state 258")
+                    state = 258
+                    tokens.append((lexeme, "numlit"))
+                    lexeme = ""
+            elif lookahead_char == '.':  
+                    state = 259
+            elif lookahead_char in allval:  
+                    state = 272
+            else:
+                print(f"ERROR IN STATE 257: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 259:
+            print("Passed state 230")
+            lexeme += token
+            if token  == ".":
+                state = 260
+            else:
+                print(f"ERROR IN STATE 230: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 260:
+            print("Passed state 244")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 245")      
+                state = 261  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 262
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 262:
+            print("Passed state 232")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 233")      
+                state = 263  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 264
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 264:
+            print("Passed state 235")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 265")      
+                state = 265  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 266
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 266:
+            print("Passed state 236")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 237")      
+                state = 267  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 268
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 268:
+            print("Passed state 238")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 239")      
+                state = 269  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 270
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 270:
+            print("Passed state 240")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 256")      
+                state = 271  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        #numlit(4)
+        elif state == 272:
+            print("Passed state 257")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":  
+                    print("Passed state 273")
+                    state = 273
+                    tokens.append((lexeme, "numlit"))
+                    lexeme = ""
+            elif lookahead_char == '.':  
+                    state = 274
+            elif lookahead_char in allval:  
+                    state = 287
+            else:
+                print(f"ERROR IN STATE 257: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 274:
+            print("Passed state 230")
+            lexeme += token
+            if token  == ".":
+                state = 275
+            else:
+                print(f"ERROR IN STATE 230: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 275:
+            print("Passed state 244")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 245")      
+                state = 276  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 277
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 277:
+            print("Passed state 232")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 233")      
+                state = 278  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 279
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 279:
+            print("Passed state 235")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 265")      
+                state = 280  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 281
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 281:
+            print("Passed state 236")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 237")      
+                state = 282  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 283
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 283:
+            print("Passed state 238")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 239")      
+                state = 284  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 285
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 285:
+            print("Passed state 240")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 256")      
+                state = 286  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        #numlit(5)
+        elif state == 287:
+            print("Passed state 257")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":  
+                    print("Passed state 273")
+                    state = 288
+                    tokens.append((lexeme, "numlit"))
+                    lexeme = ""
+            elif lookahead_char == '.':  
+                    state = 289
+            elif lookahead_char in allval:  
+                    state = 302
+            else:
+                print(f"ERROR IN STATE 257: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 289:
+            print("Passed state 230")
+            lexeme += token
+            if token  == ".":
+                state = 290
+            else:
+                print(f"ERROR IN STATE 230: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 290:
+            print("Passed state 244")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 245")      
+                state = 291  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 292
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 292:
+            print("Passed state 232")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 233")      
+                state = 293  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 294
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 294:
+            print("Passed state 235")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 265")      
+                state = 295  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 296
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 296:
+            print("Passed state 236")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 237")      
+                state = 297  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 298
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 298:
+            print("Passed state 238")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 239")      
+                state = 299  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 300
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 300:
+            print("Passed state 240")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 256")      
+                state = 301  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        #numlit(6)
+        elif state == 302:
+            print("Passed state 257")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":  
+                    print("Passed state 273")
+                    state = 303
+                    tokens.append((lexeme, "numlit"))
+                    lexeme = ""
+            elif lookahead_char == '.':  
+                    state = 304
+            elif lookahead_char in allval:  
+                    state = 317
+            else:
+                print(f"ERROR IN STATE 257: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 304:
+            print("Passed state 230")
+            lexeme += token
+            if token  == ".":
+                state = 305
+            else:
+                print(f"ERROR IN STATE 230: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 305:
+            print("Passed state 244")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 306")      
+                state = 306  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 307
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 307:
+            print("Passed state 232")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 233")      
+                state = 308  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 309
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 309:
+            print("Passed state 235")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 265")      
+                state = 310  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 311
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 311:
+            print("Passed state 236")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 237")      
+                state = 312  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 313
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 313:
+            print("Passed state 238")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 239")      
+                state = 314  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 315
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 315:
+            print("Passed state 240")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 316")      
+                state = 316  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        #numlit(7)
+        elif state == 317:
+            print("Passed state 257")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":  
+                    print("Passed state 273")
+                    state = 318
+                    tokens.append((lexeme, "numlit"))
+                    lexeme = ""
+            elif lookahead_char == '.':  
+                    state = 319
+            # elif lookahead_char in allval:  
+            #         state = 317
+            else:
+                print(f"ERROR IN STATE 257: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 319:
+            print("Passed state 230")
+            lexeme += token
+            if token  == ".":
+                state = 320
+            else:
+                print(f"ERROR IN STATE 230: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 320:
+            print("Passed state 244")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 306")      
+                state = 321  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 322
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 322:
+            print("Passed state 232")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 233")      
+                state = 323  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 324
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 324:
+            print("Passed state 235")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 265")      
+                state = 325  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 326
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 326:
+            print("Passed state 236")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 237")      
+                state = 327  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 328
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 328:
+            print("Passed state 238")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 239")      
+                state = 329  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            elif lookahead_char in allval:
+                state = 330
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
+
+        elif state == 330:
+            print("Passed state 240")
+            lexeme += token
+            # Check if the next character is within ASCII range or is a delimiter, or is None or newline
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 316")      
+                state = 331  # End state for string literal processing
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""  # Reset lexeme for next token
+            else:
+                print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
+                state = 1000  # Error state
 
         #DELIM_GEN DELIMITERS
         elif state in {2, 4, 8, 14, 20, 39, 74, 78, 85, 105}:
@@ -1867,13 +2710,13 @@ def parseLexer(input_stream):
                     tokens.append((token, "newline"))
                     line_number += 1  # Increment the line number for tracking
                 elif token == ',':
-                    tokens.append((token, "comma"))
+                    tokens.append((token, token))
                 elif token == '}':
-                    tokens.append((token, "close curly brace"))
+                    tokens.append((token, token))
                 elif token == ')':
-                    tokens.append((token, "close parenthesis"))
+                    tokens.append((token, token))
                 elif token == '+':
-                    tokens.append((token, "plus"))
+                    tokens.append((token, token))
                 elif token == '\t':
                     tokens.append(("\\t", "tab"))
                 state = 0  # Reset state for the next token
@@ -1886,13 +2729,13 @@ def parseLexer(input_stream):
         elif state in {114, 115}:
             if token in delim_add:
                 if token == '"':
-                    tokens.append((token, "double quote"))
+                    tokens.append((token, token))
                 elif token == ' ':
-                    tokens.append((token, "space"))
+                    tokens.append((token, token))
                 elif token == '^':
-                    tokens.append((token, "caret"))
+                    tokens.append((token, token))
                 elif token == '(':
-                    tokens.append((token, "open parenthesis"))
+                    tokens.append((token, token))
                 state = 0  # Reset state for the next token
             else:
                 print("WRONG IN DELIM_ADD")
@@ -1922,15 +2765,15 @@ def parseLexer(input_stream):
                 if token == ' ':
                     tokens.append((token, "space"))
                 elif token == '{':
-                    tokens.append((token, "open curly brace"))
+                    tokens.append((token, token))
                 elif token in allval:
-                    tokens.append((token, "valid value"))
+                    tokens.append((token, "value"))
                 elif token in upchar:
-                    tokens.append((token, "uppercase character"))
+                    tokens.append((token, "upchar"))
                 elif token == '(':
                     tokens.append((token, token))
                 elif token == '"':
-                    tokens.append((token, "double quote"))
+                    tokens.append((token, token))
                 state = 0  # Reset state for the next token
             else:
                 print("WRONG IN DELIM_ADD")
@@ -1955,7 +2798,6 @@ def parseLexer(input_stream):
                 print("WRONG IN DELIM_ADD")
                 state = 1000  # Reset state to recover
                 lexeme += token  # Append token to lexeme to process it in the next cycle
-
 
         #DELIM_LOGIC DELIMITERS
         elif state in {138, 141, 146, 156}:
@@ -2016,19 +2858,17 @@ def parseLexer(input_stream):
                 if token == '\n':
                     tokens.append((token, "newline"))
                 elif token == '^':
-                    tokens.append((token, "caret"))
+                    tokens.append((token, token))
                 elif token == ' ':
                     tokens.append((token, "space"))
-                elif token == '"':
-                    tokens.append((token, "quote"))
                 elif token == '(':
-                    tokens.append((token, "open_paren"))
+                    tokens.append((token, token))
                 elif token == ',':
-                    tokens.append((token, "comma"))
+                    tokens.append((token, token))
                 elif token == ')':
-                    tokens.append((token, "close_paren"))
-                elif token in lowchar:
-                    tokens.append((token, "lowchar"))
+                    tokens.append((token, token))
+                elif token in allchar:
+                    tokens.append((token, "allchar"))
                 state = 0  # Reset state for the next token
             else:
                 print("WRONG IN OPEN_PARENTHESIS_DELIM")
@@ -2078,7 +2918,7 @@ def parseLexer(input_stream):
                 elif token == '\\':
                     tokens.append((token, "backslash"))
                 elif token == '"':
-                    tokens.append((token, "double_quote"))
+                    tokens.append((token, token))
                 elif token in value:
                     tokens.append((token, "value"))
                 elif token in allchar:
@@ -2097,7 +2937,7 @@ def parseLexer(input_stream):
                 elif token == '\n':
                     tokens.append((token, "newline"))
                 elif token == '#':
-                    tokens.append((token, "hash"))
+                    tokens.append((token, token))
                 state = 0  # Reset state for the next token
             else:
                 print("WRONG IN CLOSE_BRACE_DELIM")
@@ -2109,6 +2949,8 @@ def parseLexer(input_stream):
             if token in open_bracket_delim:
                 if token in value:
                     tokens.append((token, "value"))
+                    state = 0
+                
             else:
                 print("WRONG IN OPEN_BRACKET_DELIM")
                 state = 1000  # Reset state to recover
@@ -2118,9 +2960,12 @@ def parseLexer(input_stream):
         elif state in {178}:
             if token in close_bracket_delim:
                 if token ==  ' ':
-                    tokens.append((token, "SPACE"))
+                    tokens.append((token, "space"))
                 elif token ==  '=':
-                    tokens.append((token, "equals"))
+                    tokens.append((token, token))
+                elif token ==  '[':
+                    tokens.append((token, token))
+                state = 0
             else:
                 print("WRONG IN CLOSE_BRACKET_DELIM")
                 state = 1000  # Reset state to recover
@@ -2137,33 +2982,86 @@ def parseLexer(input_stream):
             # Now handle the current token
             if token in delim_id:
                 if token == ' ':
-                    tokens.append((token, "space"))
+                    tokens.append((token, token))
                 elif token == '=':
-                    tokens.append((token, "equals"))
+                    tokens.append((token, token))
                 elif token == '<':
-                    tokens.append((token, "less than"))
+                    tokens.append((token, token))
                 elif token == '>':
-                    tokens.append((token, "greater than"))
+                    tokens.append((token, token))
                 elif token == ';':
-                    tokens.append((token, "semicolon"))
+                    tokens.append((token, token))
                 elif token == '!':
-                    tokens.append((token, "exclamation mark"))
+                    tokens.append((token, token))
                 elif token == '+':
-                    tokens.append((token, "plus"))
+                    tokens.append((token, token))
                 elif token == '[':
-                    tokens.append((token, "open bracket"))
+                    tokens.append((token, token))
                 elif token == '(':
                     tokens.append((token, token))
                 elif token == '&':
-                    tokens.append((token, "ampersand"))
+                    tokens.append((token, token))
                 elif token == '|':
-                    tokens.append((token, "pipe"))
+                    tokens.append((token, token))
+                elif token == '/':
+                    tokens.append((token, token))
                 elif token == '-':
-                    tokens.append((token, "minus"))
+                    tokens.append((token, token))
                 elif token == '*':
-                    tokens.append((token, "asterisk"))
+                    tokens.append((token, token))
                 elif token == ',':
-                    tokens.append((token, "comma"))
+                    tokens.append((token, token))
+                elif token == ')':
+                    tokens.append((token, token))
+                
+                state = 0  # Reset state for the next token
+            else:
+                # If it's not a delimiter, continue building the lexeme
+                lexeme += token
+
+        #DELIM_NUM DELIMITERS
+        elif state in {228, 231, 233, 235, 237, 239, 241, 243, 246,
+                       248, 250, 252, 254, 256}:
+            # Now handle the current token
+            if lexeme and (token in delim_num or lookahead_char in delim_num):
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""
+
+            if token in delim_num:
+                if token == '+':
+                    tokens.append((lexeme, "+"))
+                elif token == '-':
+                    tokens.append((lexeme, '-'))
+                elif token == '*':
+                    tokens.append((lexeme, '*'))
+                elif token == '/':
+                    tokens.append((lexeme, '/'))
+                elif token == '%':
+                    tokens.append((lexeme, '%'))
+                elif token == '<':
+                    tokens.append((lexeme, '<'))
+                elif token == '>':
+                    tokens.append((lexeme, '>'))
+                elif token == '!=':
+                    tokens.append((lexeme, '!='))
+                elif token == '=':
+                    tokens.append((lexeme, '='))
+                elif token == ' ':
+                    tokens.append((token, "space"))
+                elif token == ',':
+                    tokens.append((lexeme, ','))
+                elif token == '#':
+                    tokens.append((lexeme, '#'))
+                elif token == ')':
+                    tokens.append((lexeme, ')'))
+                elif token == '}':
+                    tokens.append((lexeme, '}'))
+                elif token == '&':
+                    tokens.append((lexeme, '&'))
+                elif token == '|':
+                    tokens.append((lexeme, '|'))
+                elif token == ']':
+                    tokens.append((lexeme, ']'))
                 
                 state = 0  # Reset state for the next token
             else:
@@ -2172,11 +3070,12 @@ def parseLexer(input_stream):
 
         elif state == 1000:  # Error state
             lexeme += token  # Continue capturing invalid token
-            if token in {'\n', ' '}:  # End of invalid token
-                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
-                lexeme = ""  # Reset lexeme
-                state = 0  # Recover state
+            display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+            lexeme = ""  # Reset lexeme
+            state = 0  # Recover state
 
+
+        print(state)
     return tokens
 
 root = tk.Tk()
@@ -2186,7 +3085,7 @@ frame = tk.Frame(root)
 frame.pack(fill=tk.BOTH, expand=True)
 
 #Lexer Table
-lexical_result = ttk.Treeview(frame, columns=('ID', 'Lexeme', 'Token'), show='headings', height=15)
+lexical_result = ttk.Treeview(frame, columns=('ID', 'Lexeme', 'Token'), show='headings', height=28)
 lexical_result.heading('ID', text='ID')
 lexical_result.heading('Lexeme', text='Lexeme')
 lexical_result.heading('Token', text='Token')
@@ -2196,6 +3095,16 @@ lexical_result.column('Lexeme', width=150, anchor='center')
 lexical_result.column('Token', width=150, anchor='center')
 
 lexical_result.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
+
+# Function to update line numbers
+def update_line_numbers(event=None):
+    line_numbers.config(state='normal')  # Allow editing temporarily
+    line_numbers.delete(1.0, tk.END)  # Clear current line numbers
+    current_line = 1
+    while current_line <= int(input_text.index('end-1c').split('.')[0]):
+        line_numbers.insert(tk.END, f"{current_line}\n")  # Add line numbers
+        current_line += 1
+    line_numbers.config(state='disabled')  # Disable editing again
 
 def parse_program():
     output_text.delete(1.0, tk.END)
@@ -2210,15 +3119,22 @@ def parse_program():
     for idx, (lexeme, token) in enumerate(tokens, start=1):
         lexical_result.insert('', 'end', values=(idx, lexeme, token))
 
+# Line Numbers
+line_numbers = tk.Text(frame, width=2, height=2, padx=5, takefocus=0, border=0, background="lightgrey", state='disabled')
+line_numbers.pack(side=tk.LEFT, fill=tk.Y, padx=0, pady=10)
+
 #Insert Code
-input_text = scrolledtext.ScrolledText(frame, wrap=tk.WORD, width=40, height=10)
-input_text.pack(side=tk.TOP, padx=10, pady=10)
+input_text = scrolledtext.ScrolledText(frame, wrap=tk.WORD, width=80, height=25)
+input_text.pack(side=tk.TOP, padx=10, pady=10, expand=True)
+input_text.bind('<KeyRelease>', lambda e: update_line_numbers())
 
 parse_button = tk.Button(frame, text="Run", command=parse_program)
 parse_button.pack(side=tk.TOP, padx=10, pady=5)
 
 #Display Errors
-output_text = scrolledtext.ScrolledText(frame, wrap=tk.WORD, width=40, height=15)
-output_text.pack(side=tk.TOP, padx=10, pady=10)
+output_text = scrolledtext.ScrolledText(frame, wrap=tk.WORD, width=80, height=10)
+output_text.pack(side=tk.TOP, padx=10, pady=10, expand=True)
+
+update_line_numbers()
 
 root.mainloop()
