@@ -3890,33 +3890,32 @@ def parseSyntax(tokens, syntax_result, output_text):
     :param syntax_result: The Treeview widget to display the syntax table.
     :param output_text: The text widget to display syntax errors.
     """
-    reserve_words = {'dose': 'doseval', 'quant': 'quanval', 'seq': 'seqval', 'allele': 'alleleval'}
+
+    reserve_words = {'dose', 'quant', 'seq', 'allele'}
 
     for item in syntax_result.get_children():
         syntax_result.delete(item)
-
+    
     valid_syntax = False  
 
-    for idx in range(len(tokens) - 3):  
-        token1 = tokens[idx][1]      
-        token2 = tokens[idx + 1][1]  
-        token3 = tokens[idx + 2][1]  
-        token4 = tokens[idx + 3][1]  
+    for idx in range(len(tokens) - 2): 
+        token1 = tokens[idx][1]     
+        token2 = tokens[idx + 1][1] 
+        token3 = tokens[idx + 2][1] 
 
-        if token1 in reserve_words:
-            if token2 == "space" and token3 == "Identifier" and token4 == reserve_words[token1]:
-                valid_syntax = True
-                break 
+        if token1 in reserve_words and token2 == "space" and token3 == "Identifier":
+            valid_syntax = True
+            break 
 
-    for idx, (_, token) in enumerate(tokens, start=1): 
-        syntax_result.insert('', 'end', values=(idx, token))  
-
+    # Populate the Syntax Table with tokens only
+    for idx, (_, token) in enumerate(tokens, start=1):  # Only insert the token
+        syntax_result.insert('', 'end', values=(idx, token))  # Display only token
+    
     if not valid_syntax:
-        output_text.insert(tk.END, "Syntax Error: Expected valid syntax sequence\n")
+        output_text.insert(tk.END, "Syntax Error: Expected maayos na\n")
         output_text.yview(tk.END)  
 
     syntax_result.update_idletasks()
-
 
 
 root = tk.Tk()
