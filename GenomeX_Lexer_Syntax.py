@@ -1258,35 +1258,42 @@ def parseLexer(input_stream):
                 print("WRONG IN STATE 110")
                 state = 1000    
 
-        #++
-        elif state == 115:
-            lexeme += token
-            if token == '+':
-                if lookahead_char in delim_update or lookahead_char is None or lookahead_char == "\n":
-                    state = 116
-                    tokens.append((lexeme, lexeme))
-                    lexeme = ""
-                else:
-                    print("ERROR IN STATE 116")
-                    state = 1000   
-            else:
-                print("WRONG IN STATE 115")
-                state = 1000    
 
-        #+=
-        elif state == 117:
-            lexeme += token
-            if token == '=':
-                if lookahead_char in delim_equal or lookahead_char is None or lookahead_char == "\n":
-                    state = 118
+        # Handling '+' after an identifier
+        elif state == 115:
+            lexeme += token  # Store first '+'
+            if lookahead_char == "+":  # Check if next character is '+'
+                state = 116
+                state = 0
+            elif lookahead_char == "=":  # Check if next character is '='
+                state = 117  # Move to confirm '+='
+                state = 0
+            else:
+                tokens.append((lexeme, lexeme))  # Store single '+'
+                lexeme = ""
+                state = 0  # Reset lexer
+
+        # Handling '++'
+        elif state == 116:
+            lexeme += token  # Append second '+'
+            if lookahead_char in delim_update or lookahead_char is None:  # If another '+' follows, trigger an error
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 118")
-                    state = 1000   
+                    state = 0
             else:
-                print("WRONG IN STATE 117")
-                state = 1000    
+                state = 1000  # Reset lexer
+
+        # Handling '+='
+        elif state == 117:
+            lexeme += token  # Append '='
+            if lookahead_char == "+":  # Ensure no extra `+` follows
+                print("ERROR: Unexpected '+' after '+='")
+                state = 1000  
+            else:
+                tokens.append((lexeme, "+="))  # Store '+=' as a single token
+                lexeme = ""
+                state = 0  # Reset lexer
+
 
         #--
         elif state == 121:
