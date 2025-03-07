@@ -3,6 +3,7 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 from GenomeX_Lexer import display_lexical_error, parseLexer
 import GenomeX_Lexer
+import GenomeX_Syntax  # Add this import
 
 # Create the main application window
 root = tk.Tk()
@@ -142,13 +143,14 @@ def highlight_errors(text_editor, line_number, lexeme):
     
     text_editor.tag_config("error", foreground="red", underline=True)
 
-# Function to execute lexer and display results
-def run_lexer():
+# Function to execute lexer and syntax analyzer and display results
+def run_analysis():
     input_text = text_editor.get("1.0", tk.END).strip()
     
     # Clear previous output
     tree.delete(*tree.get_children())
     lexical_panel.delete("1.0", tk.END)
+    syntax_panel.delete("1.0", tk.END)
 
     # Inject lexical_panel into the Lexer module so errors can be displayed
     GenomeX_Lexer.lexical_panel = lexical_panel  
@@ -161,8 +163,14 @@ def run_lexer():
     else:
         for idx, (lexeme, token) in enumerate(tokens):
             tree.insert("", "end", values=(idx + 1, lexeme, token))
+        
+        # After successful lexical analysis, run syntax analysis
+        GenomeX_Syntax.parseSyntax(tokens, syntax_panel)
+        
+        # Switch to the lexical tab to show results
+        notebook.select(0)  # Select the lexical tab (index 0) instead of syntax tab
 
-btn_run.config(command=run_lexer)
+btn_run.config(command=run_analysis)
 
 # Define themes
 def apply_dark_mode():
