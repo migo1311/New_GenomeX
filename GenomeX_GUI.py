@@ -147,6 +147,9 @@ def highlight_errors(text_editor, line_number, lexeme):
 def run_analysis():
     input_text = text_editor.get("1.0", tk.END).strip()
     
+    # Get the currently selected tab before performing analysis
+    current_tab = notebook.index("current")
+    
     # Clear previous output
     tree.delete(*tree.get_children())
     lexical_panel.delete("1.0", tk.END)
@@ -160,6 +163,8 @@ def run_analysis():
     
     if not tokens:
         display_lexical_error("No tokens found or input is invalid.")
+        # For errors, switch to lexical tab to show the error message
+        notebook.select(0)
     else:
         for idx, (lexeme, token) in enumerate(tokens):
             tree.insert("", "end", values=(idx + 1, lexeme, token))
@@ -167,8 +172,8 @@ def run_analysis():
         # After successful lexical analysis, run syntax analysis
         GenomeX_Syntax.parseSyntax(tokens, syntax_panel)
         
-        # Switch to the lexical tab to show results
-        notebook.select(0)  # Select the lexical tab (index 0) instead of syntax tab
+        # Return to the tab that was previously selected
+        notebook.select(current_tab)
 
 btn_run.config(command=run_analysis)
 
