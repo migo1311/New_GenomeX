@@ -3,8 +3,13 @@ from tkinter import scrolledtext
 from tkinter import ttk
 
 def display_lexical_error(message):
-    output_text.insert(tk.END, message + '\n')
-    output_text.yview(tk.END)  # Scroll to the end
+    try:
+        lexical_panel.insert(tk.END, message + '\n', 'error')  # Insert error in GUI
+        lexical_panel.yview(tk.END)  # Auto-scroll to latest error
+        lexical_panel.tag_config('error', foreground='red')  # Highlight in red
+    except NameError:
+        print(message)  # Fallback if GUI isn't available
+
 
 def is_end_of_lexeme(token):
     # End-of-lexeme characters (e.g., space, newline, punctuation)
@@ -142,45 +147,101 @@ def parseLexer(input_stream):
             elif token == '_':
                 state = 1
                 lexeme = token  
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == 'a':
                 state = 6
                 lexeme = token  
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == 'c':
                 state = 16
                 lexeme = token  
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == 'd':
                 state = 28
                 lexeme = token  
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == 'e':
                 state = 43
                 lexeme = token  
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == 'f':
                 state = 58
                 lexeme = token  
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == 'g':
                 state = 62
                 lexeme = token  
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == 'i':
                 state = 67
                 lexeme = token 
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == 'p':
                 state = 70
                 lexeme = token 
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == 'q':
                 state = 81
                 lexeme = token 
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == 'r':
                 state = 87
                 lexeme = token 
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == 's':
                 state = 91
                 lexeme = token 
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == 'v':
                 state = 102
                 lexeme = token 
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == 'w':
                 state = 107
                 lexeme = token 
+                if lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
             elif token == '+':
                 state = 113
                 lexeme = token 
@@ -3876,6 +3937,9 @@ def parseLexer(input_stream):
             if is_end_of_lexeme(token):  # Check if the current token marks the end of the invalid lexeme
                 display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
                 state = 0
+                
+                if token == '\n':
+                    line_number += 1
 
         print(state)
     return tokens
@@ -3915,11 +3979,11 @@ def parseLexer(input_stream):
 #     syntax_result.update_idletasks()
 
 
-root = tk.Tk()
-root.title("GenomeX")
+# root = tk.Tk()
+# root.title("GenomeX")
 
-frame = tk.Frame(root)
-frame.pack(fill=tk.BOTH, expand=True)
+# frame = tk.Frame(root)
+# frame.pack(fill=tk.BOTH, expand=True)
 
 
 # # Syntax Table
@@ -3938,76 +4002,76 @@ frame.pack(fill=tk.BOTH, expand=True)
 # syntax_result.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
 #Lexer Table
-lexical_result = ttk.Treeview(frame, columns=('ID', 'Lexeme', 'Token'), show='headings', height=28)
-lexical_result.heading('ID', text='ID')
-lexical_result.heading('Lexeme', text='Lexeme')
-lexical_result.heading('Token', text='Token')
+# lexical_result = ttk.Treeview(frame, columns=('ID', 'Lexeme', 'Token'), show='headings', height=28)
+# lexical_result.heading('ID', text='ID')
+# lexical_result.heading('Lexeme', text='Lexeme')
+# lexical_result.heading('Token', text='Token')
 
-lexical_result.column('ID', width=50, anchor='center')
-lexical_result.column('Lexeme', width=150, anchor='center')
-lexical_result.column('Token', width=150, anchor='center')
+# lexical_result.column('ID', width=50, anchor='center')
+# lexical_result.column('Lexeme', width=150, anchor='center')
+# lexical_result.column('Token', width=150, anchor='center')
 
-scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=lexical_result.yview)
-lexical_result.configure(yscrollcommand=scrollbar.set)
+# scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=lexical_result.yview)
+# lexical_result.configure(yscrollcommand=scrollbar.set)
 
 # Pack the Treeview and Scrollbar
-scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-lexical_result.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+# scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+# lexical_result.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
 # Function to update line numbers
-def update_line_numbers(event=None):
-    line_numbers.config(state='normal')  # Allow editing temporarily
-    line_numbers.delete(1.0, tk.END)  # Clear current line numbers
-    current_line = 1
-    while current_line <= int(input_text.index('end-1c').split('.')[0]):
-        line_numbers.insert(tk.END, f"{current_line}\n")  # Add line numbers
-        current_line += 1
-    line_numbers.config(state='disabled')  # Disable editing again
+# def update_line_numbers(event=None):
+#     line_numbers.config(state='normal')  # Allow editing temporarily
+#     line_numbers.delete(1.0, tk.END)  # Clear current line numbers
+#     current_line = 1
+#     while current_line <= int(input_text.index('end-1c').split('.')[0]):
+#         line_numbers.insert(tk.END, f"{current_line}\n")  # Add line numbers
+#         current_line += 1
+#     line_numbers.config(state='disabled')  # Disable editing again
 
-def parse_program():
-    """
-    Parses the input program, displays tokens in the Lexer Table, and checks syntax.
-    """
-    output_text.delete(1.0, tk.END)
-    code = input_text.get("1.0", tk.END).strip()  # Get the input code
+# def parse_program():
+#     """
+#     Parses the input program, displays tokens in the Lexer Table, and checks syntax.
+#     """
+#     output_text.delete(1.0, tk.END)
+#     code = input_text.get("1.0", tk.END).strip()  # Get the input code
 
-    try:
-        # Lexer Analysis
-        tokens = parseLexer(code)
+#     try:
+#         # Lexer Analysis
+#         tokens = parseLexer(code)
 
-        # Clear Lexer Table
-        for item in lexical_result.get_children():
-            lexical_result.delete(item)
+#         # Clear Lexer Table
+#         for item in lexical_result.get_children():
+#             lexical_result.delete(item)
 
-        # Insert tokens into Lexer Table
-        for idx, (lexeme, token) in enumerate(tokens, start=1):
-            lexical_result.insert('', 'end', values=(idx, lexeme, token))
+#         # Insert tokens into Lexer Table
+#         for idx, (lexeme, token) in enumerate(tokens, start=1):
+#             lexical_result.insert('', 'end', values=(idx, lexeme, token))
 
-        # Call parseSyntax with the correct parameters
-        # parseSyntax(tokens, syntax_result, output_text)
+#         # Call parseSyntax with the correct parameters
+#         # parseSyntax(tokens, syntax_result, output_text)
    
 
-    except Exception as e:
-        output_text.insert(tk.END, f"Error: {e}\n")
+#     except Exception as e:
+#         output_text.insert(tk.END, f"Error: {e}\n")
 
 
 
 # Line Numbers
-line_numbers = tk.Text(frame, width=2, height=2, padx=5, takefocus=0, border=0, background="lightgrey", state='disabled')
-line_numbers.pack(side=tk.LEFT, fill=tk.Y, padx=0, pady=10)
+# line_numbers = tk.Text(frame, width=2, height=2, padx=5, takefocus=0, border=0, background="lightgrey", state='disabled')
+# line_numbers.pack(side=tk.LEFT, fill=tk.Y, padx=0, pady=10)
 
-#Insert Code
-input_text = scrolledtext.ScrolledText(frame, wrap=tk.WORD, width=80, height=25)
-input_text.pack(side=tk.TOP, padx=10, pady=10, expand=True)
-input_text.bind('<KeyRelease>', lambda e: update_line_numbers())
+# #Insert Code
+# input_text = scrolledtext.ScrolledText(frame, wrap=tk.WORD, width=80, height=25)
+# input_text.pack(side=tk.TOP, padx=10, pady=10, expand=True)
+# input_text.bind('<KeyRelease>', lambda e: update_line_numbers())
 
-parse_button = tk.Button(frame, text="Run", command=parse_program)
-parse_button.pack(side=tk.TOP, padx=10, pady=5)
+# parse_button = tk.Button(frame, text="Run", command=parse_program)
+# parse_button.pack(side=tk.TOP, padx=10, pady=5)
 
 #Display Errors
-output_text = scrolledtext.ScrolledText(frame, wrap=tk.WORD, width=80, height=10)
-output_text.pack(side=tk.TOP, padx=10, pady=10, expand=True)
+# output_text = scrolledtext.ScrolledText(frame, wrap=tk.WORD, width=80, height=10)
+# output_text.pack(side=tk.TOP, padx=10, pady=10, expand=True)
 
-update_line_numbers()
+# update_line_numbers()
 
-root.mainloop()
+# root.mainloop()

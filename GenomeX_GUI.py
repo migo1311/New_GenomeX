@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
-from GenomeX_Lexer_Syntax import display_lexical_error, parseLexer
-import GenomeX_Lexer_Syntax
+from GenomeX_Lexer import display_lexical_error, parseLexer
+import GenomeX_Lexer
 
 # Create the main application window
 root = tk.Tk()
@@ -151,10 +151,10 @@ def run_lexer():
     lexical_panel.delete("1.0", tk.END)
 
     # Inject lexical_panel into the Lexer module so errors can be displayed
-    GenomeX_Lexer_Syntax.lexical_panel = lexical_panel  
+    GenomeX_Lexer.lexical_panel = lexical_panel  
 
     # Run Lexer and get tokens
-    tokens = GenomeX_Lexer_Syntax.parseLexer(input_text)
+    tokens = GenomeX_Lexer.parseLexer(input_text)
     
     if not tokens:
         display_lexical_error("No tokens found or input is invalid.")
