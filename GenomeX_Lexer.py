@@ -189,10 +189,13 @@ def parseLexer(input_stream):
             elif token == 'f':
                 state = 58
                 lexeme = token  
-                if lookahead_char is None:
+                if lookahead_char == 'u':
+                    state = 450
+                elif lookahead_char is None:
                     display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
                     state = 1000
                     lexeme = ""
+
             elif token == 'g':
                 state = 62
                 lexeme = token  
@@ -403,6 +406,7 @@ def parseLexer(input_stream):
             #         state = 1000  # Reset state to recover
 
             #;
+
             elif token == ';':
                 state = 165
                 lexeme = token 
@@ -961,7 +965,6 @@ def parseLexer(input_stream):
                 else:
                     print("ERROR IN STATE 56")
                     state = 1000  # Reset state to recover
-                    lexeme += token
             else:
                 print("WRONG IN STATE 55")
                 state = 1000  # Reset state to recover
@@ -974,6 +977,37 @@ def parseLexer(input_stream):
                 print("WRONG IN STATE 58")
                 state = 1000  # Reset state to recover
 
+        elif state == 450:
+            lexeme += token
+            if token == 'u':
+                state = 451
+            else:
+                print("WRONG IN STATE 450")
+                state = 1000  # Reset state to recover
+
+        elif state == 451:
+            lexeme += token
+            if token == 'n':
+                state = 452
+            else:
+                print("WRONG IN STATE 451")
+                state = 1000  # Reset state to recover
+
+        #FUNC
+        elif state == 452:
+            lexeme += token
+            if token == 'c':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 453
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                else:
+                    print("ERROR IN STATE 453")
+                    state = 1000  # Reset state to recover
+            else:
+                print("WRONG IN STATE 452")
+                state = 1000  # Reset state to recover
+
         #FOR
         elif state == 59:
             lexeme += token
@@ -983,7 +1017,7 @@ def parseLexer(input_stream):
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
                 else:
-                    print("ERROR IN STATE 56")
+                    print("ERROR IN STATE 60")
                     state = 1000  # Reset state to recover
                     lexeme += token
             else:
@@ -3529,7 +3563,7 @@ def parseLexer(input_stream):
                 state = 1000  # Reset state to recover
 
         #DELIM_1 DELIMITERS
-        elif state in {37, 46, 56, 60, 65, 68, 93, 100, 111}:
+        elif state in {37, 46, 56, 60, 65, 68, 93, 100, 111, 453}:
             if token in delim_1:
                 if token == ' ':
                     tokens.append((token, "space"))
