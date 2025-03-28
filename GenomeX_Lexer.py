@@ -146,6 +146,10 @@ def parseLexer(input_stream):
                 tokens.append((" ", "space"))
                 lexeme = ""  # Reset lexeme after delimiter processing
                 state = 0  # Reset state for next token
+            elif token == "\t":
+                tokens.append((" ", "tab"))
+                lexeme = ""  # Reset lexeme after delimiter processing
+                state = 0  # Reset state for next token
             #TEMP SOLUTION
             elif token == ",":
                 tokens.append((token, token))
@@ -2013,12 +2017,14 @@ def parseLexer(input_stream):
                     print(f"ERROR IN STATE 218")
                     state = 1000  # Error state
 
-        # STRING LITERALS
+        # String literal
         elif state == 219:
             print("Passed state 219")
             print(token)
             lexeme += token
-            if lookahead_char in ascii:
+            if lookahead_char == '\\':  # Check for backslash (escape character)
+                state = 222  # New state for handling escape sequences
+            elif lookahead_char in ascii:
                 state = 219  # Stay in state 219 to continue processing ASCII characters
             elif lookahead_char == '"':
                 state = 220  # Transition to the next state when a double quote is seen
@@ -2026,7 +2032,20 @@ def parseLexer(input_stream):
                 print(f"ERROR IN STATE 219: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
 
+        # Add a new state (222) to handle escape sequences
+        elif state == 222:
+            print("Passed state 222 - Escape sequence")
+            lexeme += token  # Add the backslash to the lexeme
+            # Handle various escape sequences
+            if lookahead_char in ['"', '\\', 'n', 't', 'r']:
+                # These are valid escape sequences
+                state = 219  # Return to string processing state
+            else:
+                print(f"ERROR IN STATE 222: Invalid escape sequence \\{lookahead_char}")
+                state = 1000  # Error state
+
         elif state == 220:
+            # This state remains unchanged
             print("Passed state 220")
             lexeme += token
             # Check if the next character is within ASCII range or is a delimiter, or is None or newline
@@ -3505,7 +3524,7 @@ def parseLexer(input_stream):
             # Check if the next character is within ASCII range or is a delimiter, or is None or newline
             if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
                 print("Passed state 404")      
-                state = 419  # End state for string literal processing
+                state = 419
                 tokens.append((lexeme, "numlit"))
                 lexeme = ""  # Reset lexeme for next token
             elif lookahead_char in allval:
@@ -3520,7 +3539,7 @@ def parseLexer(input_stream):
             # Check if the next character is within ASCII range or is a delimiter, or is None or newline
             if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
                 print("Passed state 406")      
-                state = 421  # End state for string literal processing
+                state = 421  
                 tokens.append((lexeme, "numlit"))
                 lexeme = ""  # Reset lexeme for next token
             else:
@@ -4069,13 +4088,14 @@ def parseLexer(input_stream):
                 lexeme += token
 
         elif state == 1000:  # Error state
+            lexeme += token  # Append the current token to the lexeme
             if is_end_of_lexeme(token):  # Check if the current token marks the end of the invalid lexeme
                 display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
                 state = 0
                 found_error = True
                 if token == '\n':
                     line_number += 1
-
+            break
 
 
         print(state)
