@@ -33,47 +33,24 @@ class SemanticAnalyzer:
         else:
             self.current_token = None
         print(f"Moved to next token: {self.current_token}")
-
+    
     def parse(self):
         while self.current_token is not None:
             if self.current_token[1] == 'act':
                 self.act_gene_function()
+            elif self.current_token[1] == '_G':
+                self.declaration()
+            elif self.current_token[1] not in ['act', '_G']:
+                # If the token is not 'act' or '_G', and not already an error
+                self.act_gene_function()  # Attempt to parse as act by default
             else:
                 self.errors.append(f"Semantic Error: Unexpected token: {self.current_token[1]}")
                 self.next_token()  # Skip invalid token to continue analysis
 
+
     def act_gene_function(self):
         print(f"Current token: {self.current_token}")  # Debug print
         self.next_token()  # Move past 'act'
-        print(f"Current token: {self.current_token}")  # Debug print
-
-        # Skip Spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()  # Move past space
-
-        # Check for 'gene'
-        if self.current_token is None or self.current_token[1] != 'gene':
-            self.errors.append(f"Semantic Error: Expected 'gene' after 'act', but found {self.current_token}")
-            return
-        self.next_token()  # Move past 'gene'
-        print(f"Current token: {self.current_token}")  # Debug print
-
-        # Skip Spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()  # Move past space
-
-        # Check for '('
-        if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'gene', but found {self.current_token}")
-            return
-        self.next_token()  # Move past '('
-        print(f"Current token: {self.current_token}")  # Debug print
-            
-        # Check for ')'
-        if self.current_token is None or self.current_token[0] != ')':
-            self.errors.append(f"Semantic Error: Expected ')' after '(', but found {self.current_token}")
-            return
-        self.next_token()  # Move past ')'
         print(f"Current token: {self.current_token}")  # Debug print
         
         # Skip Spaces
@@ -81,11 +58,11 @@ class SemanticAnalyzer:
             self.next_token()  # Move past space
     
         # Check for '{'
-        if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after 'gene()', but found {self.current_token}")
-            return
-        self.next_token()  # Move past '{'
-        print(f"Current token: {self.current_token}")  # Debug print
+        # if self.current_token is None or self.current_token[0] != '{':
+        #     self.errors.append(f"Semantic Error: Expected '{{' after 'gene()', but found {self.current_token}")
+        #     return
+        # self.next_token()  # Move past '{'
+        # print(f"Current token: {self.current_token}")  # Debug print
         
         # Skip Spaces
         while self.current_token is not None and self.current_token[1] == 'space':
@@ -99,11 +76,12 @@ class SemanticAnalyzer:
             self.next_token()  # Move past space
     
         # Check for '}'
-        if self.current_token is None or self.current_token[0] != '}':
-            self.errors.append(f"Semantic Error: Expected '}}' at end of 'act gene' function, but found {self.current_token}")
-            return
+        # if self.current_token is None or self.current_token[0] != '}':
+        #     self.errors.append(f"Semantic Error: Expected '}}' at end of 'act gene' function, but found {self.current_token}")
+        #     return
         self.next_token()  # Move past '}'
         print(f"Current token: {self.current_token}")  # Debug print
+        return
 
     def parse_body_statements(self):
         was_in_loop = self.in_loop  # Save previous loop state
@@ -145,6 +123,8 @@ class SemanticAnalyzer:
             elif self.current_token[1] == 'act':
                 self.function_declaration()
             elif self.current_token[1] == 'comment':
+                self.next_token()
+            elif self.current_token[1] == None:
                 self.next_token()
             else:
                 # self.errors.append(f"Semantic Error: Unexpected token '{self.current_token[0]}' in body")
@@ -545,6 +525,8 @@ class SemanticAnalyzer:
             if var_name in self.symbol_table:
                 self.errors.append(f"Semantic Error: Variable '{var_name}' already declared")
                 print(f"DEBUG: Error - Variable redeclaration: {var_name}")
+                # Return early to prevent processing the redeclared variable
+                return
                     
             self.next_token()  # Move past identifier
 
@@ -848,7 +830,7 @@ class SemanticAnalyzer:
                 
             print(f"DEBUG: Completed declaration of {'array' if is_array else 'variable'} '{var_name}'")
             print(f"DEBUG: Final symbol table state for {var_name}: {self.symbol_table[var_name]}")
-
+        
     def if_statement(self):
         """Parse if statement, checking condition and body"""
         self.next_token()  # Move past 'if'
@@ -1089,14 +1071,7 @@ class SemanticAnalyzer:
                 self.next_token()
             self.next_token()  # Move past ';'
             
-        # Condition part
-        self.parse_condition()
-        
-        # Check for semicolon
-        if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after for loop condition, found {self.current_token}")
-            return
-            
+        # Condition part       
         self.next_token()  # Move past ';'
         
         # Update part - should be an increment/decrement expression
@@ -1108,14 +1083,7 @@ class SemanticAnalyzer:
                 var_type = self.symbol_table[var_name]['type']
                 if var_type != 'dose':
                     self.errors.append(f"Semantic Error: For loop update variable must be dose type, found {var_type}")
-                    
-            self.next_token()  # Move past identifier
-            
-            # Check for ++ or --
-            if self.current_token is None or self.current_token[0] not in ['++', '--']:
-                self.errors.append(f"Semantic Error: Expected '++' or '--' in for loop update, found {self.current_token}")
-                
-            self.next_token()  # Move past increment/decrement operator
+                                
         else:
             self.errors.append(f"Semantic Error: Expected identifier in for loop update, found {self.current_token}")
             
