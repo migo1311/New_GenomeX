@@ -472,46 +472,48 @@ class SemanticAnalyzer:
             self.next_token()  # Move past semicolon
         
     def declaration(self):
-            print("DEBUG: Entering declaration method")
+        print("DEBUG: Entering declaration method")
+        
+        # Check for variable scope
+        var_scope = 'local'  # Default scope
+        
+        # If current token is _L or _G, set scope accordingly
+        if self.current_token is not None and (self.current_token[0] == '_L' or self.current_token[0] == '_G'):
+            var_scope = 'local' if self.current_token[0] == '_L' else 'global'
+            print(f"DEBUG: Detected scope: {var_scope}")
+            self.next_token()  # Move past scope token
             
-            # Check for variable scope
-            var_scope = 'local'  # Default scope
+            # Skip spaces after scope token
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+        
+        # Check for array declaration (clust keyword)
+        is_array = False
+        if self.current_token is not None and self.current_token[1] == 'clust':
+            is_array = True
+            print("DEBUG: Detected array declaration (clust keyword)")
+            self.next_token()  # Move past 'clust'
             
-            # If current token is _L or _G, set scope accordingly
-            if self.current_token is not None and (self.current_token[0] == '_L' or self.current_token[0] == '_G'):
-                var_scope = 'local' if self.current_token[0] == '_L' else 'global'
-                print(f"DEBUG: Detected scope: {var_scope}")
-                self.next_token()  # Move past scope token
-                
-                # Skip spaces after scope token
-                while self.current_token is not None and self.current_token[1] == 'space':
-                    self.next_token()
-            
-            # Check for array declaration (clust keyword)
-            is_array = False
-            if self.current_token is not None and self.current_token[1] == 'clust':
-                is_array = True
-                print("DEBUG: Detected array declaration (clust keyword)")
-                self.next_token()  # Move past 'clust'
-                
-                # Skip spaces after clust keyword
-                while self.current_token is not None and self.current_token[1] == 'space':
-                    self.next_token()
-                        
-            # Now get the data type
-            if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
-                self.errors.append(f"Semantic Error: Expected data type, found {self.current_token}")
-                print(f"DEBUG: Error - Invalid data type: {self.current_token}")
-                return
-                    
-            var_type = self.current_token[1]
-            print(f"DEBUG: Detected type: {var_type}")
-            self.next_token()  # Move past type
-
-            # Skip spaces
+            # Skip spaces after clust keyword
             while self.current_token is not None and self.current_token[1] == 'space':
                 self.next_token()
                     
+        # Now get the data type
+        if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
+            self.errors.append(f"Semantic Error: Expected data type, found {self.current_token}")
+            print(f"DEBUG: Error - Invalid data type: {self.current_token}")
+            return
+                
+        var_type = self.current_token[1]
+        print(f"DEBUG: Detected type: {var_type}")
+        self.next_token()  # Move past type
+
+        # Skip spaces
+        while self.current_token is not None and self.current_token[1] == 'space':
+            self.next_token()
+        
+        # Process variables (potentially multiple in a single line)
+        while True:
             # Get variable name
             if self.current_token is None or self.current_token[1] != 'Identifier':
                 self.errors.append(f"Semantic Error: Expected identifier after type declaration, found {self.current_token}")
@@ -525,9 +527,29 @@ class SemanticAnalyzer:
             if var_name in self.symbol_table:
                 self.errors.append(f"Semantic Error: Variable '{var_name}' already declared")
                 print(f"DEBUG: Error - Variable redeclaration: {var_name}")
-                # Return early to prevent processing the redeclared variable
-                return
+                # Continue to next variable instead of returning
+                self.next_token()  # Move past identifier
+                
+                # Skip to comma or semicolon
+                while (self.current_token is not None and 
+                    self.current_token[0] != ',' and 
+                    self.current_token[0] != ';'):
+                    self.next_token()
                     
+                # If we found a comma, continue to next variable
+                if self.current_token is not None and self.current_token[0] == ',':
+                    self.next_token()  # Move past comma
+                    # Skip spaces after comma
+                    while self.current_token is not None and self.current_token[1] == 'space':
+                        self.next_token()
+                    continue
+                # If we found a semicolon, end declaration
+                elif self.current_token is not None and self.current_token[0] == ';':
+                    self.next_token()  # Move past semicolon
+                    return
+                else:
+                    return  # End of tokens
+            
             self.next_token()  # Move past identifier
 
             # Set default value based on type
@@ -544,8 +566,7 @@ class SemanticAnalyzer:
             
             print(f"DEBUG: Default value for type {var_type}: {default_value}")
             
-            # REPLACE THIS SECTION: Check for array size declaration [size]
-            # NEW CODE: Check for array size declaration [size][size]...
+            # Check for array size declaration [size][size]...
             declared_sizes = []
             if is_array:
                 while self.current_token is not None and self.current_token[0] == '[':
@@ -584,8 +605,7 @@ class SemanticAnalyzer:
                 dimensions = len(declared_sizes)
                 print(f"DEBUG: Array has {dimensions} dimensions with sizes: {declared_sizes}")
             
-            # REPLACE THIS SECTION: Add to symbol table
-            # NEW CODE: Add to symbol table with multi-dimensional support
+            # Add to symbol table with multi-dimensional support
             if is_array:
                 print(f"DEBUG: Adding array '{var_name}' to symbol table with element type {var_type} and sizes {declared_sizes}")
                 self.symbol_table[var_name] = {
@@ -604,8 +624,7 @@ class SemanticAnalyzer:
                     'value': default_value
                 }
             
-            # REPLACE THIS SECTION: Check for assignment
-            # NEW CODE: Check for assignment with multi-dimensional array support and type checking
+            # Check for assignment with multi-dimensional array support and type checking
             if self.current_token is not None and self.current_token[0] == '=':
                 print("DEBUG: Detected assignment operator")
                 self.next_token()  # Move past '='
@@ -759,7 +778,7 @@ class SemanticAnalyzer:
                         
                             
                         # For quant type, expect float
-                        elif var_type == 'quant' and (self.current_token is None or self.current_token[1] != 'numlit'):
+                        elif var_type == 'quant' and (self.current_token is None or self.current_token[1] != 'numlit' or self.current_token[1] != '('):
                             self.errors.append(f"Semantic Error: Expected numeric value for quant variable '{var_name}'")
                             print(f"DEBUG: Error - Invalid value for quant variable: {self.current_token}")
                             
@@ -803,8 +822,7 @@ class SemanticAnalyzer:
                     
                     self.next_token()  # Move past value
             elif is_array and declared_sizes:
-                # REPLACE THIS SECTION: Default initialization for arrays with size declarations
-                # NEW CODE: Default initialization for multi-dimensional arrays
+                # Default initialization for multi-dimensional arrays
                 def create_default_array(level):
                     if level >= len(declared_sizes) - 1:
                         # At the deepest level, create an array of default values
@@ -817,19 +835,48 @@ class SemanticAnalyzer:
                 default_array = create_default_array(0)
                 self.symbol_table[var_name]['value'] = default_array
                 print(f"DEBUG: Initialized multi-dimensional array '{var_name}' with default values")
-                
-            # Continue parsing until semicolon
-            while self.current_token is not None and self.current_token[0] != ';':
+            
+            # Check for comma (multiple variables) or semicolon (end of declaration)
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
                 self.next_token()
                 
-            if self.current_token is not None and self.current_token[0] == ';':
+            # Check for comma or semicolon
+            if self.current_token is None:
+                print("DEBUG: Unexpected end of tokens in declaration")
+                return
+                
+            if self.current_token[0] == ',':
+                print("DEBUG: Found comma, processing next variable")
+                self.next_token()  # Move past comma
+                
+                # Skip spaces after comma
+                while self.current_token is not None and self.current_token[1] == 'space':
+                    self.next_token()
+                    
+                # Continue to process next variable
+                continue
+                
+            elif self.current_token[0] == ';':
                 print("DEBUG: Found semicolon at end of declaration")
                 self.next_token()  # Move past semicolon
-            else:
-                print(f"DEBUG: Warning - Missing semicolon at end of declaration: {self.current_token}")
+                return
                 
-            print(f"DEBUG: Completed declaration of {'array' if is_array else 'variable'} '{var_name}'")
-            print(f"DEBUG: Final symbol table state for {var_name}: {self.symbol_table[var_name]}")
+            else:
+                print(f"DEBUG: Warning - Expected comma or semicolon, found: {self.current_token}")
+                # Continue parsing until semicolon
+                while self.current_token is not None and self.current_token[0] != ';':
+                    self.next_token()
+                    
+                if self.current_token is not None and self.current_token[0] == ';':
+                    print("DEBUG: Found semicolon at end of declaration")
+                    self.next_token()  # Move past semicolon
+                else:
+                    print(f"DEBUG: Warning - Missing semicolon at end of declaration: {self.current_token}")
+                
+                return
+                
+        print(f"DEBUG: Completed declaration statement")
         
     def if_statement(self):
         """Parse if statement, checking condition and body"""
