@@ -1119,7 +1119,7 @@ def parseSyntax(tokens, output_text):
 
             if not is_token(tokens, start_idx, ')'):
                 print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis in express statement\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis or math op in express statement\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
                 
@@ -3180,7 +3180,6 @@ def parseSyntax(tokens, output_text):
                 # Check for closing parenthesis
                 if is_token(tokens, start_idx, ')'):
                     print(f"[DEBUG] Found matching ')' at index {start_idx}")
-                    output_text.insert(tk.END, ")")
                     return True, start_idx + 1  # Move past the closing parenthesis
                 else:
                     output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis\n")
