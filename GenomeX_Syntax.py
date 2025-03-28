@@ -320,7 +320,24 @@ def parseSyntax(tokens, output_text):
 
             def user_defined_function(tokens, start_idx):
                 print("Parsing user defined function...")
+                # Find which display line contains this token
+                current_token = tokens[start_idx] if start_idx < len(tokens) else None
 
+                matching_line = None
+                for line in display_lines:
+                    if current_token in line["tokens"]:
+                        matching_line = line
+                        break
+                
+                # If we found a matching line, use its line number, otherwise fall back to get_line_number
+                if matching_line:
+                    line_number = matching_line["line_number"]
+                    line_tokens = matching_line["tokens"]
+                    line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])  # Format without spaces
+                else:
+                    line_number = get_line_number(tokens, start_idx)
+                    line_tokens = []
+                    line_text = ""
                 start_idx = skip_spaces(tokens, start_idx)
                 
                 # Check if the next token is 'void' (optional)
@@ -390,6 +407,9 @@ def parseSyntax(tokens, output_text):
                     # Important: Return False if no statements were found in the function body
                     if not check_statements:
                         print("Error: No statements found in user defined function")
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected '_L' before keyword\n")
+                        output_text.insert(tk.END, f"Expected valid statements in user defined\n")
+
                         program.user_defined_function_error = True  # Mark that a user-defined function has an error
                         return False, None
                     
@@ -465,6 +485,8 @@ def parseSyntax(tokens, output_text):
                         # Important: Return False if no statements were found in the function body
                         if not check_statements:
                             print("Error: No statements found in main function")
+                            output_text.insert(tk.END, f"Expected valid statements in main function\n")
+
                             return False, None
                         return True, start_idx + 1
                     else:
@@ -739,19 +761,69 @@ def parseSyntax(tokens, output_text):
         @staticmethod
         def func_calling(tokens, start_idx):
             print(f"DEBUG: Starting function_calling at index {start_idx}")
+            
+            # Get the token at start_idx to find its position in the original token list
+            current_token = tokens[start_idx] if start_idx < len(tokens) else None
+                    
+            # Find which display line contains this token
+            matching_line = None
+            for line in display_lines:
+                if current_token in line["tokens"]:
+                    matching_line = line
+                    break
+                    
+            # If we found a matching line, use its line number, otherwise fall back to get_line_number
+            if matching_line:
+                line_number = matching_line["line_number"]
+                line_tokens = matching_line["tokens"]
+                line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])  # Format without spaces
+            else:
+                line_number = get_line_number(tokens, start_idx)
+                line_tokens = []
+                line_text = ""
+                
             start_idx = skip_spaces(tokens, start_idx)
 
             # Ensure we have a valid identifier
             if not (start_idx < len(tokens) and is_token(tokens, start_idx, "Identifier")):
                 print(f"Error: Expected identifier after 'func' at index {start_idx}")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier after 'func'\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, start_idx
 
             func_name = tokens[start_idx]  # Store function name
             start_idx += 1  # Move past identifier
             start_idx = skip_spaces(tokens, start_idx)
 
+            # Check if this is a function with parameters in parentheses
+            if start_idx < len(tokens) and is_token(tokens, start_idx, "("):
+                print(f"Found function call with parameters: {func_name}")
+                start_idx += 1  # Move past '('
+                start_idx = skip_spaces(tokens, start_idx)
+                
+                # Parse parameters
+                is_valid, params, new_idx = parameters.parse_params(tokens, start_idx)
+                if not is_valid:
+                    print(f"Error: Invalid parameters in function call at index {start_idx}")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Invalid parameters in function call\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    program.user_defined_function_error = True  # Mark that a user-defined function has an error
+                    return False, start_idx
+                
+                start_idx = new_idx  # Update index after parsing parameters
+                start_idx = skip_spaces(tokens, start_idx)
+                
+                # Check for closing parenthesis
+                if not (start_idx < len(tokens) and is_token(tokens, start_idx, ")")):
+                    print(f"Error: Expected ')' at index {start_idx}")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    return False, start_idx
+                
+                start_idx += 1  # Move past ')'
+                start_idx = skip_spaces(tokens, start_idx)
             # Check if this is a function reassignment
-            if start_idx < len(tokens) and is_token(tokens, start_idx, "="):
+            elif start_idx < len(tokens) and is_token(tokens, start_idx, "="):
                 print(f"Found function reassignment for {func_name}")
                 start_idx += 1  # Move past '='
                 start_idx = skip_spaces(tokens, start_idx)
@@ -759,6 +831,8 @@ def parseSyntax(tokens, output_text):
                 # Ensure valid identifier after '='
                 if not (start_idx < len(tokens) and is_token(tokens, start_idx, "Identifier")):
                     print(f"Error: Expected identifier after '=' at index {start_idx}")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier after '='\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, start_idx
 
                 assigned_func = tokens[start_idx]
@@ -769,12 +843,14 @@ def parseSyntax(tokens, output_text):
             # Check for semicolon at the end
             if not (start_idx < len(tokens) and is_token(tokens, start_idx, ";")):
                 print(f"Error: Expected ';' at index {start_idx}")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a semicolon\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, start_idx
 
             print(f"Valid function call: {func_name}")
             start_idx += 1  # Move past ';'
             return True, start_idx
-                
+        
         @staticmethod
         def if_statement(tokens, start_idx):
             # Get the token at start_idx to find its position in the original token list
@@ -1786,6 +1862,7 @@ def parseSyntax(tokens, output_text):
                         line_number = get_line_number(tokens, start_idx)
                         line_tokens = []
                         line_text = ""
+                    start_idx = skip_spaces(tokens, start_idx)
 
                     # First identifier check
                     if not is_token(tokens, start_idx, 'Identifier'):
@@ -1818,7 +1895,7 @@ def parseSyntax(tokens, output_text):
                                         # If arithmetic sequence parsing fails, check number sign and use the numlit
                                         number_sign = check_number_sign(tokens[start_idx])
                                         if number_sign in {"quantval", "nequantliteral"}:
-                                            output_text.insert(tk.END, f"Datatype error at line {line_number}: Expected an dose\n")
+                                            output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected an dose\n")
                                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                             return False, None
                                         start_idx += 1
@@ -1826,7 +1903,7 @@ def parseSyntax(tokens, output_text):
                                     # If the next token is not a math_operator, check number sign and use the numlit
                                     number_sign = check_number_sign(tokens[start_idx])
                                     if number_sign in {"quantval", "nequantliteral"}:
-                                        output_text.insert(tk.END, f"Datatype error at line {line_number}: Expected an dose\n")
+                                        output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected an dose\n")
                                         output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                         return False, None
                                     start_idx += 1
@@ -1862,7 +1939,7 @@ def parseSyntax(tokens, output_text):
                             return True, start_idx + 1
                         
                         if not is_token(tokens, start_idx, ','):
-                            output_text.insert(tk.END, f"Datatype error at line {line_number}: Expected a comma\n")
+                            output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected a comma\n")
                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
                         
@@ -1872,7 +1949,7 @@ def parseSyntax(tokens, output_text):
                         
                         # Next identifier
                         if not is_token(tokens, start_idx, 'Identifier'):
-                            output_text.insert(tk.END, f"Datatype error at line {line_number}: Expected an Identifier\n")
+                            output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected an Identifier\n")
                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
                         start_idx += 1
@@ -1900,6 +1977,8 @@ def parseSyntax(tokens, output_text):
                 line_number = get_line_number(tokens, start_idx)
                 line_tokens = []
                 line_text = ""
+
+            start_idx = skip_spaces(tokens, start_idx)
 
             # First identifier check
             if not is_token(tokens, start_idx, 'Identifier'):
@@ -1970,6 +2049,8 @@ def parseSyntax(tokens, output_text):
                 line_number = get_line_number(tokens, start_idx)
                 line_tokens = []
                 line_text = ""
+
+            start_idx = skip_spaces(tokens, start_idx)
 
             # First identifier check
             if not is_token(tokens, start_idx, 'Identifier'):
@@ -2043,6 +2124,7 @@ def parseSyntax(tokens, output_text):
                         line_number = get_line_number(tokens, start_idx)
                         line_tokens = []
                         line_text = ""
+                    start_idx = skip_spaces(tokens, start_idx)
 
                     # First identifier check
                     if not is_token(tokens, start_idx, 'Identifier'):
@@ -2075,7 +2157,7 @@ def parseSyntax(tokens, output_text):
                                         # If arithmetic sequence parsing fails, check number sign and use the numlit
                                         number_sign = check_number_sign(tokens[start_idx])
                                         if number_sign in {"doseliteral", "neliteral"}:
-                                            output_text.insert(tk.END, f"Datatype error at line {line_number}: Expected a quant\n")
+                                            output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected a quant\n")
                                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                             return False, None
                                         start_idx += 1
@@ -2083,7 +2165,7 @@ def parseSyntax(tokens, output_text):
                                     # If the next token is not a math_operator, check number sign and use the numlit
                                     number_sign = check_number_sign(tokens[start_idx])
                                     if number_sign in {"doseliteral", "neliteral"}:
-                                        output_text.insert(tk.END, f"Datatype error at line {line_number}: Expected an quant\n")
+                                        output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected an quant\n")
                                         output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                         return False, None
                                     start_idx += 1
@@ -3225,7 +3307,7 @@ def parseSyntax(tokens, output_text):
                 line_tokens = []
                 line_text = ""
             
-            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a math operator\n")
+            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a math operator or semicolon\n")
             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
             return False, start_idx
 
@@ -3233,7 +3315,24 @@ def parseSyntax(tokens, output_text):
         @staticmethod
         def parse_params(tokens, start_idx):
             print("Parsing parameters...")
-
+            current_token = tokens[start_idx] if start_idx < len(tokens) else None
+            
+            # Find which display line contains this token
+            matching_line = None
+            for line in display_lines:
+                if current_token in line["tokens"]:
+                    matching_line = line
+                    break
+            
+            # If we found a matching line, use its line number, otherwise fall back to get_line_number
+            if matching_line:
+                line_number = matching_line["line_number"]
+                line_tokens = matching_line["tokens"]
+                line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])  # Format without spaces
+            else:
+                line_number = get_line_number(tokens, start_idx)
+                line_tokens = []
+                line_text = ""
             param_types = {"dose", "quant", "seq", "allele"}
             params = []
             start_idx = skip_spaces(tokens, start_idx)
@@ -3247,6 +3346,8 @@ def parseSyntax(tokens, output_text):
                 # Check if the current token is a valid parameter type
                 if tokens[start_idx][0] not in param_types:
                     print(f"Error: Expected parameter type at index {start_idx}, found {tokens[start_idx]}")
+                    output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected an data type\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None, start_idx
 
                 param_type = tokens[start_idx][0]
@@ -3256,6 +3357,8 @@ def parseSyntax(tokens, output_text):
                 # Check if Identifier follows the parameter type
                 if start_idx >= len(tokens) or tokens[start_idx][1] != "Identifier":
                     print(f"Error: Expected Identifier after parameter type '{param_type}' at index {start_idx}")
+                    output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected an Identifier\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None, start_idx
 
                 param_id = tokens[start_idx][0]
@@ -4061,7 +4164,6 @@ def parseSyntax(tokens, output_text):
                         if is_valid:
                             is_valid_quantval = variables.validate_quantval(line_tokens, next_idx)
                             if is_valid_quantval:
-                                valid_line = True
                                 number_sign = sign
                             break
 
@@ -4069,7 +4171,6 @@ def parseSyntax(tokens, output_text):
                         if is_valid:
                             is_valid_doseval = variables.validate_doseval(line_tokens, next_idx)
                             if is_valid_doseval:
-                                valid_line = True
                                 number_sign = sign
                             break
 
@@ -4077,15 +4178,13 @@ def parseSyntax(tokens, output_text):
                         if is_valid:
                             is_valid_alleleval = variables.validate_alleleval(line_tokens, next_idx)
                             if is_valid_alleleval:
-                                valid_line = True
-                            break
+                                break
 
                     elif data_type == 'seq':
                         if is_valid:
                             is_valid_seqval = variables.validate_seqval(line_tokens, next_idx)
                             if is_valid_seqval:
-                                valid_line = True
-                            break
+                                break
 
                     elif data_type == 'clust':
                         print("pasok sa global clust")
@@ -4101,7 +4200,6 @@ def parseSyntax(tokens, output_text):
                                 if is_valid:
                                     is_valid_quantval = variables.validate_quantval(line_tokens, next_idx)
                                     if is_valid_quantval:
-                                        valid_line = True
                                         number_sign = sign
                                     break
 
@@ -4109,7 +4207,6 @@ def parseSyntax(tokens, output_text):
                                 if is_valid:
                                     is_valid_doseval = variables.validate_doseval(line_tokens, next_idx)
                                     if is_valid_doseval:
-                                        valid_line = True
                                         number_sign = sign
                                     break
 
@@ -4117,15 +4214,13 @@ def parseSyntax(tokens, output_text):
                                 if is_valid:
                                     is_valid_alleleval = variables.validate_alleleval(line_tokens, next_idx)
                                     if is_valid_alleleval:
-                                        valid_line = True
-                                    break
+                                        break
 
                             elif data_type == 'seq':
                                 if is_valid:
                                     is_valid_seqval = variables.validate_seqval(line_tokens, next_idx)
                                     if is_valid_seqval:
-                                        valid_line = True
-                                    break
+                                        break
 
                             if is_valid_perms:
                                 valid_line = True
