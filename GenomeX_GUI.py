@@ -1,9 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
 # from PIL import Image, ImageTk
-from GenomeX_Lexer import display_lexical_error, parseLexer
+from GenomeX_Lexer import display_lexical_error, parseLexer, display_lexical_pass
 import GenomeX_Lexer
 import GenomeX_Syntax  # Add this import
+import GenomX_Semantic  # Add this import
 
 # Create the main application window
 root = tk.Tk()
@@ -73,7 +74,6 @@ text_editor = tk.Text(editor_frame, wrap=tk.NONE, yscrollcommand=editor_scrollba
 text_editor.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
 # Insert default text into the text editor
-# text_editor.insert("1.0", "")
 text_editor.insert("1.0", "act gene () {\n\n\n\n\n}")
 
 # Configure vertical scrollbar
@@ -103,11 +103,13 @@ def clear_editor():
     text_editor.delete(1.0, tk.END)
     tree.delete(*tree.get_children())
     lexical_panel.delete(1.0, tk.END)
+    syntax_panel.delete(1.0, tk.END)
+    semantic_panel.delete(1.0, tk.END)
     update_line_numbers()
 
 # Buttons (Run & Clear)
 bottom_frame = ttk.Frame(root)
-bottom_frame.pack(fill=tk.X, pady=10, padx=20)
+bottom_frame.pack(fill=tk.X, pady=10,  padx=20)
 
 btn_clear = ttk.Button(bottom_frame, text="Clear", width=10, command=clear_editor)
 btn_clear.pack(side=tk.RIGHT, padx=10)
@@ -148,7 +150,7 @@ def highlight_errors(text_editor, line_number, lexeme):
         start_idx = text_content.index(lexeme)
         text_editor.tag_add("error", f"{line_number}.{start_idx}", f"{line_number}.{start_idx + len(lexeme)}")
     else:
-        text_editor.tag_add("error", start_index, end_index)  # Highlight full line if lexeme isn't found
+        text_editor.tag_add("error", start_index, end_index)  # Highligz    ht full line if lexeme isn't found
     
     text_editor.tag_config("error", foreground="red", underline=True)
 
@@ -163,27 +165,41 @@ def run_analysis():
     tree.delete(*tree.get_children())
     lexical_panel.delete("1.0", tk.END)
     syntax_panel.delete("1.0", tk.END)
+    semantic_panel.delete("1.0", tk.END)
 
     # Inject lexical_panel into the Lexer module so errors can be displayed
     GenomeX_Lexer.lexical_panel = lexical_panel  
 
     # Run Lexer and get tokens
-    tokens = GenomeX_Lexer.parseLexer(input_text)
+    tokens, found_error  = GenomeX_Lexer.parseLexer(input_text)
     
-    if  not tokens:
+    if found_error or not tokens:
         display_lexical_error("No tokens found or input is invalid.")
         # For errors, switch to lexical tab to show the error message
         notebook.select(0)
+        # Display valid tokens in the lexical tokenization table
+        for idx, (lexeme, token) in enumerate(tokens):
+            tree.insert("", "end", values=(idx + 1, lexeme, token))
         
     else:
         for idx, (lexeme, token) in enumerate(tokens):
             tree.insert("", "end", values=(idx + 1, lexeme, token))
         
+        display_lexical_pass("You are lexer free!")
+
         # After successful lexical analysis, run syntax analysis
-        GenomeX_Syntax.parseSyntax(tokens, syntax_panel)
+        syntax_errors = GenomeX_Syntax.parseSyntax(tokens, syntax_panel)
         
-        # Return to the tab that was previously selected
-        notebook.select(current_tab)
+        if not syntax_errors:
+            # After successful syntax analysis, run semantic analysis
+            semantic_success = GenomX_Semantic.parseSemantic(tokens, semantic_panel)
+            
+            if not semantic_success:
+                # If there are semantic errors, switch to semantic tab
+                notebook.select(2)  # Index 2 is the semantic tab
+            else:
+                # Return to the tab that was previously selected if no errors
+                notebook.select(current_tab)
 
 btn_run.config(command=run_analysis)
 
@@ -231,7 +247,7 @@ def apply_light_mode():
     semantic_panel.configure(background="#FFFFFF", foreground="black")
 
 # settings_button.config(command=lambda: apply_light_mode() if text_editor.cget("background") == "#1F1F1F" else apply_dark_mode())
-apply_dark_mode()  # Default theme
+apply_light_mode()  # Default theme
 
 # Run the application
 root.mainloop()
