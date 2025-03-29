@@ -1,3 +1,4 @@
+
 import re
 import GenomeX_Lexer as gxl
 import GenomeX_Syntax as gxs
@@ -124,6 +125,8 @@ class SemanticAnalyzer:
                 self.function_declaration()
             elif self.current_token[1] == 'comment':
                 self.next_token()
+            elif self.current_token[1] == 'func':
+                self.next_token()
             elif self.current_token[1] == None:
                 self.next_token()
             else:
@@ -197,8 +200,8 @@ class SemanticAnalyzer:
             self.next_token()  # Move past '['
             
             # Get size value
-            if self.current_token is None or self.current_token[1] != 'numlit' or '.' in self.current_token[0]:
-                self.errors.append(f"Semantic Error: Expected integer value for array size, found {self.current_token}")
+            if self.current_token is None or (self.current_token[1] != 'numlit' and self.current_token[1] != 'identifier') or (self.current_token[1] == 'numlit' and '.' in self.current_token[0]):
+                self.errors.append(f"Semantic Error: Expected integer value or identifier for array size, found {self.current_token}")
                 return
                 
             try:
