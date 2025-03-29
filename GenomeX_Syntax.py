@@ -802,16 +802,16 @@ def parseSyntax(tokens, output_text):
                 start_idx = skip_spaces(tokens, start_idx)
                 
                 # Parse parameters
-                is_valid, params, new_idx = parameters.parse_params(tokens, start_idx)
+                is_valid, params, new_idx = parameters.parse_params2(tokens, start_idx)
                 if not is_valid:
                     print(f"Error: Invalid parameters in function call at index {start_idx}")
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Invalid parameters in function call\n")
-                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     program.user_defined_function_error = True  # Mark that a user-defined function has an error
                     return False, start_idx
                 
                 start_idx = new_idx  # Update index after parsing parameters
                 start_idx = skip_spaces(tokens, start_idx)
+                start_idx += 1  # Move past '='
+
                 
                 # Check for closing parenthesis
                 if not (start_idx < len(tokens) and is_token(tokens, start_idx, ")")):
@@ -2278,29 +2278,35 @@ def parseSyntax(tokens, output_text):
             line_number, line_text = get_current_line_info(start_idx)
 
             # Check for dimension size
-            if not is_token(tokens, start_idx, 'numlit'):
-                print(f"DEBUG: Expected numlit at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an numlit\n")
+            if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier')):
+                print(f"DEBUG: Expected numlit or identifier at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a numlit or identifier\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
 
             literal = tokens[start_idx]
-            number_sign = check_number_sign(literal)
-            print(f"DEBUG: Found numlit: {literal}, number_sign: {number_sign}")
-            
-            if number_sign not in {'doseliteral'}:
-                print(f"DEBUG: Invalid number sign: {number_sign}, expected 'doseliteral'")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an doseval\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                return False, None
+            start_idx = skip_spaces(tokens, start_idx)
+
             start_idx += 1
 
+            # Only check number sign if it's a numlit
+            if is_token(tokens, start_idx - 1, 'numlit'):
+                number_sign = check_number_sign(literal)
+                print(f"DEBUG: Found numlit: {literal}, number_sign: {number_sign}")
+                
+                if number_sign not in {'doseliteral'}:
+                    print(f"DEBUG: Invalid number sign: {number_sign}, expected 'doseliteral'")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an doseval\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    return False, None
             start_idx = skip_spaces(tokens, start_idx)
+
             print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
             
             # Update line info before checking for closing bracket
             line_number, line_text = get_current_line_info(start_idx)
 
+            start_idx = skip_spaces(tokens, start_idx)
             # Check for closing bracket
             if not is_token(tokens, start_idx, ']'):
                 print(f"DEBUG: Expected ']' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
@@ -2787,7 +2793,7 @@ def parseSyntax(tokens, output_text):
                     number_sign = check_number_sign(literal)
                     print(f"DEBUG: Found array value: {literal}, number_sign: {number_sign}")
 
-                    if number_sign not in {'quantval', 'nequantliteral'}:
+                    if number_sign not in {'doseliteral', 'neliteral'}:
                         print(f"DEBUG: Invalid number sign: {number_sign}, expected 'doseliteral'")
                         output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a doseliteral or neliteral\n")
                         output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
@@ -3375,6 +3381,53 @@ def parseSyntax(tokens, output_text):
 
             print(f"Completed parsing parameters: {params}")
             return True, params, start_idx
+
+        def parse_params2(tokens, start_idx):
+            print("Parsing parameters...")
+            current_token = tokens[start_idx] if start_idx < len(tokens) else None
+            
+            # Find which display line contains this token
+            matching_line = None
+            for line in display_lines:
+                if current_token in line["tokens"]:
+                    matching_line = line
+                    break
+            
+            # If we found a matching line, use its line number, otherwise fall back to get_line_number
+            if matching_line:
+                line_number = matching_line["line_number"]
+                line_tokens = matching_line["tokens"]
+                line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])  # Format without spaces
+            else:
+                line_number = get_line_number(tokens, start_idx)
+                line_tokens = []
+                line_text = ""
+            params = []
+            start_idx = skip_spaces(tokens, start_idx)
+
+            # Check if Identifier follows the parameter type
+            while True:
+                if not is_token(tokens, start_idx, 'Identifier'):
+                    print(f"DEBUG: Expected string literal at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                    return False, None
+
+                start_idx += 1
+
+                start_idx = skip_spaces(tokens, start_idx)
+                print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+
+                if is_token(tokens, start_idx, ','):
+                    print(f"DEBUG: Found comma in array")
+                    start_idx += 1
+                    start_idx = skip_spaces(tokens, start_idx)
+                    print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                else:
+                    print(f"DEBUG: Expected ',' or '}}' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                    return False, None
+
+            print(f"Completed parsing parameters: {params}")
+            return True, params, start_idx
+
 
     class express:
         @staticmethod
