@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 # from PIL import Image, ImageTk
-from GenomeX_Lexer import display_lexical_error, parseLexer, display_lexical_pass
+from GenomeX_Lexer import display_lexical_error, parseLexer
 import GenomeX_Lexer
 import GenomeX_Syntax  # Add this import
 import GenomX_Semantic  # Add this import
@@ -10,7 +11,14 @@ import GenomX_Semantic  # Add this import
 root = tk.Tk()
 root.title("GenomeX 🧬")
 root.geometry("1440x1024")
-
+import re
+import GenomeX_Lexer as gxl
+import GenomeX_Syntax as gxs
+import tkinter as tk
+from tkinter import scrolledtext
+from tkinter import ttk
+import sys
+from itertools import chain
 # Load icons
 # settings_icon = ImageTk.PhotoImage(Image.open("settings_icon.png").resize((40, 40)))
 # genome_icon = ImageTk.PhotoImage(Image.open("genome_icon.png").resize((50, 50)))
@@ -74,7 +82,8 @@ text_editor = tk.Text(editor_frame, wrap=tk.NONE, yscrollcommand=editor_scrollba
 text_editor.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
 # Insert default text into the text editor
-text_editor.insert("1.0", "act gene () {\n\n\n\n\n}")
+text_editor.insert("1.0", "")
+# text_editor.insert("1.0", "act gene () {\n\n\n\n\n}")
 
 # Configure vertical scrollbar
 editor_scrollbar.config(command=on_text_scroll)
@@ -185,12 +194,13 @@ def run_analysis():
         for idx, (lexeme, token) in enumerate(tokens):
             tree.insert("", "end", values=(idx + 1, lexeme, token))
         
-        display_lexical_pass("You are lexer free!")
-
         # After successful lexical analysis, run syntax analysis
         syntax_errors = GenomeX_Syntax.parseSyntax(tokens, syntax_panel)
         
-        if not syntax_errors:
+        if syntax_errors:
+            # If there are syntax errors, switch to syntax tab
+            notebook.select(1)  # Index 1 is the syntax tab
+        else:
             # After successful syntax analysis, run semantic analysis
             semantic_success = GenomX_Semantic.parseSemantic(tokens, semantic_panel)
             
@@ -246,6 +256,23 @@ def apply_light_mode():
     syntax_panel.configure(background="#FFFFFF", foreground="black")
     semantic_panel.configure(background="#FFFFFF", foreground="black")
 
+# Define the undo function
+def undo_text():
+    try:
+        text_editor.edit_undo()
+        update_line_numbers()
+    except tk.TclError:
+        messagebox.showinfo("Undo", "Nothing to undo")
+
+# Add undo keybinding 
+text_editor.bind("<Control-z>", lambda event: undo_text())
+
+# Add undo button
+btn_undo = ttk.Button(bottom_frame, text="Undo", width=10, command=undo_text)
+btn_undo.pack(side=tk.RIGHT, padx=10)
+
+# Add undo capability to the text widget
+text_editor.config(undo=True, maxundo=-1, autoseparators=True)
 # settings_button.config(command=lambda: apply_light_mode() if text_editor.cget("background") == "#1F1F1F" else apply_dark_mode())
 apply_light_mode()  # Default theme
 
