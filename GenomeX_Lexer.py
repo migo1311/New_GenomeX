@@ -85,7 +85,7 @@ def parseLexer(input_stream):
     delim_add = {'"', ' ', '^', '(', } 
     delim_string = {' ', '\n', ',', '}', ')', '+', '\t', ';'} 
     delim_update = {' ', ';', ')'} 
-    delim_id = {' ', '=', '<', '>', ';', '!', '[', '(', '&', '|', '*', ',', ')', '/', '+', ':', ']'}
+    delim_id = {' ', '=', '<', '>', ';', '!', '[', '(', '&', '|', '*', ',', ')', '/', ':', ']'}
     delim_logic = {' ', '(', '^'} | allval | upchar
     delim_comp = {' ', '(', '^'} 
     period_delim = {' ', '(', '^'} | allval | upchar
@@ -97,7 +97,7 @@ def parseLexer(input_stream):
     close_braces_delim = {' ', '\n', '#', "{", ",", ";"}
     open_bracket_delim = value
     close_bracket_delim = {' ', '=', '[', ',', ';'}
-    delim_num = {'+', '-', '*', '/', '%', '<', '>', '=', ' ', '#', ')', '}', '&', '|', ";", "]", ",", ':'}
+    delim_num = { '*', '/', '%', '<', '>', '=', ' ', '#', ')', '}', '&', '|', ";", "]", ",", ':'}
     delim_comment = {' ', '\n'}
     lookahead_char = None
     token = None
@@ -176,7 +176,7 @@ def parseLexer(input_stream):
                     lexeme = ""
                     state = 0
                 else:
-                    print("ERROR IN STATE 113")
+                    print("ERROR IN STATE 460")
                     state = 1000  # Reset state to recover
 
             elif token == '_':
@@ -278,6 +278,7 @@ def parseLexer(input_stream):
                     display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
                     state = 1000
                     lexeme = ""
+
             elif token == '+':
                 state = 113
                 lexeme = token 
@@ -289,6 +290,10 @@ def parseLexer(input_stream):
                     state = 115
                 elif lookahead_char == '=':
                     state = 117
+                elif lookahead_char in allchar or allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
                 else:
                     print("ERROR IN STATE 113")
                     state = 1000  # Reset state to recover
@@ -569,8 +574,13 @@ def parseLexer(input_stream):
                 elif lookahead_char in valchar or lookahead_char in underscore:
                     state = 181
                 elif lookahead_char == "+":
-                    state = 115
-
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char == "-":
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
                 else:
                     print("ERROR IN STATE 179")
                     state = 1000  # Reset state to recover
@@ -595,8 +605,16 @@ def parseLexer(input_stream):
                     state = 228
                     tokens.append((lexeme, "numlit"))
                     lexeme = ""
-                elif lookahead_char in allval:  # Allow ^ or numbers to follow
+                elif lookahead_char in allval:  # Allow numbers to follow
                     state = 242
+                elif lookahead_char == "+":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+                elif lookahead_char == "-":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
                 elif lookahead_char == '.':
                     state = 229
                 else:
@@ -1672,6 +1690,14 @@ def parseLexer(input_stream):
                 # Check if the lookahead is part of the Identifier
             elif lookahead_char in valchar or lookahead_char in underscore:
                     state = 183  # Continue processing as a valid Identifier
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                     print(f"ERROR IN STATE 181")
                     state = 1000  # Error state
@@ -1682,6 +1708,14 @@ def parseLexer(input_stream):
             lexeme += token
             if token in valchar and token in upchar and token in underscore:
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1702,6 +1736,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1722,6 +1764,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1741,6 +1791,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1760,6 +1818,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1779,6 +1845,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1798,6 +1872,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1817,6 +1899,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1836,6 +1926,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1855,6 +1953,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1874,6 +1980,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1893,6 +2007,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1912,6 +2034,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1931,6 +2061,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1950,6 +2088,15 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+                
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1969,6 +2116,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -1988,6 +2143,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -2007,6 +2170,14 @@ def parseLexer(input_stream):
             if token not in valchar and token not in upchar and token not in underscore:
                 print(f"Invalid token '{token}' for Identifier")
                 state = 1000  # Error state
+            elif lookahead_char == "+":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+            elif lookahead_char == "-":
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
             else:
                 # Check for valid ending of an Identifier
                 if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
@@ -2167,7 +2338,15 @@ def parseLexer(input_stream):
             print("Passed state 242")
             lexeme += token
             # Check if the next character is within ASCII range or is a delimiter, or is None or newline
-            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":  
+            if lookahead_char == "+":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+            elif lookahead_char == "-":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+            elif lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":  
                 print("Passed state 243")      
                 state = 243  # End state for string literal processing
                 tokens.append((lexeme, "numlit"))
@@ -2291,6 +2470,14 @@ def parseLexer(input_stream):
                     state = 258
                     tokens.append((lexeme, "numlit"))
                     lexeme = ""
+            elif lookahead_char == "+":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+            elif lookahead_char == "-":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
             elif lookahead_char == '.':  
                     state = 259
             elif lookahead_char in allval:  
@@ -2406,6 +2593,14 @@ def parseLexer(input_stream):
                     state = 273
                     tokens.append((lexeme, "numlit"))
                     lexeme = ""
+            elif lookahead_char == "+":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+            elif lookahead_char == "-":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
             elif lookahead_char == '.':  
                     state = 274
             elif lookahead_char in allval:  
@@ -2521,6 +2716,14 @@ def parseLexer(input_stream):
                     state = 288
                     tokens.append((lexeme, "numlit"))
                     lexeme = ""
+            elif lookahead_char == "+":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+            elif lookahead_char == "-":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
             elif lookahead_char == '.':  
                     state = 289
             elif lookahead_char in allval:  
@@ -2636,6 +2839,14 @@ def parseLexer(input_stream):
                     state = 303
                     tokens.append((lexeme, "numlit"))
                     lexeme = ""
+            elif lookahead_char == "+":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+            elif lookahead_char == "-":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
             elif lookahead_char == '.':  
                     state = 304
             elif lookahead_char in allval:  
@@ -2751,6 +2962,14 @@ def parseLexer(input_stream):
                     state = 318
                     tokens.append((lexeme, "numlit"))
                     lexeme = ""
+            elif lookahead_char == "+":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+            elif lookahead_char == "-":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
             elif lookahead_char == '.':  
                     state = 319
             elif lookahead_char in allval:  
@@ -2866,6 +3085,14 @@ def parseLexer(input_stream):
                     state = 333
                     tokens.append((lexeme, "numlit"))
                     lexeme = ""
+            elif lookahead_char == "+":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+            elif lookahead_char == "-":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
             elif lookahead_char == '.':  
                     state = 334
             elif lookahead_char in allval:  
@@ -2981,6 +3208,14 @@ def parseLexer(input_stream):
                     state = 348
                     tokens.append((lexeme, "numlit"))
                     lexeme = ""
+            elif lookahead_char == "+":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+            elif lookahead_char == "-":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
             elif lookahead_char == '.':  
                     state = 349
             elif lookahead_char in allval:  
@@ -3096,6 +3331,14 @@ def parseLexer(input_stream):
                     state = 363
                     tokens.append((lexeme, "numlit"))
                     lexeme = ""
+            elif lookahead_char == "+":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+            elif lookahead_char == "-":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
             elif lookahead_char == '.':  
                     state = 364
             elif lookahead_char in allval:  
@@ -3211,6 +3454,14 @@ def parseLexer(input_stream):
                     state = 378
                     tokens.append((lexeme, "numlit"))
                     lexeme = ""
+            elif lookahead_char == "+":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+            elif lookahead_char == "-":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
             elif lookahead_char == '.':  
                     state = 379
             elif lookahead_char in allval:  
@@ -3326,6 +3577,14 @@ def parseLexer(input_stream):
                     state = 393
                     tokens.append((lexeme, "numlit"))
                     lexeme = ""
+            elif lookahead_char == "+":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+            elif lookahead_char == "-":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
             elif lookahead_char == '.':  
                     state = 394
             elif lookahead_char in allval:  
@@ -3441,10 +3700,17 @@ def parseLexer(input_stream):
                     state = 408
                     tokens.append((lexeme, "numlit"))
                     lexeme = ""
+            elif lookahead_char == "+":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
+            elif lookahead_char == "-":
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                        state = 0
             elif lookahead_char == '.':  
                     state = 409
-            # elif lookahead_char in allval:  
-            #         state = 407
+
             else:
                 print(f"ERROR IN STATE 392: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
@@ -3736,11 +4002,9 @@ def parseLexer(input_stream):
                 if token == ' ':
                     tokens.append((token, "space"))
                 elif token == ')':
-                    tokens.append((token, "close parenthesis"))
+                    tokens.append((token, ")"))
                 elif token == ';':
-                    tokens.append((token, "semicolon"))
-                elif token == "Identifier":
-                    tokens.append((token, "Identifier"))
+                    tokens.append((token, ";"))
                 state = 0  # Reset state for the next token
             else:
                 print("WRONG IN DELIM_UPDATE")
