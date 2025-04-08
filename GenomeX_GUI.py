@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 # from PIL import Image, ImageTk
-from GenomeX_Lexer import display_lexical_error, parseLexer
+from GenomeX_Lexer import display_lexical_error, display_lexical_pass
 import GenomeX_Lexer
 import GenomeX_Syntax  # Add this import
 import GenomX_Semantic  # Add this import
@@ -196,6 +196,8 @@ def run_analysis():
         
         # After successful lexical analysis, run syntax analysis
         syntax_errors = GenomeX_Syntax.parseSyntax(tokens, syntax_panel)
+        display_lexical_pass("You are lexer free")
+
         
         if syntax_errors:
             # If there are syntax errors, switch to syntax tab
