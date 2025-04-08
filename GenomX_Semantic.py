@@ -31,74 +31,156 @@ class SemanticAnalyzer:
 
     def parse(self):
         while self.current_token is not None:
-            if self.current_token[1] == 'act':
+            if self.current_token[1] == '_G':
+                self.declaration()
+            elif self.current_token[1] == 'act':
                 self.act_gene_function()
+            elif self.current_token[1] == 'newline':
+                self.next_token()  # Skip newlines
+            elif self.current_token[1] == 'space':
+                self.next_token()
             else:
                 self.errors.append(f"Semantic Error: Unexpected token: {self.current_token[1]}")
                 self.next_token()  # Skip invalid token to continue analysis
 
+    
     def act_gene_function(self):
         print(f"Current token: {self.current_token}")  # Debug print
         self.next_token()  # Move past 'act'
-        print(f"Current token: {self.current_token}")  # Debug print
-
+        
         # Skip Spaces
         while self.current_token is not None and self.current_token[1] == 'space':
             self.next_token()  # Move past space
 
-        # Check for 'gene'
-        if self.current_token is None or self.current_token[1] != 'gene':
-            self.errors.append(f"Semantic Error: Expected 'gene' after 'act', but found {self.current_token}")
+        # Check for 'gene', 'void', or function identifier
+        function_type = None
+        function_name = None
+        
+        if self.current_token is None:
+            self.errors.append("Semantic Error: Unexpected end of tokens after 'act'")
             return
-        self.next_token()  # Move past 'gene'
-        print(f"Current token: {self.current_token}")  # Debug print
-
+            
+        if self.current_token[1] == 'gene':
+            function_type = 'gene'
+            function_name = 'gene'
+            self.next_token()  # Move past 'gene'
+        elif self.current_token[1] == 'void':
+            function_type = 'void'
+            self.next_token()  # Move past 'void'
+            
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+                
+            # Expect identifier
+            if self.current_token is None or self.current_token[1] != 'Identifier':
+                self.errors.append(f"Semantic Error: Expected identifier after 'void', but found {self.current_token}")
+                return
+                
+            function_name = self.current_token[0]
+            self.next_token()  # Move past identifier
+        elif self.current_token[1] == 'Identifier':
+            function_type = 'regular'
+            function_name = self.current_token[0]
+            self.next_token()  # Move past identifier
+        else:
+            self.errors.append(f"Semantic Error: Expected 'gene', 'void', or identifier after 'act', but found {self.current_token}")
+            return
+        
+        print(f"Function type: {function_type}, Function name: {function_name}")
+        
         # Skip Spaces
         while self.current_token is not None and self.current_token[1] == 'space':
             self.next_token()  # Move past space
 
         # Check for '('
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'gene', but found {self.current_token}")
+            self.errors.append(f"Semantic Error: Expected '(' after function name, but found {self.current_token}")
             return
         self.next_token()  # Move past '('
-        print(f"Current token: {self.current_token}")  # Debug print
+        
+        # Parse parameters
+        parameters = []
+        while self.current_token is not None and self.current_token[0] != ')':
+            # Skip spaces and commas
+            while self.current_token is not None and (self.current_token[1] == 'space' or self.current_token[0] == ','):
+                self.next_token()
+                
+            if self.current_token is None or self.current_token[0] == ')':
+                break
+                
+            # Get parameter type
+            if self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
+                self.errors.append(f"Semantic Error: Expected valid type for function parameter, found {self.current_token}")
+                # Skip to next comma or closing parenthesis
+                while self.current_token is not None and self.current_token[0] != ',' and self.current_token[0] != ')':
+                    self.next_token()
+                continue
+                
+            param_type = self.current_token[1]
+            self.next_token()  # Move past type
             
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+            
+            # Get parameter name
+            if self.current_token is None or self.current_token[1] != 'Identifier':
+                self.errors.append(f"Semantic Error: Expected identifier for function parameter, found {self.current_token}")
+                # Skip to next comma or closing parenthesis
+                while self.current_token is not None and self.current_token[0] != ',' and self.current_token[0] != ')':
+                    self.next_token()
+                continue
+                
+            param_name = self.current_token[0]
+            
+            # Add parameter to list
+            parameters.append({
+                'name': param_name,
+                'type': param_type
+            })
+            
+            self.next_token()  # Move past parameter name
+            
+            # If we have more parameters, we should see a comma
+            if self.current_token is not None and self.current_token[0] == ',':
+                self.next_token()  # Move past comma
+            elif self.current_token is not None and self.current_token[0] != ')':
+                self.errors.append(f"Semantic Error: Expected ',' or ')' after parameter, found {self.current_token}")
+        
         # Check for ')'
         if self.current_token is None or self.current_token[0] != ')':
             self.errors.append(f"Semantic Error: Expected ')' after '(', but found {self.current_token}")
             return
         self.next_token()  # Move past ')'
-        print(f"Current token: {self.current_token}")  # Debug print
         
         # Skip Spaces
         while self.current_token is not None and self.current_token[1] == 'space':
             self.next_token()  # Move past space
-    
+
         # Check for '{'
         if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after 'gene()', but found {self.current_token}")
+            self.errors.append(f"Semantic Error: Expected '{{' after function declaration, but found {self.current_token}")
             return
         self.next_token()  # Move past '{'
-        print(f"Current token: {self.current_token}")  # Debug print
         
-        # Skip Spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()  # Move past space
-    
+        # Add function to function table if it's not gene
+        if function_name != 'gene':
+            return_type = 'void' if function_type == 'void' else param_type
+            self.functions[function_name] = {
+                'return_type': return_type,
+                'parameters': parameters  # Now using the parameters list we collected
+            }
+        
         # Parse the body statements
-        self.parse_body_statements()  # Parse the body of the act gene function
+        self.parse_body_statements()  # Parse the function body
         
-        # Skip Spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()  # Move past space
-    
         # Check for '}'
         if self.current_token is None or self.current_token[0] != '}':
-            self.errors.append(f"Semantic Error: Expected '}}' at end of 'act gene' function, but found {self.current_token}")
+            self.errors.append(f"Semantic Error: Expected '}}' at end of function body, but found {self.current_token}")
             return
         self.next_token()  # Move past '}'
-        print(f"Current token: {self.current_token}")  # Debug print
+        print(f"Finished parsing function: {function_name}")
 
     def parse_body_statements(self):
         was_in_loop = self.in_loop  # Save previous loop state
@@ -111,7 +193,7 @@ class SemanticAnalyzer:
             if self.current_token is None or self.current_token[0] == '}':
                 break
                 
-            if self.current_token[0] in ['_L', '_G'] or self.current_token[1] in ['dose', 'quant', 'seq', 'allele']:
+            if self.current_token[0] in ['_L'] or self.current_token[1] in ['dose', 'quant', 'seq', 'allele']:
                 self.declaration()
             elif self.current_token[1] == 'if':
                 self.if_statement()
@@ -139,6 +221,8 @@ class SemanticAnalyzer:
                 self.array_declaration()
             elif self.current_token[1] == 'function':
                 self.function_declaration()
+            elif self.current_token[1] == 'comment':
+                self.next_token()
             else:
                 self.errors.append(f"Semantic Error: Unexpected token '{self.current_token[0]}' in body")
                 self.next_token()  # Skip invalid token
@@ -909,13 +993,14 @@ class SemanticAnalyzer:
                     self.errors.append(f"Semantic Error: For loop update variable must be dose type, found {var_type}")
                     
             self.next_token()  # Move past identifier
-            
-            # Check for ++ or --
-            # Check for ++ or -- which are tokenized as separate + or - tokens
-            if self.current_token is None or self.current_token[0] not in ['+', '-']:
-                self.errors.append(f"Semantic Error: Expected increment/decrement operator in for loop update, found {self.current_token}")
-                self.next_token()  # Skip the current token
-            else:
+
+            # Check for ++ or -- operators which may be tokenized either as '++', '--' or as separate + or - tokens
+            if self.current_token is None:
+                self.errors.append("Semantic Error: Unexpected end of tokens in for loop update")
+            elif self.current_token[0] in ['++', '--']:
+                # Handle pre-tokenized increment/decrement operators
+                self.next_token()  # Move past the operator
+            elif self.current_token[0] in ['+', '-']:
                 # Store the first + or - character
                 first_char = self.current_token[0]
                 self.next_token()  # Move to next token
@@ -929,6 +1014,9 @@ class SemanticAnalyzer:
                     self.errors.append(f"Semantic Error: Expected '{first_char}{first_char}' in for loop update, found incomplete operator")
                 else:
                     self.next_token()  # Move past the second + or - character
+            else:
+                self.errors.append(f"Semantic Error: Expected increment/decrement operator in for loop update, found {self.current_token}")
+                self.next_token()  # Skip the current token
         else:
             self.errors.append(f"Semantic Error: Expected identifier in for loop update, found {self.current_token}")
             
@@ -1269,15 +1357,7 @@ class SemanticAnalyzer:
             else:
                 self.errors.append(f"Semantic Error: Variable '{value_name}' used before declaration")
 
-    def handle_comments(self):
-    # Check if current token is a comment
-     if self.current_token is not None and self.current_token[1] == 'comment':
-        print(f"Skipping comment: {self.current_token[0]}")
-        self.next_token()  # Move past comment token
-        # Continue skipping multiple sequential comments if present
-        while self.current_token is not None and self.current_token[1] == 'comment':
-            print(f"Skipping comment: {self.current_token[0]}")
-            self.next_token()  # Move past additional comment tokens
+    
 
 
 def generate_symtab(parsed_tokens):
