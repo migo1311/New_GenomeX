@@ -1,4 +1,3 @@
-
 import re
 import GenomeX_Lexer as gxl
 import GenomeX_Syntax as gxs
@@ -21,37 +20,55 @@ class SemanticAnalyzer:
         self.next_token()
 
     def next_token(self):
-        # Skip spaces and newlines
-        while (self.token_index < len(self.tokens) and 
-            (self.tokens[self.token_index][1] == "space" or 
-                self.tokens[self.token_index][1] == "newline"
-                )):
-            self.token_index += 1  # Skip spaces and newlines
-        
+        while self.token_index < len(self.tokens) and self.tokens[self.token_index][1] == "space":
+            self.token_index += 1  # Skip spaces
         if self.token_index < len(self.tokens):
             self.current_token = self.tokens[self.token_index]
             self.token_index += 1
         else:
             self.current_token = None
-        print(f"Moved to next token: {self.current_token}")
-    
+        print(f"Moved to next token: {self.current_token}") 
+
     def parse(self):
         while self.current_token is not None:
             if self.current_token[1] == 'act':
                 self.act_gene_function()
-            elif self.current_token[1] == '_G':
-                self.declaration()
-            elif self.current_token[1] not in ['act', '_G']:
-                # If the token is not 'act' or '_G', and not already an error
-                self.act_gene_function()  # Attempt to parse as act by default
             else:
                 self.errors.append(f"Semantic Error: Unexpected token: {self.current_token[1]}")
                 self.next_token()  # Skip invalid token to continue analysis
 
-
     def act_gene_function(self):
         print(f"Current token: {self.current_token}")  # Debug print
         self.next_token()  # Move past 'act'
+        print(f"Current token: {self.current_token}")  # Debug print
+
+        # Skip Spaces
+        while self.current_token is not None and self.current_token[1] == 'space':
+            self.next_token()  # Move past space
+
+        # Check for 'gene'
+        if self.current_token is None or self.current_token[1] != 'gene':
+            self.errors.append(f"Semantic Error: Expected 'gene' after 'act', but found {self.current_token}")
+            return
+        self.next_token()  # Move past 'gene'
+        print(f"Current token: {self.current_token}")  # Debug print
+
+        # Skip Spaces
+        while self.current_token is not None and self.current_token[1] == 'space':
+            self.next_token()  # Move past space
+
+        # Check for '('
+        if self.current_token is None or self.current_token[0] != '(':
+            self.errors.append(f"Semantic Error: Expected '(' after 'gene', but found {self.current_token}")
+            return
+        self.next_token()  # Move past '('
+        print(f"Current token: {self.current_token}")  # Debug print
+            
+        # Check for ')'
+        if self.current_token is None or self.current_token[0] != ')':
+            self.errors.append(f"Semantic Error: Expected ')' after '(', but found {self.current_token}")
+            return
+        self.next_token()  # Move past ')'
         print(f"Current token: {self.current_token}")  # Debug print
         
         # Skip Spaces
@@ -59,11 +76,11 @@ class SemanticAnalyzer:
             self.next_token()  # Move past space
     
         # Check for '{'
-        # if self.current_token is None or self.current_token[0] != '{':
-        #     self.errors.append(f"Semantic Error: Expected '{{' after 'gene()', but found {self.current_token}")
-        #     return
-        # self.next_token()  # Move past '{'
-        # print(f"Current token: {self.current_token}")  # Debug print
+        if self.current_token is None or self.current_token[0] != '{':
+            self.errors.append(f"Semantic Error: Expected '{{' after 'gene()', but found {self.current_token}")
+            return
+        self.next_token()  # Move past '{'
+        print(f"Current token: {self.current_token}")  # Debug print
         
         # Skip Spaces
         while self.current_token is not None and self.current_token[1] == 'space':
@@ -77,12 +94,11 @@ class SemanticAnalyzer:
             self.next_token()  # Move past space
     
         # Check for '}'
-        # if self.current_token is None or self.current_token[0] != '}':
-        #     self.errors.append(f"Semantic Error: Expected '}}' at end of 'act gene' function, but found {self.current_token}")
-        #     return
+        if self.current_token is None or self.current_token[0] != '}':
+            self.errors.append(f"Semantic Error: Expected '}}' at end of 'act gene' function, but found {self.current_token}")
+            return
         self.next_token()  # Move past '}'
         print(f"Current token: {self.current_token}")  # Debug print
-        return
 
     def parse_body_statements(self):
         was_in_loop = self.in_loop  # Save previous loop state
@@ -112,25 +128,19 @@ class SemanticAnalyzer:
                 self.do_while_statement()
                 self.in_loop = was_in_loop  # Restore previous loop state
             elif self.current_token[1] == 'express':
-                self.next_token()
+                self.express_statement()
             elif self.current_token[1] == 'Identifier':
                 self.check_variable_usage()
-            elif self.current_token[0] == 'destroy':
+            elif self.current_token[0] == 'break':
                 self.break_statement()
-            elif self.current_token[0] == 'contig':
+            elif self.current_token[0] == 'continue':
                 self.continue_statement()
-            elif self.current_token[1] == 'clust':
+            elif self.current_token[1] == 'array':
                 self.array_declaration()
-            elif self.current_token[1] == 'act':
+            elif self.current_token[1] == 'function':
                 self.function_declaration()
-            elif self.current_token[1] == 'comment':
-                self.next_token()
-            elif self.current_token[1] == 'func':
-                self.next_token()
-            elif self.current_token[1] == None:
-                self.next_token()
             else:
-                # self.errors.append(f"Semantic Error: Unexpected token '{self.current_token[0]}' in body")
+                self.errors.append(f"Semantic Error: Unexpected token '{self.current_token[0]}' in body")
                 self.next_token()  # Skip invalid token
     
     def break_statement(self):
@@ -194,39 +204,11 @@ class SemanticAnalyzer:
             
         self.next_token()  # Move past identifier
         
-        # Check for array size declaration [size]
-        declared_size = None
-        if self.current_token is not None and self.current_token[0] == '[':
-            self.next_token()  # Move past '['
-            
-            # Get size value
-            if self.current_token is None or (self.current_token[1] != 'numlit' and self.current_token[1] != 'identifier') or (self.current_token[1] == 'numlit' and '.' in self.current_token[0]):
-                self.errors.append(f"Semantic Error: Expected integer value or identifier for array size, found {self.current_token}")
-                return
-                
-            try:
-                declared_size = int(self.current_token[0])
-                if declared_size <= 0:
-                    self.errors.append(f"Semantic Error: Array size must be positive, found {declared_size}")
-            except:
-                self.errors.append(f"Semantic Error: Invalid array size {self.current_token[0]}")
-                return
-                
-            self.next_token()  # Move past size value
-            
-            # Check for closing bracket
-            if self.current_token is None or self.current_token[0] != ']':
-                self.errors.append(f"Semantic Error: Expected ']' after array size, found {self.current_token}")
-                return
-                
-            self.next_token()  # Move past ']'
-        
         # Add to symbol table
         self.symbol_table[array_name] = {
             'type': f'array_{element_type}',
             'value': [],
-            'element_type': element_type,
-            'size': declared_size  # Will be None if no size was declared
+            'element_type': element_type
         }
         
         # Check for assignment
@@ -234,15 +216,15 @@ class SemanticAnalyzer:
             self.next_token()  # Move past '='
             
             # Check for array initializer
-            if self.current_token is None or self.current_token[0] != '{':
-                self.errors.append(f"Semantic Error: Expected '{{' for array initialization, found {self.current_token}")
+            if self.current_token is None or self.current_token[0] != '[':
+                self.errors.append(f"Semantic Error: Expected '[' for array initialization, found {self.current_token}")
                 return
                 
             self.next_token()  # Move past '['
             
             # Parse array elements
             elements = []
-            while self.current_token is not None and self.current_token[0] != '}':
+            while self.current_token is not None and self.current_token[0] != ']':
                 # Skip spaces and commas
                 while self.current_token is not None and (self.current_token[1] == 'space' or self.current_token[0] == ','):
                     self.next_token()
@@ -283,35 +265,17 @@ class SemanticAnalyzer:
                     self.errors.append("Semantic Error: Unexpected end of tokens in array initialization")
                     return
                     
-                if self.current_token[0] != ',' and self.current_token[0] != '}':
-                    self.errors.append(f"Semantic Error: Expected ',' or '}}' in array initialization, found {self.current_token}")
-            
-            # Check for size mismatch between declaration and initialization
-            if declared_size is not None and len(elements) != declared_size:
-                self.errors.append(f"Semantic Error: Array '{array_name}' declared with size {declared_size} but initialized with {len(elements)} elements")
+                if self.current_token[0] != ',' and self.current_token[0] != ']':
+                    self.errors.append(f"Semantic Error: Expected ',' or ']' in array initialization, found {self.current_token}")
             
             # Update symbol table with elements
             self.symbol_table[array_name]['value'] = elements
             
-            if self.current_token is None or self.current_token[0] != '}':
-                self.errors.append(f"Semantic Error: Expected '}}' at end of array initialization, found {self.current_token}")
+            if self.current_token is None or self.current_token[0] != ']':
+                self.errors.append(f"Semantic Error: Expected ']' at end of array initialization, found {self.current_token}")
                 return
                 
             self.next_token()  # Move past ']'
-        elif declared_size is not None:
-            # If size was declared but no initialization, create array with default values
-            default_value = None
-            if element_type == 'dose':
-                default_value = 0
-            elif element_type == 'quant':
-                default_value = 0.0
-            elif element_type == 'seq':
-                default_value = ""
-            elif element_type == 'allele':
-                default_value = False
-                
-            # Initialize array with default values
-            self.symbol_table[array_name]['value'] = [default_value] * declared_size
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
@@ -322,12 +286,24 @@ class SemanticAnalyzer:
     
     def function_declaration(self):
         """Parse function declaration"""
-        self.next_token()  # Move past 'act'
+        self.next_token()  # Move past 'function'
         
         # Skip spaces
         while self.current_token is not None and self.current_token[1] == 'space':
             self.next_token()
+        
+        # Get return type
+        if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele', 'void']:
+            self.errors.append(f"Semantic Error: Expected valid return type for function, found {self.current_token}")
+            return
             
+        return_type = self.current_token[1]
+        self.next_token()  # Move past return type
+        
+        # Skip spaces
+        while self.current_token is not None and self.current_token[1] == 'space':
+            self.next_token()
+        
         # Get function name
         if self.current_token is None or self.current_token[1] != 'Identifier':
             self.errors.append(f"Semantic Error: Expected identifier for function name, found {self.current_token}")
@@ -475,412 +451,116 @@ class SemanticAnalyzer:
             self.next_token()  # Move past semicolon
         
     def declaration(self):
-        print("DEBUG: Entering declaration method")
-        
         # Check for variable scope
         var_scope = 'local'  # Default scope
         
         # If current token is _L or _G, set scope accordingly
         if self.current_token is not None and (self.current_token[0] == '_L' or self.current_token[0] == '_G'):
             var_scope = 'local' if self.current_token[0] == '_L' else 'global'
-            print(f"DEBUG: Detected scope: {var_scope}")
             self.next_token()  # Move past scope token
             
             # Skip spaces after scope token
             while self.current_token is not None and self.current_token[1] == 'space':
                 self.next_token()
-        
-        # Check for array declaration (clust keyword)
-        is_array = False
-        if self.current_token is not None and self.current_token[1] == 'clust':
-            is_array = True
-            print("DEBUG: Detected array declaration (clust keyword)")
-            self.next_token()  # Move past 'clust'
-            
-            # Skip spaces after clust keyword
-            while self.current_token is not None and self.current_token[1] == 'space':
-                self.next_token()
-                    
+                
         # Now get the data type
         if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
             self.errors.append(f"Semantic Error: Expected data type, found {self.current_token}")
-            print(f"DEBUG: Error - Invalid data type: {self.current_token}")
             return
-                
+            
         var_type = self.current_token[1]
-        print(f"DEBUG: Detected type: {var_type}")
         self.next_token()  # Move past type
 
         # Skip spaces
         while self.current_token is not None and self.current_token[1] == 'space':
             self.next_token()
+            
+        # Get variable name
+        if self.current_token is None or self.current_token[1] != 'Identifier':
+            self.errors.append(f"Semantic Error: Expected identifier after type declaration, found {self.current_token}")
+            return
+
+        var_name = self.current_token[0]
         
-        # Process variables (potentially multiple in a single line)
-        while True:
-            # Get variable name
-            if self.current_token is None or self.current_token[1] != 'Identifier':
-                self.errors.append(f"Semantic Error: Expected identifier after type declaration, found {self.current_token}")
-                print(f"DEBUG: Error - Invalid identifier: {self.current_token}")
-                return
-
-            var_name = self.current_token[0]
-            print(f"DEBUG: Detected variable name: {var_name}")
+        # Check for redeclaration
+        if var_name in self.symbol_table:
+            self.errors.append(f"Semantic Error: Variable '{var_name}' already declared")
             
-            # Check for redeclaration
-            if var_name in self.symbol_table:
-                self.errors.append(f"Semantic Error: Variable '{var_name}' already declared")
-                print(f"DEBUG: Error - Variable redeclaration: {var_name}")
-                # Continue to next variable instead of returning
-                self.next_token()  # Move past identifier
+        self.next_token()  # Move past identifier
+
+        # Set default value based on type
+        if var_type == 'dose':
+            default_value = 0
+        elif var_type == 'quant':
+            default_value = 0.0
+        elif var_type == 'seq':
+            default_value = ""
+        elif var_type == 'allele':
+            default_value = False
+        else:
+            default_value = None
+
+        
+        # Add to symbol table
+        self.symbol_table[var_name] = {
+            'scope': var_scope,
+            'type': var_type,
+            'value': default_value
+        }
+        
+        # Check for assignment
+        if self.current_token is not None and self.current_token[0] == '=':
+            self.next_token()  # Move past '='
+            
+            # For seq type, expect string literal
+            if var_type == 'seq' and (self.current_token is None or self.current_token[1] != 'string literal'):
+                self.errors.append(f"Semantic Error: Expected string literal for seq variable '{var_name}'")
+            
+            # For dose type, expect integer
+            elif var_type == 'dose' and (self.current_token is None or self.current_token[1] != 'numlit' or '.' in self.current_token[0]):
+                self.errors.append(f"Semantic Error: Expected integer value for dose variable '{var_name}'")
                 
-                # Skip to comma or semicolon
-                while (self.current_token is not None and 
-                    self.current_token[0] != ',' and 
-                    self.current_token[0] != ';'):
-                    self.next_token()
-                    
-                # If we found a comma, continue to next variable
-                if self.current_token is not None and self.current_token[0] == ',':
-                    self.next_token()  # Move past comma
-                    # Skip spaces after comma
-                    while self.current_token is not None and self.current_token[1] == 'space':
-                        self.next_token()
-                    continue
-                # If we found a semicolon, end declaration
-                elif self.current_token is not None and self.current_token[0] == ';':
-                    self.next_token()  # Move past semicolon
-                    return
-                else:
-                    return  # End of tokens
-            
-            self.next_token()  # Move past identifier
-
-            # Set default value based on type
-            if var_type == 'dose':
-                default_value = 0
-            elif var_type == 'quant':
-                default_value = 0.0
-            elif var_type == 'seq':
-                default_value = ""
-            elif var_type == 'allele':
-                default_value = False
-            else:
-                default_value = None
-            
-            print(f"DEBUG: Default value for type {var_type}: {default_value}")
-            
-            # Check for array size declaration [size][size]...
-            declared_sizes = []
-            if is_array:
-                while self.current_token is not None and self.current_token[0] == '[':
-                    print(f"DEBUG: Processing dimension {len(declared_sizes)+1} size declaration")
-                    self.next_token()  # Move past '['
-                    
-                    # Get size value
-                    if self.current_token is None or self.current_token[1] != 'numlit' or '.' in self.current_token[0]:
-                        self.errors.append(f"Semantic Error: Expected integer value for array size, found {self.current_token}")
-                        print(f"DEBUG: Error - Invalid array size: {self.current_token}")
-                        return
-                        
+            # For quant type, expect float
+            elif var_type == 'quant' and (self.current_token is None or self.current_token[1] != 'numlit'):
+                self.errors.append(f"Semantic Error: Expected numeric value for quant variable '{var_name}'")
+                
+            # For allele type, expect dom or rec
+            elif var_type == 'allele' and (self.current_token is None or self.current_token[0] not in ['dom', 'rec']):
+                self.errors.append(f"Semantic Error: Expected 'dom' or 'rec' for allele variable '{var_name}'")
+                
+            # Store assigned value
+            if self.current_token is not None:
+                # Update the symbol table with the actual value
+                if var_type == 'dose':
                     try:
-                        size = int(self.current_token[0])
-                        print(f"DEBUG: Array dimension {len(declared_sizes)+1} size: {size}")
-                        if size <= 0:
-                            self.errors.append(f"Semantic Error: Array size must be positive, found {size}")
-                            print(f"DEBUG: Error - Non-positive array size: {size}")
-                        declared_sizes.append(size)
+                        self.symbol_table[var_name]['value'] = int(self.current_token[0])
                     except:
-                        self.errors.append(f"Semantic Error: Invalid array size {self.current_token[0]}")
-                        print(f"DEBUG: Error - Cannot convert array size to integer: {self.current_token[0]}")
-                        return
+                        self.errors.append(f"Semantic Error: Cannot convert {self.current_token[0]} to integer for dose variable '{var_name}'")
                         
-                    self.next_token()  # Move past size value
+                elif var_type == 'quant':
+                    try:
+                        self.symbol_table[var_name]['value'] = float(self.current_token[0])
+                    except:
+                        self.errors.append(f"Semantic Error: Cannot convert {self.current_token[0]} to float for quant variable '{var_name}'")
+                        
+                elif var_type == 'seq':
+                    # Remove quotation marks
+                    string_val = self.current_token[0].strip('"\'')
+                    self.symbol_table[var_name]['value'] = string_val
                     
-                    # Check for closing bracket
-                    if self.current_token is None or self.current_token[0] != ']':
-                        self.errors.append(f"Semantic Error: Expected ']' after array size, found {self.current_token}")
-                        print(f"DEBUG: Error - Missing closing bracket after array size: {self.current_token}")
-                        return
-                        
-                    self.next_token()  # Move past ']'
+                elif var_type == 'allele':
+                    boolean_val = (self.current_token[0] == 'dom')
+                    self.symbol_table[var_name]['value'] = boolean_val
+            
+            self.next_token()  # Move past value
+            
+        # Continue parsing until semicolon
+        while self.current_token is not None and self.current_token[0] != ';':
+            self.next_token()
+            
+        if self.current_token is not None and self.current_token[0] == ';':
+            self.next_token()  # Move past semicolon
 
-                # Determine array dimensions
-                dimensions = len(declared_sizes)
-                print(f"DEBUG: Array has {dimensions} dimensions with sizes: {declared_sizes}")
-            
-            # Add to symbol table with multi-dimensional support
-            if is_array:
-                print(f"DEBUG: Adding array '{var_name}' to symbol table with element type {var_type} and sizes {declared_sizes}")
-                self.symbol_table[var_name] = {
-                    'scope': var_scope,
-                    'type': f'array_{var_type}',
-                    'value': [],
-                    'element_type': var_type,
-                    'dimensions': len(declared_sizes),
-                    'sizes': declared_sizes
-                }
-            else:
-                print(f"DEBUG: Adding variable '{var_name}' to symbol table with type {var_type}")
-                self.symbol_table[var_name] = {
-                    'scope': var_scope,
-                    'type': var_type,
-                    'value': default_value
-                }
-            
-            # Check for assignment with multi-dimensional array support and type checking
-            if self.current_token is not None and self.current_token[0] == '=':
-                print("DEBUG: Detected assignment operator")
-                self.next_token()  # Move past '='
-                
-                if is_array:
-                    # Handle array initialization with multi-dimensional support
-                    print("DEBUG: Processing array initialization")
-                    
-                    # Define a recursive function to parse nested arrays
-                    def parse_array_level(level = 1, expected_size=None):
-                        print(f"DEBUG: Parsing array level {level} (expected size: {expected_size})")
-                        elements = []
-                        
-                        # Check for opening brace
-                        if self.current_token is None or self.current_token[0] != '{':
-                            self.errors.append(f"Semantic Error: Expected '{{' for array initialization at level {level}, found {self.current_token}")
-                            print(f"DEBUG: Error - Missing opening brace for array level {level}: {self.current_token}")
-                            return []
-                            
-                        self.next_token()  # Move past '{'
-                        
-                        # Parse elements at this level
-                        while self.current_token is not None and self.current_token[0] != '}':
-                            # Skip spaces and commas
-                            while self.current_token is not None and (self.current_token[1] == 'space' or self.current_token[0] == ','):
-                                self.next_token()
-                                
-                            if self.current_token is None or self.current_token[0] == '}':
-                                break
-                                
-                            # If we're not at the deepest level, parse a nested array
-                            if level < len(declared_sizes) - 1:
-                                nested_elements = parse_array_level(level + 1, declared_sizes[level + 1] if level + 1 < len(declared_sizes) else None)
-                                elements.append(nested_elements)
-                                print(f"DEBUG: Added nested array with {len(nested_elements)} elements at level {level}")
-                            else:
-                                # We're at the deepest level, parse individual elements
-                                print(f"DEBUG: Processing array element at level {level}: {self.current_token}")
-                                
-                                # Check element type (similar to before)
-                                if var_type == 'dose' and (self.current_token[1] != 'numlit' or '.' in self.current_token[0]):
-                                    self.errors.append(f"Semantic Error: Expected integer value for dose array element, found {self.current_token}")
-                                    print(f"DEBUG: Error - Invalid dose array element: {self.current_token}")
-                                elif var_type == 'quant' and self.current_token[1] != 'numlit':
-                                    self.errors.append(f"Semantic Error: Expected numeric value for quant array element, found {self.current_token}")
-                                    print(f"DEBUG: Error - Invalid quant array element: {self.current_token}")
-                                elif var_type == 'seq' and self.current_token[1] != 'string literal':
-                                    self.errors.append(f"Semantic Error: Expected string value for seq array element, found {self.current_token}")
-                                    print(f"DEBUG: Error - Invalid seq array element: {self.current_token}")
-                                elif var_type == 'allele' and self.current_token[0] not in ['dom', 'rec']:
-                                    self.errors.append(f"Semantic Error: Expected 'dom' or 'rec' for allele array element, found {self.current_token}")
-                                    print(f"DEBUG: Error - Invalid allele array element: {self.current_token}")
-                                
-                                # Store element (raw value as requested)
-                                value = self.current_token[0]
-                                elements.append(value)
-                                print(f"DEBUG: Added {var_type} element (raw): {value}")
-                                
-                                self.next_token()  # Move past element
-                            
-                            # Look for comma or closing brace
-                            if self.current_token is None:
-                                self.errors.append(f"Semantic Error: Unexpected end of tokens in array initialization at level {level}")
-                                print(f"DEBUG: Error - Unexpected end of tokens in array level {level}")
-                                return elements
-                                
-                            if self.current_token[0] != ',' and self.current_token[0] != '}':
-                                self.errors.append(f"Semantic Error: Expected ',' or '}}' in array initialization at level {level}, found {self.current_token}")
-                                print(f"DEBUG: Error - Expected comma or closing brace at level {level}: {self.current_token}")
-                        
-                        # Check for size mismatch at this level
-                        if expected_size is not None and len(elements) != expected_size:
-                            self.errors.append(f"Semantic Error: Array at level {level} expected to have {expected_size} elements but has {len(elements)}")
-                            print(f"DEBUG: Error - Size mismatch at level {level}: expected {expected_size}, got {len(elements)}")
-                        
-                        # Check for closing brace
-                        if self.current_token is None or self.current_token[0] != '}':
-                            self.errors.append(f"Semantic Error: Expected '}}' at end of array level {level}, found {self.current_token}")
-                            print(f"DEBUG: Error - Missing closing brace at end of array level {level}: {self.current_token}")
-                            return elements
-                            
-                        print(f"DEBUG: Found closing brace for array level {level}")
-                        self.next_token()  # Move past '}'
-                        
-                        return elements
-
-                    # Start parsing from the outermost level
-                    all_elements = parse_array_level(0, declared_sizes[0] if declared_sizes else None)
-                    
-                    # Update symbol table with elements
-                    self.symbol_table[var_name]['value'] = all_elements
-                    print(f"DEBUG: Updated symbol table for array '{var_name}' with multi-dimensional array")
-                    print(f"DEBUG: Symbol table entry after update: {self.symbol_table[var_name]}")
-                    
-                else:
-                    # Handle regular variable assignment with type checking
-                    print("DEBUG: Processing regular variable assignment")
-                    
-                    # Check if the right-hand side is an identifier (variable)
-                    if self.current_token is not None and self.current_token[1] == 'Identifier':
-                        rhs_var_name = self.current_token[0]
-                        print(f"DEBUG: Assignment from variable: {rhs_var_name}")
-                        
-                        # Check if the variable exists in the symbol table
-                        if rhs_var_name not in self.symbol_table:
-                            self.errors.append(f"Semantic Error: Variable '{rhs_var_name}' used before declaration")
-                            print(f"DEBUG: Error - Variable used before declaration: {rhs_var_name}")
-                        else:
-                            # Get the type of the right-hand side variable
-                            rhs_var_info = self.symbol_table[rhs_var_name]
-                            rhs_type = rhs_var_info['type']
-                            print(f"DEBUG: RHS variable type: {rhs_type}")
-                            
-                            # Type compatibility check
-                            if var_type == 'dose':
-                                # dose can only be assigned from dose
-                                if rhs_type != 'dose':
-                                    self.errors.append(f"Semantic Error: Cannot assign {rhs_type} to dose variable '{var_name}'")
-                                    print(f"DEBUG: Error - Type mismatch: Cannot assign {rhs_type} to dose")
-                            elif var_type == 'quant':
-                                # quant can be assigned from dose or quant
-                                if rhs_type not in ['dose', 'quant']:
-                                    self.errors.append(f"Semantic Error: Cannot assign {rhs_type} to quant variable '{var_name}'")
-                                    print(f"DEBUG: Error - Type mismatch: Cannot assign {rhs_type} to quant")
-                            elif var_type == 'seq':
-                                # seq can only be assigned from seq
-                                if rhs_type != 'seq':
-                                    self.errors.append(f"Semantic Error: Cannot assign {rhs_type} to seq variable '{var_name}'")
-                                    print(f"DEBUG: Error - Type mismatch: Cannot assign {rhs_type} to seq")
-                            elif var_type == 'allele':
-                                # allele can only be assigned from allele
-                                if rhs_type != 'allele':
-                                    self.errors.append(f"Semantic Error: Cannot assign {rhs_type} to allele variable '{var_name}'")
-                                    print(f"DEBUG: Error - Type mismatch: Cannot assign {rhs_type} to allele")
-                            
-                            # If array type, check compatibility
-                            if rhs_type.startswith('array_'):
-                                self.errors.append(f"Semantic Error: Cannot assign array to non-array variable '{var_name}'")
-                                print(f"DEBUG: Error - Type mismatch: Cannot assign array to non-array variable")
-                            
-                            # Update the symbol table with the value from the RHS variable
-                            self.symbol_table[var_name]['value'] = rhs_var_info['value']
-                            print(f"DEBUG: Assigned value from variable '{rhs_var_name}' to '{var_name}'")
-                        
-                        self.next_token()  # Move past identifier
-                    else:
-                        # For seq type, expect string literal
-                        if var_type == 'seq' and (self.current_token is None or self.current_token[1] != 'string literal'):
-                            self.errors.append(f"Semantic Error: Expected string literal for seq variable '{var_name}'")
-                            print(f"DEBUG: Error - Invalid value for seq variable: {self.current_token}")
-                        
-                            
-                        # For quant type, expect float
-                        elif var_type == 'quant' and (self.current_token is None or self.current_token[1] != 'numlit' or self.current_token[1] != '('):
-                            self.errors.append(f"Semantic Error: Expected numeric value for quant variable '{var_name}'")
-                            print(f"DEBUG: Error - Invalid value for quant variable: {self.current_token}")
-                            
-                        # For allele type, expect dom or rec
-                        elif var_type == 'allele' and (self.current_token is None or self.current_token[0] not in ['dom', 'rec']):
-                            self.errors.append(f"Semantic Error: Expected 'dom' or 'rec' for allele variable '{var_name}'")
-                            print(f"DEBUG: Error - Invalid value for allele variable: {self.current_token}")
-                            
-                        # Store assigned value
-                        if self.current_token is not None:
-                            print(f"DEBUG: Assigning value to variable '{var_name}': {self.current_token}")
-                            # Update the symbol table with the actual value
-                            if var_type == 'dose':
-                                try:
-                                    value = int(self.current_token[0])
-                                    self.symbol_table[var_name]['value'] = value
-                                    print(f"DEBUG: Assigned dose value: {value}")
-                                except:
-                                    self.errors.append(f"Semantic Error: Cannot convert {self.current_token[0]} to integer for dose variable '{var_name}'")
-                                    print(f"DEBUG: Error - Failed to convert to integer: {self.current_token[0]}")
-                                    
-                            elif var_type == 'quant':
-                                try:
-                                    value = float(self.current_token[0])
-                                    self.symbol_table[var_name]['value'] = value
-                                    print(f"DEBUG: Assigned quant value: {value}")
-                                except:
-                                    self.errors.append(f"Semantic Error: Cannot convert {self.current_token[0]} to float for quant variable '{var_name}'")
-                                    print(f"DEBUG: Error - Failed to convert to float: {self.current_token[0]}")
-                                    
-                            elif var_type == 'seq':
-                                # Remove quotation marks
-                                string_val = self.current_token[0].strip('"\'')
-                                self.symbol_table[var_name]['value'] = string_val
-                                print(f"DEBUG: Assigned seq value: {string_val}")
-                                
-                            elif var_type == 'allele':
-                                boolean_val = (self.current_token[0] == 'dom')
-                                self.symbol_table[var_name]['value'] = boolean_val
-                                print(f"DEBUG: Assigned allele value: {boolean_val} ({self.current_token[0]})")
-                    
-                    self.next_token()  # Move past value
-            elif is_array and declared_sizes:
-                # Default initialization for multi-dimensional arrays
-                def create_default_array(level):
-                    if level >= len(declared_sizes) - 1:
-                        # At the deepest level, create an array of default values
-                        return [default_value] * declared_sizes[level]
-                    else:
-                        # At higher levels, create nested arrays
-                        return [create_default_array(level + 1) for _ in range(declared_sizes[level])]
-                
-                # Initialize with nested default values
-                default_array = create_default_array(0)
-                self.symbol_table[var_name]['value'] = default_array
-                print(f"DEBUG: Initialized multi-dimensional array '{var_name}' with default values")
-            
-            # Check for comma (multiple variables) or semicolon (end of declaration)
-            # Skip spaces
-            while self.current_token is not None and self.current_token[1] == 'space':
-                self.next_token()
-                
-            # Check for comma or semicolon
-            if self.current_token is None:
-                print("DEBUG: Unexpected end of tokens in declaration")
-                return
-                
-            if self.current_token[0] == ',':
-                print("DEBUG: Found comma, processing next variable")
-                self.next_token()  # Move past comma
-                
-                # Skip spaces after comma
-                while self.current_token is not None and self.current_token[1] == 'space':
-                    self.next_token()
-                    
-                # Continue to process next variable
-                continue
-                
-            elif self.current_token[0] == ';':
-                print("DEBUG: Found semicolon at end of declaration")
-                self.next_token()  # Move past semicolon
-                return
-                
-            else:
-                print(f"DEBUG: Warning - Expected comma or semicolon, found: {self.current_token}")
-                # Continue parsing until semicolon
-                while self.current_token is not None and self.current_token[0] != ';':
-                    self.next_token()
-                    
-                if self.current_token is not None and self.current_token[0] == ';':
-                    print("DEBUG: Found semicolon at end of declaration")
-                    self.next_token()  # Move past semicolon
-                else:
-                    print(f"DEBUG: Warning - Missing semicolon at end of declaration: {self.current_token}")
-                
-                return
-                
-        print(f"DEBUG: Completed declaration statement")
-        
     def if_statement(self):
         """Parse if statement, checking condition and body"""
         self.next_token()  # Move past 'if'
@@ -1057,41 +737,128 @@ class SemanticAnalyzer:
         while self.current_token is not None and self.current_token[1] == 'space':
             self.next_token()
         
-        # Right operand
-        right_operand = None
-        right_type = None
+        # Parse right side expression (can be complex with multiple operations)
+        right_type = self.parse_expression()
         
-        if self.current_token is not None:
-            if self.current_token[1] == 'Identifier':
-                var_name = self.current_token[0]
-                if var_name in self.symbol_table:
-                    right_operand = self.symbol_table[var_name]['value']
-                    right_type = self.symbol_table[var_name]['type']
-                else:
-                    self.errors.append(f"Semantic Error: Variable '{var_name}' used in condition before declaration")
-            elif self.current_token[1] == 'numlit':
-                if '.' in self.current_token[0]:
-                    right_operand = float(self.current_token[0])
-                    right_type = 'quant'
-                else:
-                    right_operand = int(self.current_token[0])
-                    right_type = 'dose'
-            elif self.current_token[1] == 'string literal':
-                right_operand = self.current_token[0].strip('"\'')
-                right_type = 'seq'
-            elif self.current_token[0] in ['dom', 'rec']:
-                right_operand = (self.current_token[0] == 'dom')
-                right_type = 'allele'
-                
-        self.next_token()  # Move past right operand
-        
-        # Type checking
-        if left_type is not None and right_type is not None and left_type != right_type:
-            self.errors.append(f"Semantic Error: Type mismatch in condition: {left_type} {operator} {right_type}")
+        # Type checking between left and right operands
+        if left_type is not None and right_type is not None:
+            if left_type != right_type:
+                # Allow numeric type comparisons (dose and quant)
+                if not (left_type in ['dose', 'quant'] and right_type in ['dose', 'quant']):
+                    self.errors.append(f"Semantic Error: Type mismatch in condition: {left_type} {operator} {right_type}")
             
-        # Operator checking for specific types
-        if operator in ['<', '>', '<=', '>='] and left_type in ['seq', 'allele']:
-            self.errors.append(f"Semantic Error: Operator '{operator}' cannot be used with {left_type} type")
+            # Operator checking for specific types
+            if operator in ['<', '>', '<=', '>=']:
+                if left_type in ['seq', 'allele'] or right_type in ['seq', 'allele']:
+                    self.errors.append(f"Semantic Error: Operator '{operator}' cannot be used with {left_type} or {right_type} type")
+    
+    def parse_expression(self):
+        """Parse a potentially complex expression and return its type"""
+        expr_type = self.parse_term()
+        
+        # Continue parsing terms if there are + or - operators
+        while self.current_token is not None and self.current_token[0] in ['+', '-']:
+            operator = self.current_token[0]
+            self.next_token()  # Move past operator
+            
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+            
+            # Get the next term
+            term_type = self.parse_term()
+            
+            # Check type compatibility
+            if expr_type in ['dose', 'quant'] and term_type in ['dose', 'quant']:
+                # If any term is quant, the result is quant
+                if expr_type == 'quant' or term_type == 'quant':
+                    expr_type = 'quant'
+            elif expr_type == 'seq' and term_type == 'seq' and operator == '+':
+                # String concatenation is allowed
+                expr_type = 'seq'
+            else:
+                self.errors.append(f"Semantic Error: Operator '{operator}' cannot be used with types {expr_type} and {term_type}")
+        
+        return expr_type
+    
+    def parse_term(self):
+        """Parse a term (factor followed by * or / or % operators)"""
+        factor_type = self.parse_factor()
+        
+        # Continue parsing factors if there are *, / or % operators
+        while self.current_token is not None and self.current_token[0] in ['*', '/', '%']:
+            operator = self.current_token[0]
+            self.next_token()  # Move past operator
+            
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+            
+            # Get the next factor
+            next_factor_type = self.parse_factor()
+            
+            # Check type compatibility - only numeric types can use these operators
+            if factor_type in ['dose', 'quant'] and next_factor_type in ['dose', 'quant']:
+                # If any factor is quant, the result is quant
+                if factor_type == 'quant' or next_factor_type == 'quant':
+                    factor_type = 'quant'
+            else:
+                self.errors.append(f"Semantic Error: Operator '{operator}' can only be used with numeric types, not {factor_type} and {next_factor_type}")
+        
+        return factor_type
+    
+    def parse_factor(self):
+        """Parse a factor (variable, literal, or parenthesized expression)"""
+        if self.current_token is None:
+            self.errors.append("Semantic Error: Unexpected end of tokens in expression")
+            return None
+            
+        factor_type = None
+        
+        # Handle identifier
+        if self.current_token[1] == 'Identifier':
+            var_name = self.current_token[0]
+            if var_name in self.symbol_table:
+                factor_type = self.symbol_table[var_name]['type']
+            else:
+                self.errors.append(f"Semantic Error: Variable '{var_name}' used before declaration")
+                factor_type = 'unknown'  # Use a placeholder type
+            self.next_token()  # Move past identifier
+            
+        # Handle numeric literal
+        elif self.current_token[1] == 'numlit':
+            if '.' in self.current_token[0]:
+                factor_type = 'quant'
+            else:
+                factor_type = 'dose'
+            self.next_token()  # Move past number
+            
+        # Handle string literal
+        elif self.current_token[1] == 'string literal':
+            factor_type = 'seq'
+            self.next_token()  # Move past string
+            
+        # Handle boolean literal
+        elif self.current_token[0] in ['dom', 'rec']:
+            factor_type = 'allele'
+            self.next_token()  # Move past boolean
+            
+        # Handle parenthesized expression
+        elif self.current_token[0] == '(':
+            self.next_token()  # Move past '('
+            factor_type = self.parse_expression()  # Recursively parse the inner expression
+            
+            # Check for closing parenthesis
+            if self.current_token is None or self.current_token[0] != ')':
+                self.errors.append(f"Semantic Error: Expected ')' after expression, found {self.current_token}")
+            else:
+                self.next_token()  # Move past ')'
+        else:
+            self.errors.append(f"Semantic Error: Unexpected token in expression: {self.current_token}")
+            self.next_token()  # Skip invalid token
+            factor_type = 'unknown'  # Use a placeholder type
+            
+        return factor_type
 
     def for_loop_statement(self):
         """Parse for loop statement and check semantic validity"""
@@ -1113,7 +880,7 @@ class SemanticAnalyzer:
         
         # Initialization part
         if self.current_token is not None and self.current_token[1] == 'dose':
-            self.declaration()  # This will handle the first part of the for loop
+            self.declaration()  # This will handle the first part of the for loop    
         else:
             self.errors.append(f"Semantic Error: Expected 'dose' declaration as for loop initialization, found {self.current_token}")
             # Skip until semicolon
@@ -1121,7 +888,14 @@ class SemanticAnalyzer:
                 self.next_token()
             self.next_token()  # Move past ';'
             
-        # Condition part       
+        # Condition part
+        self.parse_condition()
+        
+        # Check for semicolon
+        if self.current_token is None or self.current_token[0] != ';':
+            self.errors.append(f"Semantic Error: Expected ';' after for loop condition, found {self.current_token}")
+            return
+            
         self.next_token()  # Move past ';'
         
         # Update part - should be an increment/decrement expression
@@ -1133,7 +907,28 @@ class SemanticAnalyzer:
                 var_type = self.symbol_table[var_name]['type']
                 if var_type != 'dose':
                     self.errors.append(f"Semantic Error: For loop update variable must be dose type, found {var_type}")
-                                
+                    
+            self.next_token()  # Move past identifier
+            
+            # Check for ++ or --
+            # Check for ++ or -- which are tokenized as separate + or - tokens
+            if self.current_token is None or self.current_token[0] not in ['+', '-']:
+                self.errors.append(f"Semantic Error: Expected increment/decrement operator in for loop update, found {self.current_token}")
+                self.next_token()  # Skip the current token
+            else:
+                # Store the first + or - character
+                first_char = self.current_token[0]
+                self.next_token()  # Move to next token
+                
+                # Skip spaces
+                while self.current_token is not None and self.current_token[1] == 'space':
+                    self.next_token()  # Move past space
+                
+                # Check if next token is the same (++ or --)
+                if self.current_token is None or self.current_token[0] != first_char:
+                    self.errors.append(f"Semantic Error: Expected '{first_char}{first_char}' in for loop update, found incomplete operator")
+                else:
+                    self.next_token()  # Move past the second + or - character
         else:
             self.errors.append(f"Semantic Error: Expected identifier in for loop update, found {self.current_token}")
             
@@ -1347,353 +1142,66 @@ class SemanticAnalyzer:
             
         self.next_token()  # Move past ';'
     
-    def assignment_stmt(self):
-        """Parse an assignment statement"""
-        print(f"DEBUG: Entering assignment_stmt() method. Current token: {self.current_token}")
-        
-        if self.current_token is None:
-            print("DEBUG: Unexpected end of tokens in assignment statement")
-            self.errors.append("Semantic Error: Unexpected end of tokens in assignment statement")
-            return
-        
-        # Get the variable being assigned to
-        if self.current_token[1] != 'Identifier':
-            print(f"DEBUG: Expected identifier at start of assignment, found: {self.current_token}")
-            self.errors.append(f"Semantic Error: Expected identifier at start of assignment, found: {self.current_token}")
-            return
-        
-        var_name = self.current_token[0]
-        print(f"DEBUG: Assignment to variable: {var_name}")
-        
-        # Check if variable is declared
-        if var_name not in self.symbol_table:
-            print(f"DEBUG: Variable '{var_name}' used before declaration")
-            self.errors.append(f"Semantic Error: Variable '{var_name}' used in assignment before declaration")
-            return
-        
-        # Get the type of the variable being assigned to
-        left_type = self.symbol_table[var_name]['type']
-        print(f"DEBUG: Variable '{var_name}' has type '{left_type}'")
-        
-        self.next_token()  # Move past identifier
-        
-        # Check for equals sign
-        if self.current_token is None or self.current_token[0] != '=':
-            print(f"DEBUG: Expected '=' in assignment, found: {self.current_token}")
-            self.errors.append(f"Semantic Error: Expected '=' in assignment, found: {self.current_token}")
-            return
-        
-        self.next_token()  # Move past equals sign
-        
-        # Parse the right-hand side expression
-        print("DEBUG: Parsing right-hand side expression")
-        right_expr, right_type = self.expr()
-        
-        # Check if the assignment is type-compatible
-        if not self.is_valid_assignment(left_type, right_type):
-            error_msg = f"Semantic Error: Cannot assign expression of type '{right_type}' to variable '{var_name}' of type '{left_type}'"
-            self.errors.append(error_msg)
-            print(f"DEBUG: {error_msg}")
-            
-            # Add more detailed explanation for specific cases
-            if left_type == 'seq' and right_type in ['dose', 'quant']:
-                detail_msg = f"Type Error: Cannot assign numeric value to sequence variable '{var_name}'"
-                self.errors.append(detail_msg)
-                print(f"DEBUG: {detail_msg}")
-        else:
-            print(f"DEBUG: Valid assignment of '{right_type}' expression to '{var_name}' ({left_type})")
-        
-        # Check for semicolon
-        if self.current_token is None or self.current_token[0] != ';':
-            print(f"DEBUG: Expected ';' at end of assignment, found: {self.current_token}")
-            self.errors.append(f"Semantic Error: Expected ';' at end of assignment, found: {self.current_token}")
-            return
-        
-        self.next_token()  # Move past semicolon
-        print("DEBUG: Exiting assignment_stmt() method")
-
-    def is_valid_assignment(self, left_type, right_type):
-        """Check if an assignment is valid based on the types"""
-        # Rule: Types must match exactly for assignment
-        # seq can only be assigned seq
-        # dose can only be assigned dose
-        # quant can only be assigned quant
-        # bool can only be assigned bool
-        return left_type == right_type
-
     def expr(self):
         """Parse an expression, which could be a variable, literal, or operation"""
-        # Debug: Start of expression parsing
-        print(f"DEBUG: Entering expr() method. Current token: {self.current_token}")
-        
         if self.current_token is None:
-            print("DEBUG: Unexpected end of tokens in expression")
             self.errors.append("Semantic Error: Unexpected end of tokens in expression")
-            return None, None  # Return None for operand and type
+            return
             
-        expr_type = None  # Track the type of this expression
-        
         # Variable
         if self.current_token[1] == 'Identifier':
             var_name = self.current_token[0]
-            print(f"DEBUG: Identifier found: {var_name}")
-            
             if var_name not in self.symbol_table:
-                print(f"DEBUG: Variable '{var_name}' used before declaration")
                 self.errors.append(f"Semantic Error: Variable '{var_name}' used in expression before declaration")
-                expr_type = None  # Unknown type for undeclared variable
-            else:
-                # Get the type from symbol table
-                expr_type = self.symbol_table[var_name]['type']
-                print(f"DEBUG: Variable '{var_name}' has type '{expr_type}'")
             
             self.next_token()  # Move past identifier
             
             # Check for operation
             if self.current_token is not None and self.current_token[0] in ['+', '-', '*', '/', '%']:
                 operator = self.current_token[0]
-                print(f"DEBUG: Operator found after identifier: {operator}")
                 self.next_token()  # Move past operator
                 
-                # Store the left operand name and type for error reporting
-                left_operand = var_name
-                left_type = expr_type
-                
                 # Parse right side of operation
-                print("DEBUG: Parsing right side of operation")
-                right_operand, right_type = self.expr()
+                self.expr()
                 
-                # Validate operation based on types
-                if left_type and right_type:
-                    if not self.is_valid_operation(left_type, right_type, operator):
-                        error_msg = f"Semantic Error: Invalid operation '{operator}' between '{left_operand}' ({left_type}) and '{right_operand}' ({right_type})"
-                        self.errors.append(error_msg)
-                        print(f"DEBUG: {error_msg}")
-                        
-                        # Add more detailed explanation for specific cases
-                        if left_type == 'seq' and right_type in ['dose', 'quant']:
-                            detail_msg = f"Type Error: Cannot perform arithmetic between sequence and numeric types"
-                            self.errors.append(detail_msg)
-                            print(f"DEBUG: {detail_msg}")
-                        
-                        # Return the left operand and type as fallback
-                        return left_operand, left_type
-                    else:
-                        print(f"DEBUG: Valid operation '{operator}' between '{left_operand}' ({left_type}) and '{right_operand}' ({right_type})")
-                        # Determine result type of the operation
-                        result_type = self.result_type(left_type, right_type, operator)
-                        print(f"DEBUG: Result type of operation: {result_type}")
-                        return f"({left_operand} {operator} {right_operand})", result_type
-            else:
-                print("DEBUG: No operation after identifier")
-            
-            return var_name, expr_type
-        
         # Number literal
         elif self.current_token[1] == 'numlit':
-            literal = self.current_token[0]
-            print(f"DEBUG: Number literal found: {literal}")
-            
-            # Determine the type of the number literal
-            number_sign = self.check_number_type(literal)
-            if number_sign == 'doseliteral':
-                expr_type = 'dose'
-            elif number_sign == 'quantval':
-                expr_type = 'quant'
-            else:
-                expr_type = 'dose'  # Default to dose for other number types
-                
-            print(f"DEBUG: Number literal has type '{expr_type}'")
-            
             self.next_token()  # Move past number
             
             # Check for operation
             if self.current_token is not None and self.current_token[0] in ['+', '-', '*', '/', '%']:
                 operator = self.current_token[0]
-                print(f"DEBUG: Operator found after number literal: {operator}")
                 self.next_token()  # Move past operator
                 
-                # Store the left operand and type for error reporting
-                left_operand = literal
-                left_type = expr_type
-                
                 # Parse right side of operation
-                print("DEBUG: Parsing right side of operation")
-                right_operand, right_type = self.expr()
+                self.expr()
                 
-                # Validate operation based on types
-                if left_type and right_type:
-                    if not self.is_valid_operation(left_type, right_type, operator):
-                        error_msg = f"Semantic Error: Invalid operation '{operator}' between '{left_operand}' ({left_type}) and '{right_operand}' ({right_type})"
-                        self.errors.append(error_msg)
-                        print(f"DEBUG: {error_msg}")
-                        # Return the left operand and type as fallback
-                        return left_operand, left_type
-                    else:
-                        print(f"DEBUG: Valid operation '{operator}' between '{left_operand}' ({left_type}) and '{right_operand}' ({right_type})")
-                        # Determine result type of the operation
-                        result_type = self.result_type(left_type, right_type, operator)
-                        print(f"DEBUG: Result type of operation: {result_type}")
-                        return f"({left_operand} {operator} {right_operand})", result_type
-            else:
-                print("DEBUG: No operation after number literal")
-            
-            return literal, expr_type
-        
         # String literal
         elif self.current_token[1] == 'string literal':
-            literal = self.current_token[0]
-            print(f"DEBUG: String literal found: {literal}")
-            expr_type = 'seq'  # String literals are of type 'seq'
             self.next_token()  # Move past string
             
             # Check for concatenation
             if self.current_token is not None and self.current_token[0] == '+':
-                print("DEBUG: String concatenation detected")
                 self.next_token()  # Move past '+'
                 
-                # Store the left operand and type for error reporting
-                left_operand = literal
-                left_type = expr_type
-                
                 # Parse right side of concatenation
-                print("DEBUG: Parsing right side of concatenation")
-                right_operand, right_type = self.expr()
+                self.expr()
                 
-                # Validate concatenation
-                if left_type and right_type:
-                    if not self.is_valid_operation(left_type, right_type, '+'):
-                        error_msg = f"Semantic Error: Cannot concatenate '{left_operand}' ({left_type}) with '{right_operand}' ({right_type})"
-                        self.errors.append(error_msg)
-                        print(f"DEBUG: {error_msg}")
-                        # Return the left operand and type as fallback
-                        return left_operand, left_type
-                    else:
-                        print(f"DEBUG: Valid concatenation between '{left_operand}' ({left_type}) and '{right_operand}' ({right_type})")
-                        # Result of concatenation is still a seq
-                        return f"({left_operand} + {right_operand})", 'seq'
-            else:
-                print("DEBUG: No concatenation after string literal")
-            
-            return literal, expr_type
-        
         # Boolean literal (dom/rec)
         elif self.current_token[0] in ['dom', 'rec']:
-            literal = self.current_token[0]
-            print(f"DEBUG: Boolean literal found: {literal}")
-            expr_type = 'bool'  # Boolean literals are of type 'bool'
             self.next_token()  # Move past boolean
             
             # Check for logical operation
             if self.current_token is not None and self.current_token[0] in ['&&', '||']:
-                operator = self.current_token[0]
-                print(f"DEBUG: Logical operator found: {operator}")
                 self.next_token()  # Move past operator
                 
-                # Store the left operand and type for error reporting
-                left_operand = literal
-                left_type = expr_type
-                
                 # Parse right side of operation
-                print("DEBUG: Parsing right side of logical operation")
-                right_operand, right_type = self.expr()
+                self.expr()
                 
-                # Validate logical operation
-                if left_type and right_type:
-                    if not self.is_valid_operation(left_type, right_type, operator):
-                        error_msg = f"Semantic Error: Cannot perform logical operation '{operator}' between '{left_operand}' ({left_type}) and '{right_operand}' ({right_type})"
-                        self.errors.append(error_msg)
-                        print(f"DEBUG: {error_msg}")
-                        # Return the left operand and type as fallback
-                        return left_operand, left_type
-                    else:
-                        print(f"DEBUG: Valid logical operation between '{left_operand}' ({left_type}) and '{right_operand}' ({right_type})")
-                        # Result of logical operation is still a bool
-                        return f"({left_operand} {operator} {right_operand})", 'bool'
-            else:
-                print("DEBUG: No logical operation after boolean literal")
-            
-            return literal, expr_type
-        
-        elif self.current_token[1] == 'stimuli':
-            literal = self.current_token[0]
-            print(f"DEBUG: Stimuli token found: {literal}")
-            expr_type = 'stimuli'  # Stimuli tokens have their own type
-            self.next_token()  # Move past stimuli token
-            
-            return literal, expr_type
-
         else:
-            literal = str(self.current_token)
-            print(f"DEBUG: Unexpected token in expression: {literal}")
-            self.errors.append(f"Semantic Error: Unexpected token in expression: {literal}")
+            self.errors.append(f"Semantic Error: Unexpected token in expression: {self.current_token}")
             self.next_token()  # Skip invalid token
-            expr_type = None  # Unknown type for unexpected token
-            
-            return literal, expr_type
 
-    def is_valid_operation(self, left_type, right_type, operator):
-        """Check if an operation is valid based on the types of operands"""
-        # Arithmetic operations (+, -, *, /, %)
-        if operator in ['+', '-', '*', '/', '%']:
-            # Rule: seq can only operate with seq
-            if left_type == 'seq':
-                return right_type == 'seq'  # seq can only operate with seq
-            
-            # Rule: dose can only operate with dose or quant
-            if left_type == 'dose':
-                return right_type in ['dose', 'quant']
-                
-            # Rule: quant can only operate with dose or quant
-            if left_type == 'quant':
-                return right_type in ['dose', 'quant']
-                
-            # Special case for division by zero would be handled elsewhere
-            
-            return False  # Default case for unknown types
-            
-        # Logical operations (&&, ||)
-        elif operator in ['&&', '||']:
-            # Both operands must be boolean
-            return left_type == 'bool' and right_type == 'bool'
-            
-        # Unknown operator
-        return False
-
-    def result_type(self, left_type, right_type, operator):
-        """Determine the result type of an operation"""
-        # For arithmetic operations
-        if operator in ['+', '-', '*', '/', '%']:
-            # If either operand is quant, result is quant
-            if left_type == 'quant' or right_type == 'quant':
-                return 'quant'
-            # If both are seq, result is seq
-            if left_type == 'seq' and right_type == 'seq':
-                return 'seq'
-            # If both are dose, result is dose
-            if left_type == 'dose' and right_type == 'dose':
-                return 'dose'
-            
-        # For logical operations
-        elif operator in ['&&', '||']:
-            # Result of logical operation is boolean
-            if left_type == 'bool' and right_type == 'bool':
-                return 'bool'
-            
-        # Default case - return left type if no specific rule applies
-        return left_type
-
-    def check_number_type(self, literal):
-        """Determine the type of a number literal"""
-        # This is a placeholder - you'll need to implement the actual logic
-        # based on how your number literals are formatted
-        if 'q' in literal or 'Q' in literal:
-            return 'quantval'
-        elif 'd' in literal or 'D' in literal:
-            return 'doseliteral'
-        else:
-            return 'doseliteral'  # Default
-    
     def check_type_compatibility(self, left_type, right_type, operator):
         """Check if the types are compatible with the given operator"""
         if left_type == right_type:
@@ -1760,6 +1268,17 @@ class SemanticAnalyzer:
                     self.errors.append(f"Semantic Error: Cannot assign {value_type} variable to {var_type} variable '{var_name}'")
             else:
                 self.errors.append(f"Semantic Error: Variable '{value_name}' used before declaration")
+
+    def handle_comments(self):
+    # Check if current token is a comment
+     if self.current_token is not None and self.current_token[1] == 'comment':
+        print(f"Skipping comment: {self.current_token[0]}")
+        self.next_token()  # Move past comment token
+        # Continue skipping multiple sequential comments if present
+        while self.current_token is not None and self.current_token[1] == 'comment':
+            print(f"Skipping comment: {self.current_token[0]}")
+            self.next_token()  # Move past additional comment tokens
+
 
 def generate_symtab(parsed_tokens):
     """Create a symbol table from parsed tokens"""
@@ -1898,7 +1417,7 @@ def get_default_value_for_type(type_name):
         return ""
     elif type_name == 'allele':
         return False
-    elif type_name.startswith('clust'):
+    elif type_name.startswith('array_'):
         return []
     return None  # Unknown type
 
