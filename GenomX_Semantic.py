@@ -17,7 +17,9 @@ class SemanticAnalyzer:
         self.functions = {}  # Track function definitions
         self.current_line = 1  # Track line numbers for better error reporting
         self.in_loop = False  # Track if we're inside a loop for break/continue validation
+        self.current_assignment_type = None  # Track the type of the current assignment
         self.next_token()
+        self.pending_inputs = []  # Add this line to store pending inputs
 
     def next_token(self):
         while self.token_index < len(self.tokens) and self.tokens[self.token_index][1] == "space":
@@ -45,6 +47,7 @@ class SemanticAnalyzer:
 
     
     def act_gene_function(self):
+        
         print(f"Current token: {self.current_token}")  # Debug print
         self.next_token()  # Move past 'act'
         
@@ -181,6 +184,126 @@ class SemanticAnalyzer:
             return
         self.next_token()  # Move past '}'
         print(f"Finished parsing function: {function_name}")
+    def prod_statement(self): 
+
+        """Parse prod statement (return statement) and check type compatibility"""
+        self.next_token()  # Move past 'prod'
+        
+        # Skip spaces
+        while self.current_token is not None and self.current_token[1] == 'space':
+            self.next_token()
+        
+        # Check if we're in a function
+        if not self.functions:
+            self.errors.append("Semantic Error: 'prod' statement can only be used inside a function")
+            
+        # Get the current function's return type
+        # For simplicity, we'll assume we're in the most recently defined function
+        current_function = None
+        return_type = None
+        if self.functions:
+            current_function = list(self.functions.keys())[-1]
+            return_type = self.functions[current_function]['return_type']
+            
+        # Handle void functions (no return value)
+        if return_type == 'void':
+            # Void functions should not return a value
+            if self.current_token is not None and self.current_token[0] != ';':
+                self.errors.append("Semantic Error: Void function cannot return a value")
+                
+                # Skip until semicolon
+                while self.current_token is not None and self.current_token[0] != ';':
+                    self.next_token()
+        else:
+            # Non-void functions must return a value of the correct type
+            value_type = self.parse_expression()
+            
+            # Check if returned value type matches function return type
+            if value_type is not None and return_type is not None and value_type != return_type:
+                # Allow dose to be returned from a quant function
+                if not (return_type == 'quant' and value_type == 'dose'):
+                    self.errors.append(f"Semantic Error: Function returns {return_type} but got {value_type}")
+        
+        # Check for semicolon
+        if self.current_token is None or self.current_token[0] != ';':
+            self.errors.append(f"Semantic Error: Expected ';' after prod statement, found {self.current_token}")
+            return
+            
+        self.next_token()  # Move past ';'
+    def function_call(self):
+        """Parse function call statement starting with 'func'"""
+        self.next_token()  # Move past 'func'
+        
+        # Skip spaces
+        while self.current_token is not None and self.current_token[1] == 'space':
+            self.next_token()
+        
+        # Get function name
+        if self.current_token is None or self.current_token[1] != 'Identifier':
+            self.errors.append(f"Semantic Error: Expected function identifier after 'func', found {self.current_token}")
+            return
+            
+        function_name = self.current_token[0]
+        
+        # Check if function exists
+        if function_name not in self.functions:
+            self.errors.append(f"Semantic Error: Function '{function_name}' called but not defined")
+        
+        self.next_token()  # Move past function name
+        
+        # Skip spaces
+        while self.current_token is not None and self.current_token[1] == 'space':
+            self.next_token()
+            
+        # Check for semicolon
+        if self.current_token is None or self.current_token[0] != ';':
+            self.errors.append(f"Semantic Error: Expected ';' after function call, found {self.current_token}")
+            return
+            
+        self.next_token()  # Move past ';'
+    def stimuli_statement(self):
+        """Parse stimuli statement (input statement) and validate types"""
+        self.next_token()  # Move past 'stimuli'
+        
+        # Skip spaces
+        while self.current_token is not None and self.current_token[1] == 'space':
+            self.next_token()
+        
+        # Check for opening parenthesis
+        if self.current_token is None or self.current_token[0] != '(':
+            self.errors.append(f"Semantic Error: Expected '(' after 'stimuli', found {self.current_token}")
+            return
+            
+        self.next_token()  # Move past '('
+        
+        # Check for prompt message (string literal)
+        if self.current_token is None or self.current_token[1] != 'string literal':
+            self.errors.append(f"Semantic Error: Expected string literal for input prompt, found {self.current_token}")
+            # Skip to closing parenthesis or semicolon to continue parsing
+            while self.current_token is not None and self.current_token[0] != ')' and self.current_token[0] != ';':
+                self.next_token()
+        else:
+            # Store the prompt message for potential use
+            prompt_message = self.current_token[0].strip('"\'')
+            self.next_token()  # Move past string literal
+        
+        # Check for closing parenthesis
+        if self.current_token is None or self.current_token[0] != ')':
+            self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}")
+            return
+            
+        self.next_token()  # Move past ')'
+        
+        # Check for semicolon
+        if self.current_token is None or self.current_token[0] != ';':
+            self.errors.append(f"Semantic Error: Expected ';' after stimuli statement, found {self.current_token}")
+            return
+            
+        self.next_token()  # Move past ';'
+        
+        # Note: This is a placeholder for runtime behavior
+        # The actual input value would be determined at runtime
+        # At compile time, we just verify the syntax is correct
 
     def parse_body_statements(self):
         was_in_loop = self.in_loop  # Save previous loop state
@@ -197,6 +320,10 @@ class SemanticAnalyzer:
                 self.declaration()
             elif self.current_token[1] == 'if':
                 self.if_statement()
+            elif self.current_token[1] == 'prod':
+                self.prod_statement()
+            elif self.current_token[1] == 'func':
+                self.function_call()
             elif self.current_token[1] == 'for':
                 self.in_loop = True  # Mark that we're in a loop
                 self.for_loop_statement()
@@ -211,17 +338,19 @@ class SemanticAnalyzer:
                 self.in_loop = was_in_loop  # Restore previous loop state
             elif self.current_token[1] == 'express':
                 self.express_statement()
+            elif self.current_token[1] == 'stimuli':
+                self.stimuli_statement()
             elif self.current_token[1] == 'Identifier':
                 self.check_variable_usage()
-            elif self.current_token[0] == 'break':
+            elif self.current_token[1] == 'destroy':
                 self.break_statement()
-            elif self.current_token[0] == 'continue':
+            elif self.current_token[0] == 'contig':
                 self.continue_statement()
             elif self.current_token[1] == 'array':
                 self.array_declaration()
             elif self.current_token[1] == 'function':
                 self.function_declaration()
-            elif self.current_token[1] == 'comment':
+            elif self.current_token[1] == 'comment':    
                 self.next_token()
             else:
                 self.errors.append(f"Semantic Error: Unexpected token '{self.current_token[0]}' in body")
@@ -367,6 +496,7 @@ class SemanticAnalyzer:
             return
             
         self.next_token()  # Move past ';'
+
     
     def function_declaration(self):
         """Parse function declaration"""
@@ -559,12 +689,204 @@ class SemanticAnalyzer:
         while self.current_token is not None and self.current_token[1] == 'space':
             self.next_token()
             
-        # Get variable name
-        if self.current_token is None or self.current_token[1] != 'Identifier':
-            self.errors.append(f"Semantic Error: Expected identifier after type declaration, found {self.current_token}")
-            return
+        # Process multiple variable declarations separated by commas
+        while True:
+            # Get variable name
+            if self.current_token is None or self.current_token[1] != 'Identifier':
+                self.errors.append(f"Semantic Error: Expected identifier after type declaration, found {self.current_token}")
+                return
 
-        var_name = self.current_token[0]
+            var_name = self.current_token[0]
+            
+            # Check for redeclaration
+            if var_name in self.symbol_table:
+                self.errors.append(f"Semantic Error: Variable '{var_name}' already declared")
+                
+            self.next_token()  # Move past identifier
+
+            # Set default value based on type
+            if var_type == 'dose':
+                default_value = 0
+            elif var_type == 'quant':
+                default_value = 0.0
+            elif var_type == 'seq':
+                default_value = ""
+            elif var_type == 'allele':
+                default_value = False
+            else:
+                default_value = None
+
+            # Add to symbol table
+            self.symbol_table[var_name] = {
+                'scope': var_scope,
+                'type': var_type,
+                'value': default_value
+            }
+            
+            # Check for assignment
+            if self.current_token is not None and self.current_token[0] == '=':
+                self.next_token()  # Move past '='
+                
+                # Set the current assignment type for type checking
+                self.current_assignment_type = var_type
+                
+                # Collect tokens for the expression until semicolon or comma
+                expression_tokens = []
+                start_pos = self.token_index - 1  # Start after '='
+                
+                while self.current_token is not None and self.current_token[0] != ';' and self.current_token[0] != ',':
+                    expression_tokens.append(self.current_token)
+                    self.next_token()
+                
+                # Evaluate the expression for the current variable
+                if len(expression_tokens) == 1:
+                    token = expression_tokens[0]
+                    
+                    # Check if the assigned value is an identifier
+                    if token[1] == 'Identifier':
+                        var_to_assign = token[0]
+                        if var_to_assign in self.symbol_table:
+                            # Get value from the identifier's stored value
+                            assigned_value = self.symbol_table[var_to_assign]['value']
+                            assigned_type = self.symbol_table[var_to_assign]['type']
+                            
+                            # Check type compatibility
+                            if var_type == assigned_type or (var_type == 'quant' and assigned_type == 'dose'):
+                                self.symbol_table[var_name]['value'] = assigned_value
+                            else:
+                                self.errors.append(f"Semantic Error: Cannot assign {assigned_type} variable to {var_type} variable '{var_name}'")
+                        else:
+                            self.errors.append(f"Semantic Error: Variable '{var_to_assign}' used before declaration")
+                    
+                    # Handle literals
+                    elif token[1] == 'numlit':
+                        if var_type == 'dose':
+                            try:
+                                self.symbol_table[var_name]['value'] = int(token[0])
+                            except:
+                                self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose variable '{var_name}'")
+                        elif var_type == 'quant':
+                            try:
+                                self.symbol_table[var_name]['value'] = float(token[0])
+                            except:
+                                self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant variable '{var_name}'")
+                        else:
+                            self.errors.append(f"Semantic Error: Cannot assign numeric value to {var_type} variable '{var_name}'")
+                    
+                    elif token[1] == 'string literal':
+                        if var_type == 'seq':
+                            # Remove quotation marks
+                            string_val = token[0].strip('"\'')
+                            self.symbol_table[var_name]['value'] = string_val
+                        else:
+                            self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} variable '{var_name}'")
+                    
+                    elif token[0] in ['dom', 'rec']:
+                        if var_type == 'allele':
+                            boolean_val = (token[0] == 'dom')
+                            self.symbol_table[var_name]['value'] = boolean_val
+                        else:
+                            self.errors.append(f"Semantic Error: Cannot assign boolean value to {var_type} variable '{var_name}'")
+                
+                # Handle complex expressions
+                elif len(expression_tokens) > 1:
+                    # Only handle arithmetic expressions for numeric types
+                    if var_type in ['dose', 'quant']:
+                        expr_str = ""
+                        valid_expression = True
+                        
+                        for token in expression_tokens:
+                            if token[1] == 'Identifier':
+                                if token[0] in self.symbol_table:
+                                    if self.symbol_table[token[0]]['type'] in ['dose', 'quant']:
+                                        expr_str += str(self.symbol_table[token[0]]['value'])
+                                    else:
+                                        self.errors.append(f"Semantic Error: Cannot use non-numeric variable '{token[0]}' in arithmetic expression")
+                                        valid_expression = False
+                                        break
+                                else:
+                                    self.errors.append(f"Semantic Error: Variable '{token[0]}' used before declaration")
+                                    valid_expression = False
+                                    break
+                            elif token[1] == 'numlit':
+                                expr_str += token[0]
+                            elif token[0] in ['+', '-', '*', '/', '%', '(', ')']:
+                                expr_str += token[0]
+                            elif token[1] == 'space':
+                                continue  # Skip spaces
+                            else:
+                                self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in arithmetic expression")
+                                valid_expression = False
+                                break
+                        
+                        if valid_expression and expr_str:
+                            try:
+                                if var_type == 'dose':
+                                    result = int(eval(expr_str))
+                                else:  # quant
+                                    result = float(eval(expr_str))
+                                
+                                self.symbol_table[var_name]['value'] = result
+                            except Exception as e:
+                                self.errors.append(f"Semantic Error: Failed to evaluate expression: {str(e)}")
+                    
+                    # Handle string concatenation for seq type
+                    elif var_type == 'seq':
+                        result = ""
+                        valid_expression = True
+                        
+                        for i, token in enumerate(expression_tokens):
+                            if token[0] == '+':
+                                continue
+                            
+                            if token[1] == 'Identifier':
+                                if token[0] in self.symbol_table:
+                                    if self.symbol_table[token[0]]['type'] == 'seq':
+                                        result += str(self.symbol_table[token[0]]['value'])
+                                    else:
+                                        self.errors.append(f"Semantic Error: Cannot concatenate non-string variable '{token[0]}'")
+                                        valid_expression = False
+                                        break
+                                else:
+                                    self.errors.append(f"Semantic Error: Variable '{token[0]}' used before declaration")
+                                    valid_expression = False
+                                    break
+                            elif token[1] == 'string literal':
+                                result += token[0].strip('"\'')
+                            elif token[1] == 'space':
+                                continue  # Skip spaces
+                            else:
+                                self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in string concatenation")
+                                valid_expression = False
+                                break
+                        
+                        if valid_expression:
+                            self.symbol_table[var_name]['value'] = result
+                    else:
+                        self.errors.append(f"Semantic Error: Complex expressions not supported for {var_type} type")
+                
+            # Check if we have another variable declaration (comma) or end of declaration (semicolon)
+            if self.current_token is None:
+                self.errors.append("Semantic Error: Unexpected end of tokens in declaration")
+                return
+            
+            if self.current_token[0] == ';':
+                self.next_token()  # Move past semicolon
+                return  # End of declaration
+            
+            if self.current_token[0] == ',':
+                self.next_token()  # Move past comma
+                
+                # Skip spaces after comma
+                while self.current_token is not None and self.current_token[1] == 'space':
+                    self.next_token()
+                
+                # Continue to the next variable declaration
+                continue
+            
+            # If neither semicolon nor comma, there's a syntax error
+            self.errors.append(f"Semantic Error: Expected ',' or ';' after variable declaration, found {self.current_token}")
+            return
         
         # Check for redeclaration
         if var_name in self.symbol_table:
@@ -596,47 +918,149 @@ class SemanticAnalyzer:
         if self.current_token is not None and self.current_token[0] == '=':
             self.next_token()  # Move past '='
             
-            # For seq type, expect string literal
-            if var_type == 'seq' and (self.current_token is None or self.current_token[1] != 'string literal'):
-                self.errors.append(f"Semantic Error: Expected string literal for seq variable '{var_name}'")
+            # Collect tokens for the expression until semicolon
+            expression_tokens = []
+            start_pos = self.token_index - 1  # Start after '='
             
-            # For dose type, expect integer
-            elif var_type == 'dose' and (self.current_token is None or self.current_token[1] != 'numlit' or '.' in self.current_token[0]):
-                self.errors.append(f"Semantic Error: Expected integer value for dose variable '{var_name}'")
+            while self.current_token is not None and self.current_token[0] != ';':
+                expression_tokens.append(self.current_token)
+                self.next_token()
+            
+            # For now, we've consumed tokens up to but not including semicolon
+            # Now evaluate the expression
+            
+            # For simple assignment (just one token)
+            if len(expression_tokens) == 1:
+                token = expression_tokens[0]
                 
-            # For quant type, expect float
-            elif var_type == 'quant' and (self.current_token is None or self.current_token[1] != 'numlit'):
-                self.errors.append(f"Semantic Error: Expected numeric value for quant variable '{var_name}'")
-                
-            # For allele type, expect dom or rec
-            elif var_type == 'allele' and (self.current_token is None or self.current_token[0] not in ['dom', 'rec']):
-                self.errors.append(f"Semantic Error: Expected 'dom' or 'rec' for allele variable '{var_name}'")
-                
-            # Store assigned value
-            if self.current_token is not None:
-                # Update the symbol table with the actual value
-                if var_type == 'dose':
-                    try:
-                        self.symbol_table[var_name]['value'] = int(self.current_token[0])
-                    except:
-                        self.errors.append(f"Semantic Error: Cannot convert {self.current_token[0]} to integer for dose variable '{var_name}'")
+                # Check if the assigned value is an identifier
+                if token[1] == 'Identifier':
+                    var_to_assign = token[0]
+                    if var_to_assign in self.symbol_table:
+                        # Get value from the identifier's stored value
+                        assigned_value = self.symbol_table[var_to_assign]['value']
+                        assigned_type = self.symbol_table[var_to_assign]['type']
                         
-                elif var_type == 'quant':
-                    try:
-                        self.symbol_table[var_name]['value'] = float(self.current_token[0])
-                    except:
-                        self.errors.append(f"Semantic Error: Cannot convert {self.current_token[0]} to float for quant variable '{var_name}'")
-                        
-                elif var_type == 'seq':
-                    # Remove quotation marks
-                    string_val = self.current_token[0].strip('"\'')
-                    self.symbol_table[var_name]['value'] = string_val
+                        # Check type compatibility
+                        if var_type == assigned_type or (var_type == 'quant' and assigned_type == 'dose'):
+                            self.symbol_table[var_name]['value'] = assigned_value
+                        else:
+                            self.errors.append(f"Semantic Error: Cannot assign {assigned_type} variable to {var_type} variable '{var_name}'")
+                    else:
+                        self.errors.append(f"Semantic Error: Variable '{var_to_assign}' used before declaration")
+                
+                # Handle literals
+                elif token[1] == 'numlit':
+                    if var_type == 'dose':
+                        try:
+                            self.symbol_table[var_name]['value'] = int(token[0])
+                        except:
+                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose variable '{var_name}'")
+                    elif var_type == 'quant':
+                        try:
+                            self.symbol_table[var_name]['value'] = float(token[0])
+                        except:
+                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant variable '{var_name}'")
+                    else:
+                        self.errors.append(f"Semantic Error: Cannot assign numeric value to {var_type} variable '{var_name}'")
+                
+                elif token[1] == 'string literal':
+                    if var_type == 'seq':
+                        # Remove quotation marks
+                        string_val = token[0].strip('"\'')
+                        self.symbol_table[var_name]['value'] = string_val
+                    else:
+                        self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} variable '{var_name}'")
+                
+                elif token[0] in ['dom', 'rec']:
+                    if var_type == 'allele':
+                        boolean_val = (token[0] == 'dom')
+                        self.symbol_table[var_name]['value'] = boolean_val
+                    else:
+                        self.errors.append(f"Semantic Error: Cannot assign boolean value to {var_type} variable '{var_name}'")
+            
+            # For complex expressions (multiple tokens with operators)
+            elif len(expression_tokens) > 1:
+                # Only handle arithmetic expressions for numeric types (dose and quant)
+                if var_type in ['dose', 'quant']:
+                    # Build expression string for evaluation
+                    expr_str = ""
+                    valid_expression = True
                     
-                elif var_type == 'allele':
-                    boolean_val = (self.current_token[0] == 'dom')
-                    self.symbol_table[var_name]['value'] = boolean_val
-            
-            self.next_token()  # Move past value
+                    for token in expression_tokens:
+                        if token[1] == 'Identifier':
+                            if token[0] in self.symbol_table:
+                                # Check if identifier is numeric type
+                                if self.symbol_table[token[0]]['type'] in ['dose', 'quant']:
+                                    expr_str += str(self.symbol_table[token[0]]['value'])
+                                else:
+                                    self.errors.append(f"Semantic Error: Cannot use non-numeric variable '{token[0]}' in arithmetic expression")
+                                    valid_expression = False
+                                    break
+                            else:
+                                self.errors.append(f"Semantic Error: Variable '{token[0]}' used before declaration")
+                                valid_expression = False
+                                break
+                        elif token[1] == 'numlit':
+                            expr_str += token[0]
+                        elif token[0] in ['+', '-', '*', '/', '%', '(', ')']:
+                            expr_str += token[0]
+                        elif token[1] == 'space':
+                            continue  # Skip spaces
+                        else:
+                            self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in arithmetic expression")
+                            valid_expression = False
+                            break
+                    
+                    # Evaluate expression if valid
+                    if valid_expression and expr_str:
+                        try:
+                            if var_type == 'dose':
+                                result = int(eval(expr_str))
+                            else:  # quant
+                                result = float(eval(expr_str))
+                            
+                            self.symbol_table[var_name]['value'] = result
+                        except Exception as e:
+                            self.errors.append(f"Semantic Error: Failed to evaluate expression: {str(e)}")
+                
+                # Handle string concatenation
+                elif var_type == 'seq':
+                    result = ""
+                    valid_expression = True
+                    
+                    for i, token in enumerate(expression_tokens):
+                        # Skip the '+' operator tokens
+                        if token[0] == '+':
+                            continue
+                        
+                        if token[1] == 'Identifier':
+                            if token[0] in self.symbol_table:
+                                if self.symbol_table[token[0]]['type'] == 'seq':
+                                    result += str(self.symbol_table[token[0]]['value'])
+                                else:
+                                    self.errors.append(f"Semantic Error: Cannot concatenate non-string variable '{token[0]}'")
+                                    valid_expression = False
+                                    break
+                            else:
+                                self.errors.append(f"Semantic Error: Variable '{token[0]}' used before declaration")
+                                valid_expression = False
+                                break
+                        elif token[1] == 'string literal':
+                            result += token[0].strip('"\'')
+                        elif token[1] == 'space':
+                            continue  # Skip spaces
+                        else:
+                            self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in string concatenation")
+                            valid_expression = False
+                            break
+                    
+                    if valid_expression:
+                        self.symbol_table[var_name]['value'] = result
+                
+                # For other types, don't allow complex expressions
+                else:
+                    self.errors.append(f"Semantic Error: Complex expressions not supported for {var_type} type")
             
         # Continue parsing until semicolon
         while self.current_token is not None and self.current_token[0] != ';':
@@ -927,6 +1351,65 @@ class SemanticAnalyzer:
             factor_type = 'allele'
             self.next_token()  # Move past boolean
             
+        # Handle stimuli function (user input)
+        elif self.current_token[1] == 'stimuli':
+            self.next_token()  # Move past 'stimuli'
+            
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+            
+            # Check for opening parenthesis
+            if self.current_token is None or self.current_token[0] != '(':
+                self.errors.append(f"Semantic Error: Expected '(' after 'stimuli', found {self.current_token}")
+                return 'unknown'
+                
+            self.next_token()  # Move past '('
+            
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+            
+            # Check for prompt message (string literal)
+            if self.current_token is None or self.current_token[1] != 'string literal':
+                self.errors.append(f"Semantic Error: Expected string literal for input prompt, found {self.current_token}")
+                # Skip to closing parenthesis to continue parsing
+                while self.current_token is not None and self.current_token[0] != ')':
+                    self.next_token()
+            else:
+                # Process the prompt message
+                self.next_token()  # Move past string literal
+            
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+            
+            # Check for closing parenthesis
+            if self.current_token is None or self.current_token[0] != ')':
+                self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}")
+                return 'unknown'
+                
+            self.next_token()  # Move past ')'
+            
+            # At parse time, we assume stimuli returns a string by default
+            # The actual type conversion would happen at runtime
+            factor_type = 'seq'
+            
+            # If this is part of an assignment, we need to check the target variable type
+            if hasattr(self, 'current_assignment_type'):
+                target_type = self.current_assignment_type
+                if target_type == 'dose':
+                    # Allow conversion from string to dose (integer)
+                    factor_type = 'dose'
+                elif target_type == 'quant':
+                    # Allow conversion from string to quant (float)
+                    factor_type = 'quant'
+                elif target_type == 'seq':
+                    # Keep as string
+                    factor_type = 'seq'
+                else:
+                    self.errors.append(f"Semantic Error: Cannot assign stimuli input to {target_type} variable")
+        
         # Handle parenthesized expression
         elif self.current_token[0] == '(':
             self.next_token()  # Move past '('
@@ -1165,7 +1648,7 @@ class SemanticAnalyzer:
         self.next_token()  # Move past ';'
 
     def express_statement(self):
-        """Parse express statement (print statement)"""
+        """Parse express statement (print statement) that can handle multiple values"""
         self.next_token()  # Move past 'express'
         
         # Skip spaces
@@ -1179,42 +1662,70 @@ class SemanticAnalyzer:
             
         self.next_token()  # Move past '('
         
-        # Skip spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()
+        # Store all values to print
+        values_to_print = []
         
-        # Check for variable identifier or literal
-        if self.current_token is None:
-            self.errors.append("Semantic Error: Unexpected end of tokens in express statement")
-            return
-        
-        # Store the value to print
-        value_to_print = None
-        if self.current_token[1] == 'Identifier':
-            var_name = self.current_token[0]
-            if var_name not in self.symbol_table:
-                self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement before declaration")
+        # Parse values until closing parenthesis
+        while self.current_token is not None and self.current_token[0] != ')':
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+            
+            # Check for variable identifier or literal
+            if self.current_token is None:
+                self.errors.append("Semantic Error: Unexpected end of tokens in express statement")
+                return
+            
+            # Process the current value
+            if self.current_token[1] == 'Identifier':
+                var_name = self.current_token[0]
+                if var_name not in self.symbol_table:
+                    self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement before declaration")
+                    values_to_print.append(f"undefined({var_name})")
+                else:
+                    # Get the value from the symbol table for printing
+                    values_to_print.append(str(self.symbol_table[var_name]['value']))
+            elif self.current_token[1] == 'string literal':
+                # For string literals, strip quotes and handle escape sequences
+                string_val = self.current_token[0].strip('"\'')
+                # Handle \n escape sequence
+                string_val = string_val.replace('\\n', '\n')
+                values_to_print.append(string_val)
+            elif self.current_token[1] == 'numlit':
+                # For numeric literals
+                values_to_print.append(self.current_token[0])
+            elif self.current_token[0] in ['dom', 'rec']:
+                # For boolean literals
+                values_to_print.append(self.current_token[0])
             else:
-                # Get the value from the symbol table for printing
-                value_to_print = self.symbol_table[var_name]['value']
-                # Add to symbol table special 'express_output' key to store what should be printed
-                self.symbol_table['express_output'] = {'type': 'output', 'value': value_to_print}
-        elif self.current_token[1] in ['string literal', 'numlit']:
-            # For literals, just store the literal value
-            value_to_print = self.current_token[0]
-            self.symbol_table['express_output'] = {'type': 'output', 'value': value_to_print}
-        elif self.current_token[0] in ['dom', 'rec']:
-            # For boolean literals
-            value_to_print = self.current_token[0]
-            self.symbol_table['express_output'] = {'type': 'output', 'value': value_to_print}
-        else:
-            self.errors.append(f"Semantic Error: Expected identifier or literal in express statement, found {self.current_token}")
-                
-        self.next_token()  # Move past identifier/literal
+                self.errors.append(f"Semantic Error: Expected identifier or literal in express statement, found {self.current_token}")
+                    
+            self.next_token()  # Move past identifier/literal
+            
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+            
+            # Check for comma or closing parenthesis
+            if self.current_token is None:
+                self.errors.append("Semantic Error: Unexpected end of tokens in express statement")
+                return
+            elif self.current_token[0] == ',':
+                self.next_token()  # Move past comma
+                continue
+            elif self.current_token[0] != ')':
+                self.errors.append(f"Semantic Error: Expected ',' or ')' in express statement, found {self.current_token}")
+                # Try to recover by skipping until we find a comma or closing parenthesis
+                while self.current_token is not None and self.current_token[0] != ',' and self.current_token[0] != ')':
+                    self.next_token()
+                if self.current_token is None:
+                    return
+                if self.current_token[0] == ',':
+                    self.next_token()  # Move past comma
+                    continue
         
-        # Skip spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()
+        # Store the collected values in the symbol table
+        self.symbol_table['express_output'] = {'type': 'output', 'value': values_to_print}
         
         # Check for closing parenthesis
         if self.current_token is None or self.current_token[0] != ')':
@@ -1231,9 +1742,34 @@ class SemanticAnalyzer:
         self.next_token()  # Move past ';'
     
     def expr(self):
-        """Parse an expression, which could be a variable, literal, or operation"""
+        """Parse an expression, which could be a variable, literal, or a chain of operations"""
         if self.current_token is None:
             self.errors.append("Semantic Error: Unexpected end of tokens in expression")
+            return
+            
+        # First parse the first operand
+        self.parse_operand()
+        
+        # Then handle any following operations in a loop
+        while self.current_token is not None and self.current_token[0] in ['+', '-', '*', '/', '%', '&&', '||']:
+            operator = self.current_token[0]
+            self.next_token()  # Move past operator
+            
+            # Skip spaces after operator
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+                
+            # Parse the next operand
+            self.parse_operand()
+            
+    def parse_operand(self):
+        """Parse a single operand (variable, literal, or parenthesized expression)"""
+        # Skip spaces before operand
+        while self.current_token is not None and self.current_token[1] == 'space':
+            self.next_token()
+            
+        if self.current_token is None:
+            self.errors.append("Semantic Error: Expected operand but found end of tokens")
             return
             
         # Variable
@@ -1243,52 +1779,80 @@ class SemanticAnalyzer:
                 self.errors.append(f"Semantic Error: Variable '{var_name}' used in expression before declaration")
             
             self.next_token()  # Move past identifier
-            
-            # Check for operation
-            if self.current_token is not None and self.current_token[0] in ['+', '-', '*', '/', '%']:
-                operator = self.current_token[0]
-                self.next_token()  # Move past operator
-                
-                # Parse right side of operation
-                self.expr()
                 
         # Number literal
         elif self.current_token[1] == 'numlit':
             self.next_token()  # Move past number
-            
-            # Check for operation
-            if self.current_token is not None and self.current_token[0] in ['+', '-', '*', '/', '%']:
-                operator = self.current_token[0]
-                self.next_token()  # Move past operator
-                
-                # Parse right side of operation
-                self.expr()
                 
         # String literal
         elif self.current_token[1] == 'string literal':
             self.next_token()  # Move past string
-            
-            # Check for concatenation
-            if self.current_token is not None and self.current_token[0] == '+':
-                self.next_token()  # Move past '+'
-                
-                # Parse right side of concatenation
-                self.expr()
                 
         # Boolean literal (dom/rec)
         elif self.current_token[0] in ['dom', 'rec']:
             self.next_token()  # Move past boolean
             
-            # Check for logical operation
-            if self.current_token is not None and self.current_token[0] in ['&&', '||']:
-                self.next_token()  # Move past operator
+        # Handle stimuli function
+        elif self.current_token[1] == 'stimuli':
+            self.next_token()  # Move past 'stimuli'
+            
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+            
+            # Check for opening parenthesis
+            if self.current_token is None or self.current_token[0] != '(':
+                self.errors.append(f"Semantic Error: Expected '(' after 'stimuli', found {self.current_token}")
+                return
                 
-                # Parse right side of operation
-                self.expr()
+            self.next_token()  # Move past '('
+            
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+            
+            # Check for prompt message (string literal)
+            if self.current_token is None or self.current_token[1] != 'string literal':
+                self.errors.append(f"Semantic Error: Expected string literal for input prompt, found {self.current_token}")
+                return
+                
+            prompt = self.current_token[0].strip('"\'')  # Store the prompt message
+            self.next_token()  # Move past string literal
+            
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+            
+            # Check for closing parenthesis
+            if self.current_token is None or self.current_token[0] != ')':
+                self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}")
+                return
+                
+            self.next_token()  # Move past ')'
+            
+            # Store the prompt for runtime input
+            if not hasattr(self, 'pending_inputs'):
+                self.pending_inputs = []
+            self.pending_inputs.append(prompt)
+            
+        # Parenthesized expression
+        elif self.current_token[0] == '(':
+            self.next_token()  # Move past '('
+            self.expr()  # Parse inner expression
+            
+            # Check for closing parenthesis
+            if self.current_token is None or self.current_token[0] != ')':
+                self.errors.append(f"Semantic Error: Expected ')' but found {self.current_token}")
+            else:
+                self.next_token()  # Move past ')'
                 
         else:
             self.errors.append(f"Semantic Error: Unexpected token in expression: {self.current_token}")
             self.next_token()  # Skip invalid token
+        
+        # Skip spaces after operand
+        while self.current_token is not None and self.current_token[1] == 'space':
+            self.next_token()
 
     def check_type_compatibility(self, left_type, right_type, operator):
         """Check if the types are compatible with the given operator"""
@@ -1526,6 +2090,7 @@ def can_convert_between_types(from_type, to_type):
     
     return False
 
+
 def parseSemantic(tokens, semantic_panel):
     """
     Run semantic analysis on tokens and display results in the semantic panel
@@ -1544,46 +2109,23 @@ def parseSemantic(tokens, semantic_panel):
     errors = analyzer.errors
     
     if not errors:
-        semantic_panel.insert(tk.END, "Semantic Analysis: No errors found.\n\n")
+        # If there are pending inputs, handle them directly
+        if analyzer.pending_inputs:
+            for prompt in analyzer.pending_inputs:
+                # Store the prompt in the semantic panel
+                semantic_panel.insert(tk.END, f"{prompt}\n")
+                # For now, we'll use a default value of 0 for dose variables
+                for var_name, var_info in analyzer.symbol_table.items():
+                    if var_info.get('type') == 'dose' and var_info.get('value') == 'undefined':
+                        analyzer.symbol_table[var_name]['value'] = 0
+                        break
+                
+                # After getting input, re-run the analysis to update the output
+                analyzer.parse()
+                display_results(analyzer, semantic_panel)
+        else:
+            display_results(analyzer, semantic_panel)
         
-        # Check if there's any express statement output to display
-        if 'express_output' in analyzer.symbol_table:
-            express_value = analyzer.symbol_table['express_output']['value']
-            semantic_panel.insert(tk.END, f"Express Output: {express_value}\n\n")
-        
-        
-        # Display symbol table
-        for var_name, var_info in analyzer.symbol_table.items():
-            # Skip the special express_output entry when displaying variables
-            if var_name == 'express_output':
-                continue
-                
-            var_type = var_info.get('type', 'unknown')
-            var_value = var_info.get('value', 'undefined')
-            semantic_panel.insert(tk.END, f"Variable: {var_name}\n")
-            semantic_panel.insert(tk.END, f"  Type: {var_type}\n")
-            semantic_panel.insert(tk.END, f"  Value: {var_value}\n\n")
-        
-        # Display function table if any functions were defined
-        if analyzer.functions:
-            semantic_panel.insert(tk.END, "\nFunction Table:\n")
-            
-            for func_name, func_info in analyzer.functions.items():
-                return_type = func_info.get('return_type', 'void')
-                params = func_info.get('parameters', [])
-                
-                semantic_panel.insert(tk.END, f"Function: {func_name}\n")
-                semantic_panel.insert(tk.END, f"  Return Type: {return_type}\n")
-                
-                if params:
-                    semantic_panel.insert(tk.END, f"  Parameters:\n")
-                    for param in params:
-                        semantic_panel.insert(tk.END, f"    {param['name']} ({param['type']})\n")
-                else:
-                    semantic_panel.insert(tk.END, f"  Parameters: None\n")
-                
-                semantic_panel.insert(tk.END, "\n")
-                
         return True
     else:
         # Display errors
@@ -1600,7 +2142,54 @@ def parseSemantic(tokens, semantic_panel):
         semantic_panel.insert(tk.END, f"\nTotal Errors: {len(errors)}\n")
         semantic_panel.tag_config("error", foreground="red")
         
-        # Switch to the semantic tab to show errors
-        # Note: This would be done in the GUI code
-        
         return False
+
+def display_results(analyzer, semantic_panel):
+    """Helper function to display analysis results"""
+    semantic_panel.delete("1.0", tk.END)
+    semantic_panel.insert(tk.END, "Semantic Analysis: No errors found.\n\n")
+    
+    # Check if there's any express statement output to display
+    if 'express_output' in analyzer.symbol_table:
+        express_values = analyzer.symbol_table['express_output']['value']
+        semantic_panel.insert(tk.END, "Express Output:\n")
+        
+        # Render the output properly rather than just displaying the raw values
+        output_text = ""
+        for value in express_values:
+            # Handle both string values and other types
+            output_text += str(value)
+        
+        semantic_panel.insert(tk.END, output_text + "\n\n")
+    
+    # Display symbol table
+    for var_name, var_info in analyzer.symbol_table.items():
+        # Skip the special express_output entry when displaying variables
+        if var_name == 'express_output':
+            continue
+            
+        var_type = var_info.get('type', 'unknown')
+        var_value = var_info.get('value', 'undefined')
+        semantic_panel.insert(tk.END, f"Variable: {var_name}\n")
+        semantic_panel.insert(tk.END, f"  Type: {var_type}\n")
+        semantic_panel.insert(tk.END, f"  Value: {var_value}\n\n")
+    
+    # Display function table if any functions were defined
+    if analyzer.functions:
+        semantic_panel.insert(tk.END, "\nFunction Table:\n")
+        
+        for func_name, func_info in analyzer.functions.items():
+            return_type = func_info.get('return_type', 'void')
+            params = func_info.get('parameters', [])
+            
+            semantic_panel.insert(tk.END, f"Function: {func_name}\n")
+            semantic_panel.insert(tk.END, f"  Return Type: {return_type}\n")
+            
+            if params:
+                semantic_panel.insert(tk.END, f"  Parameters:\n")
+                for param in params:
+                    semantic_panel.insert(tk.END, f"    {param['name']} ({param['type']})\n")
+            else:
+                semantic_panel.insert(tk.END, f"  Parameters: None\n")
+            
+            semantic_panel.insert(tk.END, "\n")

@@ -198,7 +198,6 @@ def run_analysis():
         syntax_errors = GenomeX_Syntax.parseSyntax(tokens, syntax_panel)
         display_lexical_pass("You are lexer free")
 
-        
         if syntax_errors:
             # If there are syntax errors, switch to syntax tab
             notebook.select(1)  # Index 1 is the syntax tab
@@ -210,6 +209,9 @@ def run_analysis():
                 # If there are semantic errors, switch to semantic tab
                 notebook.select(2)  # Index 2 is the semantic tab
             else:
+                # Switch to semantic tab to show the results
+                notebook.select(2)
+                
                 # Return to the tab that was previously selected if no errors
                 notebook.select(current_tab)
 
