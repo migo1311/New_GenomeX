@@ -170,10 +170,13 @@ class SemanticAnalyzer:
         
         # Add function to function table if it's not gene
         if function_name != 'gene':
-            return_type = 'void' if function_type == 'void' else param_type
+            return_type = 'void' if function_type == 'void' else param_type or 'regular'
+            # Support for multiple return values
             self.functions[function_name] = {
-                'return_type': return_type,
-                'parameters': parameters  # Now using the parameters list we collected
+                'return_type': return_type,                # Primary return type for backward compatibility
+                'parameters': parameters,                  # Parameters list
+                'multiple_returns': False,                 # Initially set to false, will be updated if multiple returns are found
+                'return_types': [return_type] if return_type != 'void' else [] # Initial array of return types
             }
         
         # Parse the body statements
@@ -181,12 +184,72 @@ class SemanticAnalyzer:
         
         # Check for '}'
         if self.current_token is None or self.current_token[0] != '}':
-            self.errors.append(f"Semantic Error: Expected '}}' at end of function body, but found {self.current_token}")
+            self.errors.append(f"Semantic Error: Expected '}}' at end of function body, found {self.current_token}")
             return
         self.next_token()  # Move past '}'
         print(f"Finished parsing function: {function_name}")
-    def prod_statement(self): 
 
+    # Parameter Passing
+    def check_parameter_passing(self, function_name, args):
+        """Check if arguments match function parameters"""
+        if function_name not in self.functions:
+            self.errors.append(f"Semantic Error: Function '{function_name}' not defined")
+            return False
+
+        func_info = self.functions[function_name]
+        expected_params = func_info['parameters']
+
+        # Check number of arguments matches parameters
+        if len(args) != len(expected_params):
+            self.errors.append(f"Semantic Error: Function '{function_name}' expects {len(expected_params)} arguments but got {len(args)}")
+            return False
+
+        # Check each argument matches parameter type
+        for i, (arg, param) in enumerate(zip(args, expected_params)):
+            arg_name = arg['name']
+            param_type = param['type']
+            param_name = param['name']
+
+            # Get argument type from symbol table
+            if arg_name not in self.symbol_table:
+                self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration")
+                return False
+
+            arg_type = self.symbol_table[arg_name]['type']
+            arg_value = arg.get('value', None)
+
+            # Log the parameter passing (for debugging)
+            # print(f"Passing {arg_name} ({arg_type}) with value {arg_value} to parameter {param_name} ({param_type})")
+
+            # Check type compatibility
+            if arg_type != param_type:
+                # Special cases for type compatibility
+                if param_type == 'quant' and arg_type == 'dose':
+                    # Allow dose to be passed to quant parameter (implicit conversion)
+                    pass
+                elif param_type == 'seq' and arg_type == 'chr':
+                    # Allow character to be passed to string parameter (implicit conversion)
+                    pass
+                elif param_type == 'allele' and arg_type in ['dose', 'quant']:
+                    # Allow numeric types to be converted to boolean (non-zero = dom, zero = rec)
+                    pass
+                else:
+                    self.errors.append(f"Semantic Error: Function '{function_name}' parameter {i+1} ('{param_name}') expects {param_type} but got {arg_type}")
+                    return False
+            
+            # Store the argument value in a temporary variable for this function call
+            # This helps with tracking parameter values during semantic analysis
+            temp_param_var = f"_{function_name}_{param_name}"
+            self.symbol_table[temp_param_var] = {
+                'type': param_type,
+                'value': arg_value,
+                'is_parameter': True,
+                'original_var': arg_name
+            }
+
+        return True
+
+    def prod_statement(self):
         """Parse prod statement (return statement) and check type compatibility"""
         self.next_token()  # Move past 'prod'
         
@@ -199,12 +262,12 @@ class SemanticAnalyzer:
             self.errors.append("Semantic Error: 'prod' statement can only be used inside a function")
             
         # Get the current function's return type
-        # For simplicity, we'll assume we're in the most recently defined function
         current_function = None
         return_type = None
         if self.functions:
             current_function = list(self.functions.keys())[-1]
-            return_type = self.functions[current_function]['return_type']
+            function_info = self.functions[current_function]
+            return_type = function_info['return_type']
             
         # Handle void functions (no return value)
         if return_type == 'void':
@@ -216,14 +279,50 @@ class SemanticAnalyzer:
                 while self.current_token is not None and self.current_token[0] != ';':
                     self.next_token()
         else:
-            # Non-void functions must return a value of the correct type
-            value_type = self.parse_expression()
+            # Process multiple return values if present
+            return_values = []
             
-            # Check if returned value type matches function return type
-            if value_type is not None and return_type is not None and value_type != return_type:
-                # Allow dose to be returned from a quant function
-                if not (return_type == 'quant' and value_type == 'dose'):
-                    self.errors.append(f"Semantic Error: Function returns {return_type} but got {value_type}")
+            while True:
+                # Non-void functions must return a value of the correct type
+                value_type = self.parse_expression()
+                return_values.append(value_type)
+                
+                # Check if there's a comma indicating another return value
+                if self.current_token is not None and self.current_token[0] == ',':
+                    self.next_token()  # Move past ','
+                    # Skip spaces after comma
+                    while self.current_token is not None and self.current_token[1] == 'space':
+                        self.next_token()
+                else:
+                    break
+            
+            # If multiple values are being returned
+            if len(return_values) > 1:
+                # Update the function to indicate it returns multiple values
+                function_info['multiple_returns'] = True
+                
+                # If this is the first prod statement with multiple returns, update return types
+                if 'return_types' not in function_info or len(function_info.get('return_types', [])) <= 1:
+                    function_info['return_types'] = return_values
+                else:
+                    # Check if the number of return values matches previous returns
+                    if len(return_values) != len(function_info['return_types']):
+                        self.errors.append(f"Semantic Error: Inconsistent number of return values. Function has previously returned {len(function_info['return_types'])} values but is now returning {len(return_values)} values.")
+                    else:
+                        # Check each return value for type compatibility
+                        for i, (current_type, expected_type) in enumerate(zip(return_values, function_info['return_types'])):
+                            if current_type != expected_type:
+                                # Allow certain implicit conversions
+                                if not ((expected_type == 'quant' and current_type == 'dose') or 
+                                       (expected_type == 'seq' and current_type == 'chr') or
+                                       (expected_type == 'allele' and current_type in ['dose', 'quant'])):
+                                    self.errors.append(f"Semantic Error: Function's return value at position {i+1} should be {expected_type} but got {current_type}")
+            else:
+                # Single return value - check against the function's primary return type
+                if return_values[0] != return_type:
+                    # Allow dose to be returned from a quant function
+                    if not (return_type == 'quant' and return_values[0] == 'dose'):
+                        self.errors.append(f"Semantic Error: Function returns {return_type} but got {return_values[0]}")
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
@@ -242,20 +341,151 @@ class SemanticAnalyzer:
         # Get function name
         if self.current_token is None or self.current_token[1] != 'Identifier':
             self.errors.append(f"Semantic Error: Expected function identifier after 'func', found {self.current_token}")
+            # Skip to end of statement for error recovery
+            while self.current_token is not None and self.current_token[0] != ';':
+                self.next_token()
+            if self.current_token is not None:
+                self.next_token()  # Move past ';'
             return
-            
-        function_name = self.current_token[0]
         
-        # Check if function exists
-        if function_name not in self.functions:
-            self.errors.append(f"Semantic Error: Function '{function_name}' called but not defined")
+        function_name = self.current_token[0]  # Store the function name
         
         self.next_token()  # Move past function name
         
         # Skip spaces
         while self.current_token is not None and self.current_token[1] == 'space':
             self.next_token()
+        
+        # Parse arguments - in your GenomeX language, arguments can be with or without parentheses
+        args = []
+        
+        # First check if there are parentheses (optional syntax)
+        has_parentheses = False
+        if self.current_token is not None and self.current_token[0] == '(':
+            has_parentheses = True
+            self.next_token()  # Move past '('
+        
+        # For cases like: func Multiply(Number);
+        if has_parentheses:
+            # Parse arguments inside parentheses
+            while self.current_token is not None and self.current_token[0] != ')':
+                # Skip spaces
+                while self.current_token is not None and self.current_token[1] == 'space':
+                    self.next_token()
+                
+                # Check if we've reached the end of arguments
+                if self.current_token is not None and self.current_token[0] == ')':
+                    break
+                
+                # Get argument (variable name)
+                if self.current_token is None or self.current_token[1] != 'Identifier':
+                    self.errors.append(f"Semantic Error: Expected identifier as function argument, found {self.current_token}")
+                    # Skip to end of statement for error recovery
+                    while self.current_token is not None and self.current_token[0] != ';':
+                        self.next_token()
+                    if self.current_token is not None:
+                        self.next_token()  # Move past ';'
+                    return
+                
+                arg_name = self.current_token[0]
+                
+                # Check if variable exists in symbol table
+                if arg_name not in self.symbol_table:
+                    self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration")
+                    # Skip to end of statement for error recovery
+                    while self.current_token is not None and self.current_token[0] != ';':
+                        self.next_token()
+                    if self.current_token is not None:
+                        self.next_token()  # Move past ';'
+                    return
+                
+                # Add argument to the list
+                args.append({
+                    'name': arg_name,
+                    'type': self.symbol_table[arg_name]['type'],
+                    'value': self.symbol_table[arg_name]['value'] if 'value' in self.symbol_table[arg_name] else None
+                })
+                
+                self.next_token()  # Move past argument
+                
+                # Skip spaces
+                while self.current_token is not None and self.current_token[1] == 'space':
+                    self.next_token()
+                
+                # Check for comma or closing parenthesis
+                if self.current_token is None:
+                    self.errors.append("Semantic Error: Unexpected end of tokens in function arguments")
+                    return
+                
+                if self.current_token[0] == ',':
+                    self.next_token()  # Move past comma
+                    continue
+                elif self.current_token[0] != ')':
+                    self.errors.append(f"Semantic Error: Expected ',' or ')' in function arguments, found {self.current_token}")
+                    # Skip to end of statement for error recovery
+                    while self.current_token is not None and self.current_token[0] != ';':
+                        self.next_token()
+                    if self.current_token is not None:
+                        self.next_token()  # Move past ';'
+                    return
             
+            # Move past ')'
+            if self.current_token is not None and self.current_token[0] == ')':
+                self.next_token()
+        # For cases like: func Multiply Number;
+        else:
+            # Check if there are any arguments after the function name (before semicolon)
+            while self.current_token is not None and self.current_token[0] != ';':
+                # Skip spaces
+                while self.current_token is not None and self.current_token[1] == 'space':
+                    self.next_token()
+                
+                # Check if we've reached the end
+                if self.current_token is not None and self.current_token[0] == ';':
+                    break
+                    
+                # Get argument (variable name)
+                if self.current_token is None or self.current_token[1] != 'Identifier':
+                    self.errors.append(f"Semantic Error: Expected identifier as function argument, found {self.current_token}")
+                    # Skip to end of statement for error recovery
+                    while self.current_token is not None and self.current_token[0] != ';':
+                        self.next_token()
+                    if self.current_token is not None:
+                        self.next_token()  # Move past ';'
+                    return
+                
+                arg_name = self.current_token[0]
+                
+                # Check if variable exists in symbol table
+                if arg_name not in self.symbol_table:
+                    self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration")
+                    # Skip to end of statement for error recovery
+                    while self.current_token is not None and self.current_token[0] != ';':
+                        self.next_token()
+                    if self.current_token is not None:
+                        self.next_token()  # Move past ';'
+                    return
+                
+                # Add argument to the list
+                args.append({
+                    'name': arg_name,
+                    'type': self.symbol_table[arg_name]['type'],
+                    'value': self.symbol_table[arg_name]['value'] if 'value' in self.symbol_table[arg_name] else None
+                })
+                
+                self.next_token()  # Move past argument
+                
+                # Skip spaces
+                while self.current_token is not None and self.current_token[1] == 'space':
+                    self.next_token()
+                
+                # Support for comma-separated arguments without parentheses
+                if self.current_token is not None and self.current_token[0] == ',':
+                    self.next_token()  # Move past comma
+        
+        # Validate parameter types and number
+        self.check_parameter_passing(function_name, args)
+        
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
             self.errors.append(f"Semantic Error: Expected ';' after function call, found {self.current_token}")
@@ -1831,93 +2061,170 @@ class SemanticAnalyzer:
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
             self.errors.append(f"Semantic Error: Expected '(' after 'express', found {self.current_token}")
-            # Try to recover by skipping to semicolon if possible
-            while self.current_token is not None and self.current_token[0] != ';':
-                self.next_token()
-            if self.current_token is not None:
-                self.next_token()  # Move past semicolon
             return
             
         self.next_token()  # Move past '('
         
-        # Process and collect all expressions to be printed
-        express_values = []
+        # Store all values to print
+        values_to_print = []
         
-        # Process the first expression
-        if self.current_token is not None and self.current_token[0] != ')':
-            # Parse the expression
+        # Parse values until closing parenthesis
+        while self.current_token is not None and self.current_token[0] != ')':
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+            
+            # Check for variable identifier or literal
+            if self.current_token is None:
+                self.errors.append("Semantic Error: Unexpected end of tokens in express statement")
+                return
+            
+            # Process the current value
             if self.current_token[1] == 'Identifier':
                 var_name = self.current_token[0]
-                if var_name in self.symbol_table:
-                    var_value = self.symbol_table[var_name].get('value', 'undefined')
-                    express_values.append(f"{var_name}: {var_value}")
-                else:
-                    self.errors.append(f"Semantic Error: Variable '{var_name}' used before declaration")
-                    express_values.append(f"{var_name}: undefined")
                 self.next_token()  # Move past identifier
-            elif self.current_token[1] in ['numlit', 'string literal', 'dom', 'rec']:
-                express_values.append(str(self.current_token[0]))
-                self.next_token()  # Move past literal
-            else:
-                # For other tokens, just add them as is
-                express_values.append(str(self.current_token[0]))
-                self.next_token()  # Move past token
                 
-            # Handle comma-separated values
-            while self.current_token is not None and self.current_token[0] == ',':
-                self.next_token()  # Move past comma
-                
-                # Skip spaces
-                while self.current_token is not None and self.current_token[1] == 'space':
-                    self.next_token()
-                    
-                if self.current_token is not None and self.current_token[0] != ')':
-                    if self.current_token[1] == 'Identifier':
-                        var_name = self.current_token[0]
-                        if var_name in self.symbol_table:
-                            var_value = self.symbol_table[var_name].get('value', 'undefined')
-                            express_values.append(f"{var_name}: {var_value}")
-                        else:
-                            self.errors.append(f"Semantic Error: Variable '{var_name}' used before declaration")
-                            express_values.append(f"{var_name}: undefined")
-                        self.next_token()  # Move past identifier
-                    elif self.current_token[1] in ['numlit', 'string literal', 'dom', 'rec']:
-                        express_values.append(str(self.current_token[0]))
-                        self.next_token()  # Move past literal
+                # Check if this is a function name (followed by parentheses)
+                if self.current_token is not None and self.current_token[0] == '(':
+                    # Handle function call
+                    if var_name not in self.functions:
+                        self.errors.append(f"Semantic Error: Function '{var_name}' used in express statement before declaration")
+                        values_to_print.append(f"undefined({var_name})")
                     else:
-                        # For other tokens, just add them as is
-                        express_values.append(str(self.current_token[0]))
-                        self.next_token()  # Move past token
+                        # Parse function arguments
+                        args = []
+                        self.next_token()  # Move past '('
+                        
+                        # Parse arguments
+                        while self.current_token is not None and self.current_token[0] != ')':
+                            # Skip spaces
+                            while self.current_token is not None and self.current_token[1] == 'space':
+                                self.next_token()
+                            
+                            # Get argument (variable name)
+                            if self.current_token is None or self.current_token[1] != 'Identifier':
+                                self.errors.append(f"Semantic Error: Expected identifier as function argument, found {self.current_token}")
+                                break
+                            
+                            arg_name = self.current_token[0]
+                            
+                            # Check if variable exists in symbol table
+                            if arg_name not in self.symbol_table:
+                                self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration")
+                                break
+                            
+                            # Add argument to the list
+                            args.append({
+                                'name': arg_name,
+                                'type': self.symbol_table[arg_name]['type'],
+                                'value': self.symbol_table[arg_name]['value'] if 'value' in self.symbol_table[arg_name] else None
+                            })
+                            
+                            self.next_token()  # Move past argument
+                            
+                            # Skip spaces
+                            while self.current_token is not None and self.current_token[1] == 'space':
+                                self.next_token()
+                            
+                            # Check for comma or closing parenthesis
+                            if self.current_token is None:
+                                self.errors.append("Semantic Error: Unexpected end of tokens in function arguments")
+                                break
+                            
+                            if self.current_token[0] == ',':
+                                self.next_token()  # Move past comma
+                                continue
+                            elif self.current_token[0] != ')':
+                                self.errors.append(f"Semantic Error: Expected ',' or ')' in function arguments, found {self.current_token}")
+                                break
+                        
+                        # Validate parameter types and number
+                        is_valid = self.check_parameter_passing(var_name, args)
+                        
+                        if is_valid:
+                            # Check if the function returns multiple values
+                            if self.functions[var_name].get('multiple_returns', False):
+                                # Get all return types
+                                return_types = self.functions[var_name].get('return_types', [])
+                                # Create a placeholder for each return value
+                                multiple_returns = []
+                                for i, ret_type in enumerate(return_types):
+                                    multiple_returns.append(f"{var_name}() result {i+1} [type: {ret_type}]")
+                                # Add all return values to the express output
+                                values_to_print.append(f"Multiple returns from {var_name}(): {', '.join(multiple_returns)}")
+                            else:
+                                # Single return value (old behavior)
+                                func_return_type = self.functions[var_name].get('return_type', 'unknown')
+                                values_to_print.append(f"{var_name}() result [type: {func_return_type}]")
+                        else:
+                            values_to_print.append(f"invalid call to {var_name}()")
+                        
+                        if self.current_token is not None and self.current_token[0] == ')':
+                            self.next_token()  # Move past ')'
+                else:
+                    # Handle function reference in express(Multiply) syntax
+                    # This is a reference to a function without calling it (displaying function info)
+                    if var_name in self.functions:
+                        # Check if the function returns multiple values
+                        if self.functions[var_name].get('multiple_returns', False):
+                            # Get all return types
+                            return_types = self.functions[var_name].get('return_types', [])
+                            return_types_str = ', '.join(return_types)
+                            param_count = len(self.functions[var_name].get('parameters', []))
+                            values_to_print.append(f"Function {var_name} (returns multiple values: {return_types_str}, takes {param_count} parameters)")
+                        else:
+                            # Just print the function information (single return)
+                            func_return_type = self.functions[var_name].get('return_type', 'unknown')
+                            param_count = len(self.functions[var_name].get('parameters', []))
+                            values_to_print.append(f"Function {var_name} (returns {func_return_type}, takes {param_count} parameters)")
+                    # Regular variable
+                    elif var_name not in self.symbol_table:
+                        self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement before declaration")
+                        values_to_print.append(f"undefined({var_name})")
+                    else:
+                        # Get the value from the symbol table for printing
+                        values_to_print.append(str(self.symbol_table[var_name]['value']))
+            elif self.current_token[1] == 'string literal':
+                # For string literals, strip quotes and handle escape sequences
+                string_val = self.current_token[0].strip('"\'')
+                # Handle \n escape sequence
+                string_val = string_val.replace('\\n', '\n')
+                values_to_print.append(string_val)
+                self.next_token()  # Move past string literal
+            elif self.current_token[1] == 'numlit':
+                # For numeric literals
+                values_to_print.append(self.current_token[0])
+                self.next_token()  # Move past numlit
+            elif self.current_token[0] in ['dom', 'rec']:
+                # For boolean literals
+                values_to_print.append(self.current_token[0])
+                self.next_token()  # Move past boolean literal
+            else:
+                # For any other token - just take it as is
+                values_to_print.append(str(self.current_token[0]))
+                self.next_token()
+            
+            # Check for comma (multiple values)
+            if self.current_token is not None and self.current_token[0] == ',':
+                self.next_token()  # Move past comma
+                continue
         
         # Check for closing parenthesis
         if self.current_token is None or self.current_token[0] != ')':
             self.errors.append(f"Semantic Error: Expected ')' in express statement, found {self.current_token}")
-            # Try to recover by skipping to semicolon if possible
-            while self.current_token is not None and self.current_token[0] != ';':
-                self.next_token()
-            if self.current_token is not None:
-                self.next_token()  # Move past semicolon
             return
-        
+            
         self.next_token()  # Move past ')'
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
             self.errors.append(f"Semantic Error: Expected ';' after express statement, found {self.current_token}")
-            # Try to recover by skipping to semicolon if possible
-            while self.current_token is not None and self.current_token[0] != ';':
-                self.next_token()
-            if self.current_token is not None:
-                self.next_token()  # Move past semicolon
             return
             
         self.next_token()  # Move past ';'
         
         # Store the express statement for output in the semantic panel
-        if hasattr(self, 'express_outputs'):
-            self.express_outputs.append(express_values)
-        else:
-            self.express_outputs = [express_values]
+        self.express_outputs.append(values_to_print)
 
     def expr(self):
         """Parse an expression, which could be a variable, literal, or a chain of operations"""
@@ -2040,72 +2347,83 @@ class SemanticAnalyzer:
                 # Numeric types can use all arithmetic operators
                 return True
             elif left_type == 'seq' and operator == '+':
-                # Sequences can only be concatenated
+                # Strings can use concatenation
                 return True
-            elif left_type == 'allele' and operator in ['&&', '||']:
-                # Boolean types can use logical operators
+            elif left_type == 'allele' and operator in ['==', '!=']:
+                # Boolean types can use equality operators
+                return True
+            elif operator in ['==', '!=']:
+                # All types can use equality operators
                 return True
             else:
-                # Other cases are not compatible
                 return False
-        elif (left_type == 'dose' and right_type == 'quant') or (left_type == 'quant' and right_type == 'dose'):
-            # Mixing integers and floats is allowed
+        elif left_type in ['dose', 'quant'] and right_type in ['dose', 'quant']:
+            # Different numeric types can be used together
             return True
         else:
-            # Different types are not compatible
+            # Different non-numeric types are not compatible
             return False
-
+        
     def type_check_assignment(self, var_name, value_token):
-        """Check if a value can be assigned to a variable of a specific type"""
+        """Check if value can be assigned to variable of given type"""
         if var_name not in self.symbol_table:
-            self.errors.append(f"Semantic Error: Variable '{var_name}' used before declaration")
-            return
+            self.errors.append(f"Semantic Error: Variable '{var_name}' not declared")
+            return False
             
         var_type = self.symbol_table[var_name]['type']
         
-        if value_token is None:
-            return
-            
-        # Check literal value types
+        # Handle different token types
         if value_token[1] == 'numlit':
-            if '.' in value_token[0]:
-                value_type = 'quant'
-            else:
-                value_type = 'dose'
-                
-            if var_type == 'dose' and value_type == 'quant':
-                self.errors.append(f"Semantic Error: Cannot assign float value to dose variable '{var_name}'")
-            elif var_type not in ['dose', 'quant']:
-                self.errors.append(f"Semantic Error: Cannot assign numeric value to {var_type} variable '{var_name}'")
-                
+            if '.' in value_token[0]:  # Float value
+                if var_type == 'quant':
+                    return True
+                elif var_type == 'dose':
+                    self.errors.append(f"Semantic Error: Cannot assign float to dose variable '{var_name}'")
+                    return False
+                else:
+                    self.errors.append(f"Semantic Error: Cannot assign number to {var_type} variable '{var_name}'")
+                    return False
+            else:  # Integer value
+                if var_type in ['dose', 'quant']:
+                    return True
+                else:
+                    self.errors.append(f"Semantic Error: Cannot assign number to {var_type} variable '{var_name}'")
+                    return False
         elif value_token[1] == 'string literal':
-            if var_type != 'seq':
-                self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} variable '{var_name}'")
-                
-        elif value_token[0] in ['dom', 'rec']:
-            if var_type != 'allele':
-                self.errors.append(f"Semantic Error: Cannot assign boolean value to {var_type} variable '{var_name}'")
-        
-        # Check variable assignments
-        elif value_token[1] == 'Identifier':
-            value_name = value_token[0]
-            if value_name in self.symbol_table:
-                value_type = self.symbol_table[value_name]['type']
-                
-                if var_type == 'dose' and value_type == 'quant':
-                    self.errors.append(f"Semantic Error: Cannot assign quant variable to dose variable '{var_name}'")
-                elif var_type != value_type and not (var_type == 'quant' and value_type == 'dose'):
-                    self.errors.append(f"Semantic Error: Cannot assign {value_type} variable to {var_type} variable '{var_name}'")
+            if var_type == 'seq':
+                return True
             else:
-                self.errors.append(f"Semantic Error: Variable '{value_name}' used before declaration")
-
+                self.errors.append(f"Semantic Error: Cannot assign string to {var_type} variable '{var_name}'")
+                return False
+        elif value_token[0] in ['dom', 'rec']:
+            if var_type == 'allele':
+                return True
+            else:
+                self.errors.append(f"Semantic Error: Cannot assign boolean to {var_type} variable '{var_name}'")
+                return False
+        elif value_token[1] == 'Identifier':
+            if value_token[0] not in self.symbol_table:
+                self.errors.append(f"Semantic Error: Variable '{value_token[0]}' not declared")
+                return False
+                
+            value_type = self.symbol_table[value_token[0]]['type']
+            
+            if var_type == value_type:
+                return True
+            elif var_type == 'quant' and value_type == 'dose':
+                # Allow implicit conversion from dose to quant
+                return True
+            else:
+                self.errors.append(f"Semantic Error: Cannot assign {value_type} value to {var_type} variable '{var_name}'")
+                return False
+        else:
+            self.errors.append(f"Semantic Error: Invalid value token: {value_token}")
+            return False
+            
     def skip_to_end_of_block(self):
-        """
-        Helper method to skip tokens until the end of the current block.
-        This is used for error recovery.
-        """
-        # Look for matching closing braces
-        brace_count = 1  # Start with 1 assuming we're inside a block
+        """Skip tokens until the end of the current block (matching closing brace)"""
+        # We assume we're just inside the { of a block
+        brace_count = 1  # Already inside one level
         
         while self.current_token is not None and brace_count > 0:
             if self.current_token[0] == '{':
@@ -2115,8 +2433,7 @@ class SemanticAnalyzer:
                 
             self.next_token()
             
-        # Now we should be at the token after the closing brace
-        # or at the end of tokens
+        # At this point, we're at the token after the closing brace
 
 
 def generate_symtab(parsed_tokens):
@@ -2146,14 +2463,18 @@ def validate_program(tokens):
     return len(errors) == 0, errors
 
 def analyze_code_snippet(code_snippet):
-    """
-    Analyze a code snippet without running a full program
-    Useful for IDE-like feedback during typing
-    """
-    tokens = gxl.tokenize(code_snippet)
+    """Analyze a code snippet (separate from the main file analysis)"""
+    # Tokenize the snippet
+    tokens = gxl.tokenize_input(code_snippet)
+    
+    # Create a semantic analyzer with an empty symbol table
     analyzer = SemanticAnalyzer(tokens)
+    
+    # Parse the tokens
     analyzer.parse()
-    return analyzer.errors
+    
+    # Return the analyzer for examination
+    return analyzer
 
 def get_variable_info(symbol_table, var_name):
     """
@@ -2323,86 +2644,60 @@ def parseSemantic(tokens, semantic_panel):
         
         return True
     else:
-        # Display errors
-        semantic_panel.insert(tk.END, "Semantic Analysis Errors:\n")
+        # Configure tags for styling
+        semantic_panel.tag_configure("heading", font=("Inter", 12, "bold"))
+        semantic_panel.tag_configure("success", foreground="green")
+        semantic_panel.tag_configure("item", foreground="blue")
+        semantic_panel.tag_configure("error", foreground="red")
+        
+        # Display errors in a simplified format
+        semantic_panel.insert(tk.END, "Semantic Analysis Errors:\n", "heading")
         
         for i, error in enumerate(errors, 1):
-            semantic_panel.insert(tk.END, f"{i}. {error}\n")
-            
-            # Apply error tags for highlighting
-            error_start = f"{i}.0"
-            error_end = f"{i}.end"
-            semantic_panel.tag_add("error", error_start, error_end)
-        
-        semantic_panel.insert(tk.END, f"\nTotal Errors: {len(errors)}\n")
-        semantic_panel.tag_config("error", foreground="red")
+            semantic_panel.insert(tk.END, f"{i}. {error}\n", "error")
         
         return False
 
 def display_results(analyzer, semantic_panel):
-    """Helper function to display analysis results"""
-    semantic_panel.delete("1.0", tk.END)
+    """Display the results of semantic analysis in a simple, clean format"""
+    # Clear the panel first
+    semantic_panel.delete('1.0', tk.END)
     
-    # Check if there are any errors first
-    if analyzer.errors:
-        semantic_panel.insert(tk.END, "Semantic Analysis: Errors found.\n\n")
-        for error in analyzer.errors:
-            semantic_panel.insert(tk.END, f"{error}\n")
-    else:
-        semantic_panel.insert(tk.END, "Semantic Analysis: No errors found.\n\n")
+    # Configure tags for styling
+    semantic_panel.tag_configure("heading", font=("Inter", 12, "bold"))
+    semantic_panel.tag_configure("success", foreground="green")
+    semantic_panel.tag_configure("item", foreground="blue")
+    semantic_panel.tag_configure("error", foreground="red")
     
-    # Check if there are any express outputs to display
-    if hasattr(analyzer, 'express_outputs') and analyzer.express_outputs:
-        semantic_panel.insert(tk.END, "Express Output:\n")
-        for i, express_values in enumerate(analyzer.express_outputs):
-            if i > 0:
-                semantic_panel.insert(tk.END, "\n")  # Add line between multiple express statements
-            
-            # Format the express values for display
-            output_line = "  "
-            for j, value in enumerate(express_values):
-                if j > 0:
-                    output_line += ", "
-                output_line += str(value)
-            
-            semantic_panel.insert(tk.END, output_line)
-        
-        semantic_panel.insert(tk.END, "\n\n")
-    
-    # Display symbol table
-    semantic_panel.insert(tk.END, "Variables:\n")
+    # Display the symbol table
+    semantic_panel.insert(tk.END, "Symbol Table:\n", "heading")
     for var_name, var_info in analyzer.symbol_table.items():
-        # Skip the special express_output entry when displaying variables
-        if var_name == 'express_output':
-            continue
-            
-        var_type = var_info.get('type', 'unknown')
-        var_value = var_info.get('value', 'undefined')
-        
-        # Format value display
-        value_display = var_value
-        if var_type == 'quant' and isinstance(var_value, float) and var_value == int(var_value):
-            # Display whole numbers without decimal point
-            value_display = int(var_value)
-        
-        semantic_panel.insert(tk.END, f"  {var_name} ({var_type}): {value_display}\n")
+        if not var_name.startswith('_'):  # Skip internal temporary variables
+            type_str = var_info.get('type', 'unknown')
+            value_str = str(var_info.get('value', 'undefined'))
+            semantic_panel.insert(tk.END, f"• {var_name}: {type_str} = {value_str}\n", "item")
     
-    # Display function table if any functions were defined
-    if analyzer.functions:
-        semantic_panel.insert(tk.END, "\nFunction Table:\n")
-        
-        for func_name, func_info in analyzer.functions.items():
-            return_type = func_info.get('return_type', 'void')
-            params = func_info.get('parameters', [])
+    # Display the function table
+    semantic_panel.insert(tk.END, "\nFunctions:\n", "heading")
+    for func_name, func_info in analyzer.functions.items():
+        return_type = func_info.get('return_type', 'unknown')
+        parameters = func_info.get('parameters', [])
+        param_str = ", ".join([f"{p['name']}: {p['type']}" for p in parameters])
+        semantic_panel.insert(tk.END, f"• {func_name} → {return_type} ({param_str})\n", "item")
+    
+    # Display express outputs
+    if hasattr(analyzer, 'express_outputs') and analyzer.express_outputs:
+        semantic_panel.insert(tk.END, "\nExpress Outputs:\n", "heading")
+        for i, output_values in enumerate(analyzer.express_outputs):
+            output_line = ", ".join(output_values)
+            semantic_panel.insert(tk.END, f"• {output_line}\n", "item")
+    
+    # Display errors (if any)
+    if analyzer.errors:
+        semantic_panel.insert(tk.END, "\nErrors:\n", "heading")
+        for error in analyzer.errors:
+            semantic_panel.insert(tk.END, f"• {error}\n", "error")
             
-            semantic_panel.insert(tk.END, f"  {func_name}: {return_type}\n")
-            
-            if params:
-                param_str = "  Parameters: "
-                for i, param in enumerate(params):
-                    if i > 0:
-                        param_str += ", "
-                    param_str += f"{param['name']} ({param['type']})"
-                semantic_panel.insert(tk.END, param_str + "\n")
-            else:
-                semantic_panel.insert(tk.END, f"  Parameters: None\n")
+    # Add success message if no errors
+    if not analyzer.errors:
+        semantic_panel.insert(tk.END, "\n✓ Semantic analysis completed successfully. No errors found.\n", "success")

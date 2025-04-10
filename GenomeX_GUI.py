@@ -6,6 +6,7 @@ from GenomeX_Lexer import display_lexical_error, display_lexical_pass
 import GenomeX_Lexer
 import GenomeX_Syntax  # Add this import
 import GenomX_Semantic  # Add this import
+import GenomeX_CodeGen
 
 # Create the main application window
 root = tk.Tk()
@@ -82,7 +83,8 @@ text_editor = tk.Text(editor_frame, wrap=tk.NONE, yscrollcommand=editor_scrollba
 text_editor.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
 # Insert default text into the text editor
-text_editor.insert("1.0", "")
+
+# text_editor.insert("1.0", "")
 # text_editor.insert("1.0", "act gene () {\n\n\n\n\n}")
 
 # Configure vertical scrollbar
@@ -114,6 +116,7 @@ def clear_editor():
     lexical_panel.delete(1.0, tk.END)
     syntax_panel.delete(1.0, tk.END)
     semantic_panel.delete(1.0, tk.END)
+    codegen_panel.delete(1.0, tk.END)
     update_line_numbers()
 
 # Buttons (Run & Clear)
@@ -134,10 +137,12 @@ notebook = ttk.Notebook(out_frame)
 lexical_tab = ttk.Frame(notebook)
 syntax_tab = ttk.Frame(notebook)
 semantic_tab = ttk.Frame(notebook)
+codegen_tab = ttk.Frame(notebook)
 
 notebook.add(lexical_tab, text="Lexical Status")
 notebook.add(syntax_tab, text="Syntax Result")
 notebook.add(semantic_tab, text="Semantic Error")
+notebook.add(codegen_tab, text="Python Code")
 notebook.pack(fill=tk.BOTH, expand=True)
 
 lexical_panel = tk.Text(lexical_tab, wrap=tk.WORD)
@@ -148,6 +153,9 @@ syntax_panel.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
 semantic_panel = tk.Text(semantic_tab, wrap=tk.WORD)
 semantic_panel.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+codegen_panel = tk.Text(codegen_tab, wrap=tk.WORD)
+codegen_panel.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
 def highlight_errors(text_editor, line_number, lexeme):
     start_index = f"{line_number}.0"
@@ -172,9 +180,10 @@ def run_analysis():
     
     # Clear previous output
     tree.delete(*tree.get_children())
-    lexical_panel.delete("1.0", tk.END)
-    syntax_panel.delete("1.0", tk.END)
-    semantic_panel.delete("1.0", tk.END)
+    lexical_panel.delete(1.0, tk.END)
+    syntax_panel.delete(1.0, tk.END)
+    semantic_panel.delete(1.0, tk.END)
+    codegen_panel.delete(1.0, tk.END)
 
     # Inject lexical_panel into the Lexer module so errors can be displayed
     GenomeX_Lexer.lexical_panel = lexical_panel  
@@ -209,11 +218,21 @@ def run_analysis():
                 # If there are semantic errors, switch to semantic tab
                 notebook.select(2)  # Index 2 is the semantic tab
             else:
-                # Switch to semantic tab to show the results
-                notebook.select(2)
+                # If semantic analysis passes, run the code generator
+                success, generated_code = GenomeX_CodeGen.parseCodeGen(tokens, codegen_panel)
                 
-                # Return to the tab that was previously selected if no errors
-                notebook.select(current_tab)
+                # Switch to CodeGen tab to show the results
+                notebook.select(3)  # Index 3 is the CodeGen tab
+                
+                if success:
+                    # Show Python code
+                    codegen_panel.delete("1.0", tk.END)
+                    codegen_panel.insert(tk.END, "// Python code generated successfully\n\n", "success")
+                    codegen_panel.insert(tk.END, generated_code)
+                    codegen_panel.tag_config("success", foreground="green")
+                else:
+                    # Already handled by parseCodeGen with appropriate message
+                    pass
 
 btn_run.config(command=run_analysis)
 
@@ -238,6 +257,7 @@ def apply_dark_mode():
     lexical_panel.configure(background="#1F1F1F", foreground="white", font=("Inter", 12))
     syntax_panel.configure(background="#1F1F1F", foreground="white")
     semantic_panel.configure(background="#1F1F1F", foreground="white")
+    codegen_panel.configure(background="#1F1F1F", foreground="white")
 
 def apply_light_mode():
     root.configure(bg="#FFFFFF")
@@ -259,6 +279,7 @@ def apply_light_mode():
     lexical_panel.configure(background="#FFFFFF", foreground="black", font=("Inter", 12))
     syntax_panel.configure(background="#FFFFFF", foreground="black")
     semantic_panel.configure(background="#FFFFFF", foreground="black")
+    codegen_panel.configure(background="#FFFFFF", foreground="black")
 
 # Define the undo function
 def undo_text():
