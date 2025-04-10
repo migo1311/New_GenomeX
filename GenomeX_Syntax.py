@@ -313,7 +313,10 @@ def parseSyntax(tokens, output_text):
 
                 print(f"End of body_statements: check_statements={check_statements}, start_idx={start_idx}")
                 return check_statements, start_idx  # Return final state
-                        
+
+            # Class variables to track program state
+            main_function_seen = False
+            user_defined_function_error = False  # Track if any user-defined function has an error            
             def global_statements(tokens, start_idx):
                 keywords = {"dose", "quant", "seq", "allele"}
 
@@ -477,11 +480,24 @@ def parseSyntax(tokens, output_text):
 
                     print(f"End of body_statements: check_statements={check_statements}, start_idx={start_idx}")
                     return check_statements, start_idx  # Return final state
-            
-            # Class variables to track program state
-            main_function_seen = False
-            user_defined_function_error = False  # Track if any user-defined function has an error
 
+            def global_handling(tokens, start_idx):
+                print("<global_handling>")
+                check_statements, new_idx = program.global_statements(tokens, start_idx)
+
+                if new_idx is None:
+                    print("Error in main function body statements")
+                    return False, None
+                
+                if not program.main_function_seen:
+                    print("Error: No main function (gene) found in the program")
+                    output_text.insert(tk.END, f"Expected main function\n")
+
+                    return False, None
+                
+                start_idx = new_idx
+                return True, start_idx + 1
+            
             def user_defined_function(tokens, start_idx):
                 print("Parsing user defined function...")
                 # Find which display line contains this token
@@ -563,8 +579,9 @@ def parseSyntax(tokens, output_text):
                 # Check if a main function exists in the program
                 if not program.main_function_seen:
                     print("Error: No main function (gene) found in the program")
+                    output_text.insert(tk.END, f"Expected main function\n")
                     return False, None
-                
+
                 # Check for closing brace
                 if is_token(tokens, start_idx, '}'):
                     print("Found closing brace for user defined function")
@@ -580,6 +597,8 @@ def parseSyntax(tokens, output_text):
                     return True, start_idx + 1
                 else:
                     print("Missing closing brace for user defined function")
+                    print("Error: No main function (gene) found in the program")
+
                     program.user_defined_function_error = True  # Mark that a user-defined function has an error
                     return False, None  # Error: Missing closing brace
 
@@ -663,6 +682,7 @@ def parseSyntax(tokens, output_text):
                     # Check if we've already seen the main function - this is an error
                     if program.main_function_seen:
                         print("Error: User-defined functions must be declared before the main function")
+                        output_text.insert(tk.END, f"Syntax Error: User-defined functions must be declared before the main function\n")
                         program.user_defined_function_error = True  # Mark that a user-defined function has an error
                         return False, None
                         
@@ -672,22 +692,7 @@ def parseSyntax(tokens, output_text):
                     # This ensures that errors in user-defined functions are properly detected
                     return program.user_defined_function(tokens, start_idx)
     
-            def global_handling(tokens, start_idx):
-                print("<global_handling>")
-                check_statements, new_idx = program.global_statements(tokens, start_idx)
 
-                if new_idx is None:
-                    print("Error in main function body statements")
-                    return False, None
-                
-                if not program.main_function_seen:
-                    print("Error: No main function (gene) found in the program")
-                    output_text.insert(tk.END, f"Expected main function\n")
-
-                    return False, None
-                
-                start_idx = new_idx
-                return True, start_idx + 1
 
     class conditional:
             @staticmethod
@@ -1023,7 +1028,7 @@ def parseSyntax(tokens, output_text):
             # Check for semicolon at the end
             if not (start_idx < len(tokens) and is_token(tokens, start_idx, ";")):
                 print(f"Error: Expected ';' at index {start_idx}")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a semicolon\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a ';' or '('\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, start_idx
 
@@ -1073,7 +1078,7 @@ def parseSyntax(tokens, output_text):
             start_idx = skip_spaces(tokens, start_idx)
 
             if not is_token(tokens, start_idx, ')'):
-                print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in if statement")
                 return False, None
 
             start_idx += 1  # Move past ')'
@@ -1134,7 +1139,7 @@ def parseSyntax(tokens, output_text):
                     start_idx = skip_spaces(tokens, start_idx)
 
                     if not is_token(tokens, start_idx, ')'):
-                        print(f"Error: Expected ')' at index {start_idx}")
+                        print(f"Error: Expected ')' at index {start_idx} in elif statement")
                         return False, None
                     
                     start_idx += 1  # Move past ')'
@@ -1298,7 +1303,7 @@ def parseSyntax(tokens, output_text):
             start_idx = skip_spaces(tokens, start_idx)
 
             if not is_token(tokens, start_idx, ')'):
-                print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in express statement")
                 output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis or math op in express statement\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
@@ -1459,7 +1464,7 @@ def parseSyntax(tokens, output_text):
             
             # Check for closing parenthesis
             if not is_token(tokens, start_idx, ')'):
-                print(f"Error: Expected ')' at index {start_idx} (line {line_number})")
+                print(f"Error: Expected ')' at index {start_idx} (line {line_number}) in stimuli call")
                 output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
@@ -1756,7 +1761,7 @@ def parseSyntax(tokens, output_text):
 
             # Check for closing parenthesis
             if not (start_idx < len(tokens) and tokens[start_idx][0] == ')'):
-                print(f"ERROR: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"ERROR: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in for loop")
                 output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected closing parenthesis for for loop\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
@@ -1987,7 +1992,7 @@ def parseSyntax(tokens, output_text):
             
             # Check for closing parenthesis
             if not is_token(tokens, start_idx, ')'):
-                print(f"DEBUG: Expected ')' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG: Expected ')' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in do-while statement")
                 return False, None
             
             # Move past closing parenthesis
@@ -2022,7 +2027,7 @@ def parseSyntax(tokens, output_text):
             start_idx = skip_spaces(tokens, start_idx)
 
             if not is_token(tokens, start_idx, ')'):
-                print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in while statement")
                 return False, None
 
             start_idx += 1  # Move past ')'
@@ -2149,7 +2154,7 @@ def parseSyntax(tokens, output_text):
                             return True, start_idx + 1
                         
                         if not is_token(tokens, start_idx, ','):
-                            output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected a comma\n")
+                            output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected a comma, math op or semicolon\n")
                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
                         
@@ -2220,7 +2225,7 @@ def parseSyntax(tokens, output_text):
                     return True, start_idx + 1
                 
                 if not is_token(tokens, start_idx, ','):
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected ; or , \n")
+                    output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected a comma, math op or semicolon\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
                 
@@ -2296,7 +2301,7 @@ def parseSyntax(tokens, output_text):
                     return True, start_idx + 1
                 
                 if not is_token(tokens, start_idx, ','):
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected ; or , \n")
+                    output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected a comma, math op or semicolon\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
                 
@@ -2367,7 +2372,7 @@ def parseSyntax(tokens, output_text):
                                         # If arithmetic sequence parsing fails, check number sign and use the numlit
                                         number_sign = check_number_sign(tokens[start_idx])
                                         if number_sign in {"doseliteral", "neliteral"}:
-                                            output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected a quant\n")
+                                            output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected a quant value\n")
                                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                             return False, None
                                         start_idx += 1
@@ -2375,7 +2380,7 @@ def parseSyntax(tokens, output_text):
                                     # If the next token is not a math_operator, check number sign and use the numlit
                                     number_sign = check_number_sign(tokens[start_idx])
                                     if number_sign in {"doseliteral", "neliteral"}:
-                                        output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected an quant\n")
+                                        output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected a quant value\n")
                                         output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                         return False, None
                                     start_idx += 1
@@ -2411,6 +2416,8 @@ def parseSyntax(tokens, output_text):
                             return True, start_idx + 1
                         
                         if not is_token(tokens, start_idx, ','):
+                            output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected a comma, math op or semicolon\n")
+                            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
                         
                         # Move past comma
@@ -4221,14 +4228,14 @@ def parseSyntax(tokens, output_text):
             print("No further splices")
             return True, [], start_idx
 
-    def reset_parser_state():
-        global main_function_seen
-        main_function_seen = False
+    # def reset_parser_state():
+    #     global main_function_seen
+    #     main_function_seen = False
 
     # Modify the process_tokens function to call reset_parser_state at the beginning
     def process_tokens(tokens):
         print("\n========== PROCESS TOKENS ==========")  # Big header for debugging
-        reset_parser_state()
+        # reset_parser_state()
 
         lines = []
         current_statement = []
@@ -4374,7 +4381,7 @@ def parseSyntax(tokens, output_text):
                         valid_line = True
                     break
 
-        elif first_token == "comment" or first_token == "multiline":
+        elif first_token == "comment" or first_token == "multiline" or first_token == "tab":
             continue  # Skip the rest of the loop for this line
 
 
