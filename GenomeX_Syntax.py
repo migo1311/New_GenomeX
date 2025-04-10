@@ -33,7 +33,7 @@ def parseSyntax(tokens, output_text):
         if start_idx is None:
             return None
             
-        while start_idx < len(tokens) and tokens[start_idx][1] in ["space", "comment", "multiline"]:
+        while start_idx < len(tokens) and tokens[start_idx][1] in ["space", "comment", "multiline", "tab"]:
             start_idx += 1
         return start_idx
 
@@ -297,7 +297,7 @@ def parseSyntax(tokens, output_text):
 
                             start_idx = new_idx
                             start_idx = skip_spaces(tokens, start_idx)
-                            print(f"tapos act: {statement_type}")
+                            print(f"Finished statement: {statement_type}")
                             break  # Exit loop after parsing a valid statement
 
                     if not found_statement:
@@ -314,6 +314,170 @@ def parseSyntax(tokens, output_text):
                 print(f"End of body_statements: check_statements={check_statements}, start_idx={start_idx}")
                 return check_statements, start_idx  # Return final state
                         
+            def global_statements(tokens, start_idx):
+                keywords = {"dose", "quant", "seq", "allele"}
+
+                perms_parsers = {
+                    'allele': variables.validate_alleleval,
+                    'dose': variables.validate_doseval,
+                    'seq': variables.validate_seqval,
+                    'quant': variables.validate_quantval,
+                }
+
+                local_parse = {
+                    'allele': variables.validate_alleleval,
+                    'dose': variables.validate_doseval,
+                    'seq': variables.validate_seqval,
+                    'quant': variables.validate_quantval,
+                }
+
+                clust_parse = {
+                    'dose': clust.validate_clust_doseval,
+                    'quant': clust.validate_clust_quantval,
+                    'seq': clust.validate_clust_seqval
+                }
+
+                
+                check_statements = False
+
+                while start_idx is not None and start_idx < len(tokens):
+                    start_idx = skip_spaces(tokens, start_idx)
+                    print("<body_statements>")
+                    current_token = tokens[start_idx] if start_idx < len(tokens) else None
+                        
+                    # Find which display line contains this token
+                    matching_line = None
+                    for line in display_lines:
+                        if current_token in line["tokens"]:
+                            matching_line = line
+                            break
+                        
+                    # If we found a matching line, use its line number, otherwise fall back to get_line_number
+                    if matching_line:
+                        line_number = matching_line["line_number"]
+                        line_tokens = matching_line["tokens"]
+                        line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])  # Format without spaces
+                    else:
+                        line_number = get_line_number(tokens, start_idx)
+                        line_tokens = []
+                        line_text = ""
+
+                    # List of keywords that require '_L' prefix
+                    keywords = ['dose', 'quant', 'seq', 'allele', 'clust', 'perms']
+
+                    # Check if current token is one of the keywords
+                    for keyword in keywords:
+                        if is_token(tokens, start_idx, keyword):
+                            # Removed the error about expecting '_L' before keyword
+                            # Now we just proceed normally with keyword processing
+                            print(f"Found keyword: {keyword}")
+                            # Add any keyword processing here if needed
+                            # ...
+                            
+                    # Special handling for perms and clust (removed '_L' requirement)
+                    if is_token(tokens, start_idx, 'perms'):
+                        print("<perms>")
+                        start_idx += 1  # Move past 'perms'
+                        start_idx = skip_spaces(tokens, start_idx)
+                        
+                        # Check if 'clust' follows 'perms'
+                        if is_token(tokens, start_idx, 'clust'):
+                            print("<clust>")
+                            start_idx += 1  # Move past 'clust'
+                            start_idx = skip_spaces(tokens, start_idx)
+                            
+                            # Look for a valid clust type
+                            if not any(is_token(tokens, start_idx, clust_type) for clust_type in clust_parse):
+                                print("Invalid clust type")
+                                return False, None
+                                
+                            for clust_type, parser_func in clust_parse.items():
+                                if is_token(tokens, start_idx, clust_type):
+                                    start_idx += 1  # Move past the type
+                                    start_idx = skip_spaces(tokens, start_idx)
+                                    
+                                    is_valid, new_idx = parser_func(tokens, start_idx)
+                                    if not is_valid:
+                                        print(f"Invalid perms clust {clust_type} statement")
+                                        return False, None
+                                        
+                                    start_idx = new_idx
+                                    start_idx = skip_spaces(tokens, start_idx)
+                                    print(f"Successfully parsed perms clust {clust_type}")
+                                    break  # Exit loop after parsing a valid statement
+                                    
+                            continue  # Continue main loop
+                        
+                        # Original perms parsing logic
+                        # Look for a valid perms type
+                        if not any(is_token(tokens, start_idx, perms_type) for perms_type in perms_parsers):
+                            print("Invalid perms type")
+                            return False, None  # Invalid perms type
+                            
+                        for perms_type, parser_func in perms_parsers.items():
+                            if is_token(tokens, start_idx, perms_type):
+                                start_idx += 1  # Move past the type
+                                start_idx = skip_spaces(tokens, start_idx)
+                                
+                                is_valid, new_idx = parser_func(tokens, start_idx)
+                                if not is_valid:
+                                    print(f"Invalid perms {perms_type} statement")
+                                    return False, None
+                                    
+                                start_idx = new_idx
+                                start_idx = skip_spaces(tokens, start_idx)
+                                print(f"Successfully parsed perms {perms_type}")
+                                break  # Exit loop after parsing a valid perms statement
+                                
+                        continue  # Continue main loop
+                        
+                    elif is_token(tokens, start_idx, 'clust'):
+                        print("<clust>")
+                        start_idx += 1  # Move past 'clust'
+                        start_idx = skip_spaces(tokens, start_idx)
+                        
+                        # Look for a valid clust type
+                        if not any(is_token(tokens, start_idx, clust_type) for clust_type in clust_parse):
+                            print("Invalid clust type")
+                            return False, None
+                            
+                        for clust_type, parser_func in clust_parse.items():
+                            if is_token(tokens, start_idx, clust_type):
+                                start_idx += 1  # Move past the type
+                                start_idx = skip_spaces(tokens, start_idx)
+                                
+                                is_valid, new_idx = parser_func(tokens, start_idx)
+                                if not is_valid:
+                                    print(f"Invalid clust {clust_type} statement")
+                                    return False, None
+                                    
+                                start_idx = new_idx
+                                start_idx = skip_spaces(tokens, start_idx)
+                                print(f"Successfully parsed clust {clust_type}")
+                                break  # Exit loop after parsing a valid statement
+                                
+                        continue  # Continue main loop
+
+                    # Direct parsing for other types
+                    for L_type, parser_func in local_parse.items():
+                        if is_token(tokens, start_idx, L_type):
+                            start_idx += 1  # Move past the type
+                            start_idx = skip_spaces(tokens, start_idx)
+
+                            is_valid, new_idx = parser_func(tokens, start_idx)
+                            if not is_valid:
+                                print(f"Invalid {L_type} statement")
+                                return False, None
+
+                            start_idx = new_idx
+                            start_idx = skip_spaces(tokens, start_idx)
+                            print(f"Successfully parsed {L_type}")
+                            check_statements = True  # Mark that we've found a valid statement
+                            break  # Exit loop after parsing a valid statement
+
+                    print(f"End of body_statements: check_statements={check_statements}, start_idx={start_idx}")
+                    return check_statements, start_idx  # Return final state
+            
             # Class variables to track program state
             main_function_seen = False
             user_defined_function_error = False  # Track if any user-defined function has an error
@@ -508,6 +672,23 @@ def parseSyntax(tokens, output_text):
                     # This ensures that errors in user-defined functions are properly detected
                     return program.user_defined_function(tokens, start_idx)
     
+            def global_handling(tokens, start_idx):
+                print("<global_handling>")
+                check_statements, new_idx = program.global_statements(tokens, start_idx)
+
+                if new_idx is None:
+                    print("Error in main function body statements")
+                    return False, None
+                
+                if not program.main_function_seen:
+                    print("Error: No main function (gene) found in the program")
+                    output_text.insert(tk.END, f"Expected main function\n")
+
+                    return False, None
+                
+                start_idx = new_idx
+                return True, start_idx + 1
+
     class conditional:
             @staticmethod
             def conditional_block(tokens, start_idx):
@@ -537,8 +718,8 @@ def parseSyntax(tokens, output_text):
                         line_tokens = []
                         line_text = ""
                         
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Invalid condition\n")
-                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    # output_text.insert(tk.END, f"Syntax Error at line {line_number}: Invalid condition\n")
+                    # output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     print(f"Error: Invalid conditions_base at index {start_idx}")
                     return False, None
                 return True, new_idx
@@ -591,7 +772,7 @@ def parseSyntax(tokens, output_text):
 
                 # Check if there's a conditional operator - REQUIRED
                 if start_idx >= len(tokens) or not any(tokens[start_idx][0] in op_set for op_set in [logical_operators, relational_operators] for op in op_set):
-                    output_text.insert(tk.END, f"Syntax Error: Expected relational operator at line {get_line_number(tokens, start_idx)}\n")
+                    # output_text.insert(tk.END, f"Syntax Error: Expected relational operator at line {get_line_number(tokens, start_idx)}\n")
                     print(f"Error: Expected relational operator at index {start_idx}, found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}")
                     output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected relational operator\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
@@ -802,12 +983,11 @@ def parseSyntax(tokens, output_text):
                 start_idx = skip_spaces(tokens, start_idx)
                 
                 # Parse parameters
-                is_valid, params, new_idx = parameters.parse_params(tokens, start_idx)
+                is_valid, new_idx = parameters.func_params(tokens, start_idx)
                 if not is_valid:
                     print(f"Error: Invalid parameters in function call at index {start_idx}")
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Invalid parameters in function call\n")
-                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                    program.user_defined_function_error = True  # Mark that a user-defined function has an error
+                    # output_text.insert(tk.END, f"Syntax Error at line {line_number}: Invalid parameters in function call\n")
+                    # output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, start_idx
                 
                 start_idx = new_idx  # Update index after parsing parameters
@@ -885,8 +1065,8 @@ def parseSyntax(tokens, output_text):
             is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
             if not is_valid:
                 print(f"Error: Invalid condition in if statement at index {start_idx}")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a conditional block\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                # output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a conditional block\n")
+                # output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
 
             start_idx = new_idx  # Move to next token
@@ -1126,9 +1306,13 @@ def parseSyntax(tokens, output_text):
             start_idx += 1 
             start_idx = skip_spaces(tokens, start_idx)   
 
-            print("abot dulo ng express")
             if is_token(tokens, start_idx, ';'):
                 return True, start_idx + 1
+            else:
+                print(f"Error: Expected ';' at index {start_idx} (line {line_number})")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a semicolon in express statement\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                return False, None
 
         @staticmethod
         def stimuli_statement(tokens, start_idx):
@@ -1611,10 +1795,32 @@ def parseSyntax(tokens, output_text):
         @staticmethod
         def prod_statement(tokens, start_idx):
             print("inside prod_statement")
-            
+
+            current_token = tokens[start_idx] if start_idx < len(tokens) else None
+                
+            # Find which display line contains this token
+            matching_line = None
+            for line in display_lines:
+                if current_token in line["tokens"]:
+                    matching_line = line
+                    break
+                
+            # If we found a matching line, use its line number, otherwise fall back to get_line_number
+            if matching_line:
+                line_number = matching_line["line_number"]
+                line_tokens = matching_line["tokens"]
+                line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])  # Format without spaces
+            else:
+                line_number = get_line_number(tokens, start_idx)
+                line_tokens = []
+                line_text = ""
+
             # Check if we have just "prod" followed immediately by ";"
             start_idx = skip_spaces(tokens, start_idx)
             if start_idx < len(tokens) and is_token(tokens, start_idx, ';'):
+                print(f"Error: Expected ';' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected ';'\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 print(f"Valid empty prod statement at index {start_idx}")
                 return True, start_idx + 1  # End of statement
             
@@ -1633,7 +1839,9 @@ def parseSyntax(tokens, output_text):
                 print(f"Valid prod statement (ends with ';') at index {start_idx}")
                 return True, start_idx + 1  # End of statement
 
-            print(f"Error: Invalid token after arithmetic expression {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} at index {start_idx}")
+            print(f"Error: Expected literal at prod statement, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected ';'\n")
+            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
             return False, None
 
         @staticmethod
@@ -3218,8 +3426,8 @@ def parseSyntax(tokens, output_text):
       
             # If we get here, the token is neither a parenthesized expression nor a literal/identifier
             print(f"ERROR: Expected parenthesized expression, literal, or identifier at index {start_idx}, but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}")
-            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected parenthesized expression, literal, or identifier\n")
-            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+            # output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected parenthesized expression, literal, or identifier\n")
+            # output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
             return False, start_idx
 
         @staticmethod
@@ -3349,6 +3557,66 @@ def parseSyntax(tokens, output_text):
 
             print(f"Completed parsing parameters: {params}")
             return True, params, start_idx
+
+        @staticmethod
+        def func_params(tokens, start_idx):
+            print(">> Parsing func parameters...")
+            print(f"Initial start index: {start_idx}")
+            print(f"Token at start index: {tokens[start_idx] if start_idx < len(tokens) else 'None'}")
+
+            current_token = tokens[start_idx] if start_idx < len(tokens) else None
+            
+            # Find which display line contains this token
+            matching_line = None
+            for line in display_lines:
+                if current_token in line["tokens"]:
+                    matching_line = line
+                    break
+            
+            # If we found a matching line, use its line number, otherwise fall back to get_line_number
+            if matching_line:
+                line_number = matching_line["line_number"]
+                line_tokens = matching_line["tokens"]
+                line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])  # Format without spaces
+                print(f"Matched display line found at line {line_number}: {line_text}")
+            else:
+                line_number = get_line_number(tokens, start_idx)
+                line_tokens = []
+                line_text = ""
+                print(f"No matching display line found. Falling back to get_line_number: {line_number}")
+
+            start_idx = skip_spaces(tokens, start_idx)
+            print(f"Index after skipping initial spaces: {start_idx}")
+
+            if start_idx >= len(tokens):
+                print(f">> No parameters found at index {start_idx}.")
+                return True, start_idx
+
+            while start_idx < len(tokens):
+                print(f"Processing parameter at index: {start_idx}")
+
+                # Check if the current token is an identifier
+                if tokens[start_idx][1] == "Identifier":
+                    print(f"Parameter identifier detected: {tokens[start_idx][0]}")
+                    start_idx += 1
+                    start_idx = skip_spaces(tokens, start_idx)
+                    print(f"Index after skipping spaces post-identifier: {start_idx}")
+                else:
+                    print(f">> ERROR: Expected identifier at index {start_idx}")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    return False, start_idx
+
+                if start_idx < len(tokens) and is_token(tokens, start_idx, ','):
+                    print("Comma detected, moving to next parameter.")
+                    start_idx += 1
+                    start_idx = skip_spaces(tokens, start_idx)
+                else:
+                    print("No comma found, assuming end of parameter list.")
+                    break
+
+            print(f">> Completed parsing parameters")
+            return True, start_idx
 
     class express:
         @staticmethod
@@ -4069,23 +4337,9 @@ def parseSyntax(tokens, output_text):
     assignment_op = {'+=', '*=', '-=', '/=', '%=', '='}
 
     program_pattern = [
-        ['act' ]
+        ['act'],
+        ['_G']
     ]
-
-    global_pattern = [
-        ['_G', 'quant'],
-        ['_G', 'dose'],
-        ['_G', 'seq'],
-        ['_G', 'allele'],
-        ['_G', 'clust', 'dose'],
-        ['_G', 'clust', 'quant'],
-        ['_G', 'clust', 'seq'],
-        ['_G', 'perms', 'dose'],
-        ['_G', 'perms', 'quant'],
-        ['_G', 'perms', 'seq'],
-        ['_G', 'perms', 'allele']
-    ]
-
 
     token_lines, display_lines = process_tokens(tokens)
     valid_syntax = True
@@ -4107,11 +4361,15 @@ def parseSyntax(tokens, output_text):
         start_idx = 0 
         print(f"first token: {first_token}")
             
-        if first_token == "act":
+        if first_token == "act" or first_token == "_G":
             for pattern in program_pattern:
                 is_valid, next_idx, _ = validate_syntax_pattern(line_tokens, pattern)
                 if is_valid:
-                    is_valid_program, sign = program.main_function(line_tokens, next_idx)
+                    if first_token == "act":
+                        is_valid_program, sign = program.main_function(line_tokens, next_idx)
+                    elif first_token == "_G":
+                        is_valid_program, sign = program.global_handling(line_tokens, next_idx)
+                    
                     if is_valid_program:
                         valid_line = True
                     break
@@ -4119,123 +4377,7 @@ def parseSyntax(tokens, output_text):
         elif first_token == "comment" or first_token == "multiline":
             continue  # Skip the rest of the loop for this line
 
-        elif first_token == "_G":
-            is_valid_perms = False  
-            sign = None 
 
-            for pattern in global_pattern:
-                print(f"Checking pattern: {pattern}")
-                is_valid, next_idx, _ = validate_syntax_pattern(line_tokens, pattern)
-                print(f"Is pattern valid? {is_valid}")
-
-                if is_valid:
-                    data_type = pattern[1]
-                    print(f"Data type identified: {data_type}")
-                    
-                    if data_type == 'quant':
-                        if is_valid:
-                            is_valid_quantval = variables.validate_quantval(line_tokens, next_idx)
-                            if is_valid_quantval:
-                                number_sign = sign
-                            break
-
-                    elif data_type == 'dose':
-                        if is_valid:
-                            is_valid_doseval = variables.validate_doseval(line_tokens, next_idx)
-                            if is_valid_doseval:
-                                number_sign = sign
-                            break
-
-                    elif data_type == 'allele':
-                        if is_valid:
-                            is_valid_alleleval = variables.validate_alleleval(line_tokens, next_idx)
-                            if is_valid_alleleval:
-                                break
-
-                    elif data_type == 'seq':
-                        if is_valid:
-                            is_valid_seqval = variables.validate_seqval(line_tokens, next_idx)
-                            if is_valid_seqval:
-                                break
-
-                    elif data_type == 'clust':
-                        print("pasok sa global clust")
-                        print(f"Checking pattern: {pattern}")
-                        is_valid, next_idx, _ = validate_syntax_pattern(line_tokens, pattern)
-                        print(f"Is pattern valid? {is_valid}")
-
-                        if is_valid:
-                            data_type = pattern[2]
-                            print(f"Data type identified: {data_type}")
-                            
-                            if data_type == 'quant':
-                                if is_valid:
-                                    is_valid_quantval = variables.validate_quantval(line_tokens, next_idx)
-                                    if is_valid_quantval:
-                                        number_sign = sign
-                                    break
-
-                            elif data_type == 'dose':
-                                if is_valid:
-                                    is_valid_doseval = variables.validate_doseval(line_tokens, next_idx)
-                                    if is_valid_doseval:
-                                        number_sign = sign
-                                    break
-
-                            elif data_type == 'allele':
-                                if is_valid:
-                                    is_valid_alleleval = variables.validate_alleleval(line_tokens, next_idx)
-                                    if is_valid_alleleval:
-                                        break
-
-                            elif data_type == 'seq':
-                                if is_valid:
-                                    is_valid_seqval = variables.validate_seqval(line_tokens, next_idx)
-                                    if is_valid_seqval:
-                                        break
-
-                            if is_valid_perms:
-                                valid_line = True
-                                number_sign = sign
-                            break  
-
-                    elif data_type == 'perms':
-                        print("pasok sa global clust")
-                        print(f"Checking pattern: {pattern}")
-                        is_valid, next_idx, _ = validate_syntax_pattern(line_tokens, pattern)
-                        print(f"Is pattern valid? {is_valid}")
-
-                        if is_valid:
-                            data_type = pattern[2]
-                            print(f"Data type identified: {data_type}")
-                            
-                            if data_type == 'quant':
-                                if is_valid:
-                                    is_valid_quantval = variables.validate_quantval(line_tokens, next_idx)
-                                    if is_valid_quantval:
-                                        valid_line = True
-                                    break
-
-                            elif data_type == 'dose':
-                                if is_valid:
-                                    is_valid_doseval = variables.validate_doseval(line_tokens, next_idx)
-                                    if is_valid_doseval:
-                                        valid_line = True
-                                    break
-
-                            elif data_type == 'seq':
-                                if is_valid:
-                                    is_valid_seqval = variables.validate_seqval(line_tokens, next_idx)
-                                    if is_valid_seqval:
-                                        valid_line = True
-                                    break
-
-                            elif data_type == 'allele':
-                                if is_valid:
-                                    is_valid_alleleval = variables.validate_alleleval(line_tokens, next_idx)
-                                    if is_valid_alleleval:
-                                        valid_line = True
-                                    break
 
         else:
             #DAPAT DI TO NAGPAPAKITA KAHIT ERROR SA USER DEF
