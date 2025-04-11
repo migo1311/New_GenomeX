@@ -2,8 +2,13 @@ import tkinter as tk
 import GenomeX_Lexer as gxl
 import GenomeX_Syntax as gxs
 import GenomX_Semantic as gxsem
+import io
+import sys
+
+
 
 class GenomeXCodeGenerator:
+    print("Initializing GenomeXCodeGenerator...")
     def __init__(self, tokens, symbol_table=None):
         self.tokens = tokens
         self.symbol_table = symbol_table if symbol_table else {}
@@ -18,6 +23,7 @@ class GenomeXCodeGenerator:
         self.python_code.append(f"{indent}{line}")
         
     def generate_code(self):
+        print("Generating Python code from codegen...")
         """Main method to generate Python code from tokens"""
         self.add_line("# Generated Python code from GenomeX")
         self.add_line("")
@@ -231,6 +237,8 @@ class GenomeXCodeGenerator:
             elif token_type == "Identifier":
                 index = self.process_assignment(index)
                 
+            elif token_type == "comment":
+                index = self.process_assignment(index)
             else:
                 index += 1
                 
@@ -283,47 +291,41 @@ class GenomeXCodeGenerator:
         return index
     
     def process_express_statement(self, index):
-        """Process an express (print) statement"""
-        # Skip express token
-        index += 1
-        
+        index += 1  # Skip 'express'
+
         # Skip spaces
         while index < len(self.tokens) and self.tokens[index][1] == "space":
             index += 1
-            
+
         # Check for opening parenthesis
         if index < len(self.tokens) and self.tokens[index][0] == "(":
             index += 1
-            
-            # Process values to print
-            values = []
-            while index < len(self.tokens) and self.tokens[index][0] != ")":
-                # Skip spaces and commas
-                while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == ","):
-                    index += 1
-                
-                if index < len(self.tokens) and self.tokens[index][0] == ")":
-                    break
-                
-                # Get the value to print
-                value, index = self.extract_value(index)
-                values.append(value)
-            
-            # Skip closing parenthesis
+
+            # Build the expression as a string
+            expression_parts = []
+            paren_count = 1  # we’ve already seen one (
+            while index < len(self.tokens) and paren_count > 0:
+                token, token_type = self.tokens[index]
+
+                if token == "(":
+                    paren_count += 1
+                elif token == ")":
+                    paren_count -= 1
+                    if paren_count == 0:
+                        break
+
+                expression_parts.append(token)
+                index += 1
+
+            # Skip the closing ')'
             if index < len(self.tokens) and self.tokens[index][0] == ")":
                 index += 1
-            
-            # Generate Python print statement
-            if len(values) == 1:
-                self.add_line(f"print({values[0]})")
-            else:
-                self.add_line(f"print({', '.join(values)})")
-        else:
-            # No parenthesis, simple value
-            value, index = self.extract_value(index)
-            self.add_line(f"print({value})")
-        
+
+            expression = " ".join(expression_parts)
+            self.add_line(f"print({expression})")
+
         return index
+
     
     def process_if_statement(self, index):
         """Process an if statement"""
@@ -654,15 +656,16 @@ class GenomeXCodeGenerator:
         token, token_type = self.tokens[index]
         
         # Handle different value types
-        if token_type == "doseliteral" or token_type == "neliteral":
+        if token_type == "numlit" :
             # Integer
             value = token
             index += 1
-        elif token_type == "quantval" or token_type == "nequantliteral":
-            # Float
-            value = token
-            index += 1
-        elif token_type == "stringlit":
+
+        # elif token_type == "quantval" or token_type == "nequantliteral":
+        #     # Float
+        #     value = token
+        #     index += 1
+        elif token_type == "string literal":
             # String
             value = token
             index += 1
@@ -798,6 +801,7 @@ class GenomeXCodeGenerator:
 
 def generate_python_code(tokens, symbol_table=None):
     """Generate Python code from GenomeX tokens"""
+    print("Generating Python code...")
     code_generator = GenomeXCodeGenerator(tokens, symbol_table)
     return code_generator.generate_code()
 
@@ -808,23 +812,40 @@ def display_codegen_output(python_code, output_panel):
     return python_code
 
 def parseCodeGen(tokens, codegen_panel):
-    """Parse tokens and generate Python code if semantic analysis passes"""
-    # Perform semantic analysis first
-    semantic_success = gxsem.parseSemantic(tokens, None)
+    """Parse tokens, generate Python code, display it, and execute it with output shown in terminal"""
+    print(f"parseCodeGen called with {len(tokens)} tokens")
     
-    if semantic_success:
+    try:
         # Generate Python code
         python_code = generate_python_code(tokens)
+        print(f"Python code generated, length: {len(python_code)}")
         
-        # Display the generated code
+        # Display the generated code in the codegen panel
         display_codegen_output(python_code, codegen_panel)
-        
-        # Return success and the Python code
+        print("Code displayed in output panel")
+
+        # === Capture and execute code output ===
+        # Redirect stdout temporarily to capture print statements
+        original_stdout = sys.stdout
+        sys.stdout = io.StringIO()
+
+        try:
+            print("Executing generated code and capturing output...\n")
+            exec(python_code, {})
+            output = sys.stdout.getvalue()
+        finally:
+            # Restore original stdout
+            sys.stdout = original_stdout
+
+        # Print captured output to terminal
+        print("----- Executed Code Output -----")
+        print(output)
+        print("----- End of Output -----")
+
         return True, python_code
-    else:
-        # If semantic analysis failed, display an error message
-        codegen_panel.delete(1.0, tk.END)
-        codegen_panel.insert(tk.END, "Cannot generate code: Semantic analysis failed. Please fix the errors first.")
-        
-        # Return failure
-        return False, None
+
+    except Exception as e:
+        print(f"Error in parseCodeGen: {e}")
+        import traceback
+        traceback.print_exc()
+        return False, str(e)
