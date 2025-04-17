@@ -41,6 +41,23 @@ def parseLexer(input_stream):
     char_iter = iter(input_stream)
     line_number = 1 
     found_error = False
+    
+    # Handle spaces and newlines as valid tokens
+    for token in input_stream:
+        if token == '\n':
+            tokens.append(('\\n', 'whitespace'))
+            line_number += 1
+            state = 0
+            lexeme = ""
+        elif token == ' ':
+            tokens.append((' ', 'space'))
+        # Add other token processing here
+    
+    # Reset the iterator for the main lexing process
+    # char_iter = iter(input_stream)
+    # state = 0
+    lexeme = ""
+    
     ascii = {" ", '!', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', 
             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', 
             '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 
@@ -126,9 +143,8 @@ def parseLexer(input_stream):
                 lexeme = ""  # Reset lexeme to avoid appending invalid values
                 state = 0  # Reset state to recover
 
-            if token == '\n':
-                tokens.append(("\\n", "newline"))
-                line_number += 1
+            tokens.append(('\\n', 'newline'))
+            line_number += 1
             lexeme = ""  # Reset lexeme after delimiter processing
             state = 0  # Reset state for next token
             continue  # Skip further processing for delimiters
@@ -138,16 +154,16 @@ def parseLexer(input_stream):
             lookahead_char = next(char_iter)  # Peek the next character
             # print(f"lookahead_char after {lookahead_char}")
         except StopIteration:
-            lookahead_char = None  # No more characters to proce
+            lookahead_char = None  # No more characters to process
     
         if state == 0:
             print("Passed state 0")
             if token == " ":
-                tokens.append((" ", "space"))
+                tokens.append((' ', 'space'))
                 lexeme = ""  # Reset lexeme after delimiter processing
                 state = 0  # Reset state for next token
             elif token == "\t":
-                tokens.append((" ", "tab"))
+                tokens.append((' ', 'tab'))
                 lexeme = ""  # Reset lexeme after delimiter processing
                 state = 0  # Reset state for next token
             #TEMP SOLUTION
@@ -1428,6 +1444,14 @@ def parseLexer(input_stream):
                     state = 116
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
+                elif lookahead_char in allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in upchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
                 else:
                     print("ERROR IN STATE 116")
                     state = 1000  # Reset state to recover
@@ -3948,7 +3972,7 @@ def parseLexer(input_stream):
                 if token == ' ':
                     tokens.append((token, "space"))
                 elif token == '{':
-                    tokens.append((token, "open curly brace"))
+                    tokens.append((token, "{"))
                 state = 0  # Reset state for the next token
             else:
                 print("WRONG IN DELIM_2")
