@@ -157,6 +157,11 @@ def parseSyntax(tokens, output_text):
                         line_tokens = []
                         line_text = ""
 
+                    # Check for None or space token
+                    if current_token is None or current_token[1] == "space":
+                        output_text.insert(tk.END, f"No valid keyword found after _G\n")
+                        return False, None
+
                     # List of keywords that require '_L' prefix
                     keywords = ['dose', 'quant', 'seq', 'allele', 'clust', 'perms']
 
@@ -478,8 +483,14 @@ def parseSyntax(tokens, output_text):
                             check_statements = True  # Mark that we've found a valid statement
                             break  # Exit loop after parsing a valid statement
 
-                    print(f"End of body_statements: check_statements={check_statements}, start_idx={start_idx}")
-                    return check_statements, start_idx  # Return final state
+                    # If we reach here and no valid keyword was found
+                    if not check_statements:
+                        output_text.insert(tk.END, f"No valid keyword found after _G\n")
+                        return False, None
+
+                        
+                print(f"End of body_statements: check_statements={check_statements}, start_idx={start_idx}")
+                return check_statements, start_idx  # Return final state
 
             def global_handling(tokens, start_idx):
                 print("<global_handling>")
@@ -528,6 +539,8 @@ def parseSyntax(tokens, output_text):
                 # The function name is now required. We check for an Identifier token.
                 if not (start_idx < len(tokens) and tokens[start_idx][1] == "Identifier"):
                     print(f"Error: Expected function name (Identifier) at index {start_idx}")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected Identifier or gene\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     program.user_defined_function_error = True  # Mark that a user-defined function has an error
                     return False, None
 
@@ -579,7 +592,7 @@ def parseSyntax(tokens, output_text):
                 # Check if a main function exists in the program
                 if not program.main_function_seen:
                     print("Error: No main function (gene) found in the program")
-                    output_text.insert(tk.END, f"Expected main function\n")
+                    # output_text.insert(tk.END, f"Expected main function\n")
                     return False, None
 
                 # Check for closing brace
@@ -596,13 +609,29 @@ def parseSyntax(tokens, output_text):
                     
                     return True, start_idx + 1
                 else:
-                    print("Missing closing brace for user defined function")
-                    print("Error: No main function (gene) found in the program")
+
 
                     program.user_defined_function_error = True  # Mark that a user-defined function has an error
                     return False, None  # Error: Missing closing brace
 
             def main_function(tokens, start_idx):
+                current_token = tokens[start_idx] if start_idx < len(tokens) else None
+
+                matching_line = None
+                for line in display_lines:
+                    if current_token in line["tokens"]:
+                        matching_line = line
+                        break
+                
+                # If we found a matching line, use its line number, otherwise fall back to get_line_number
+                if matching_line:
+                    line_number = matching_line["line_number"]
+                    line_tokens = matching_line["tokens"]
+                    line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])  # Format without spaces
+                else:
+                    line_number = get_line_number(tokens, start_idx)
+                    line_tokens = []
+                    line_text = ""
                 print("Parsing function...")
 
                 start_idx = skip_spaces(tokens, start_idx)
@@ -629,6 +658,8 @@ def parseSyntax(tokens, output_text):
                     
                     if not is_token(tokens, start_idx, '('):
                         print(f"Error: Expected '(' after 'gene' at index {start_idx}")
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected '(' after 'gene'\n")
+                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                         return False, None
                     start_idx += 1  # Move past '('
 
@@ -640,13 +671,15 @@ def parseSyntax(tokens, output_text):
 
                     if not is_token(tokens, start_idx, ')'):
                         print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected ')' after 'gene'\n")
+                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                         return False, None
                     
                     start_idx += 1 
                     start_idx = skip_spaces(tokens, start_idx)            
                     if not is_token(tokens, start_idx, '{'):
-
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected '{{' after 'gene'\n")
+                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                         print("Missing opening brace for main function block")
                         return False, None
                     
@@ -674,7 +707,8 @@ def parseSyntax(tokens, output_text):
                         return True, start_idx + 1
                     else:
                         print("Missing closing brace for main function")
-
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid body statements after '{{' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} \n")
+                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                         return False, None
                 
                 # This is a user-defined function
@@ -1304,7 +1338,7 @@ def parseSyntax(tokens, output_text):
 
             if not is_token(tokens, start_idx, ')'):
                 print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in express statement")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis or math op in express statement\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a ',', ')' or math op in express statement\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
                 
@@ -1414,7 +1448,7 @@ def parseSyntax(tokens, output_text):
             else:
                 # If no assignment operator is found, print error and return False
                 print(f"Error: Expected assignment operator at index {start_idx} (line {line_number})")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an assignment operator\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an assignment operator but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
                     
@@ -2090,6 +2124,23 @@ def parseSyntax(tokens, output_text):
                     start_idx = skip_spaces(tokens, start_idx)
                     
                     while True:
+                        # Find which display line contains this token
+                        matching_line = None
+                        for line in display_lines:
+                            if current_token in line["tokens"]:
+                                matching_line = line
+                                break
+                        
+                        # If we found a matching line, use its line number, otherwise fall back to get_line_number
+                        if matching_line:
+                            line_number = matching_line["line_number"]
+                            line_tokens = matching_line["tokens"]
+                            line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])  # Format without spaces
+                        else:
+                            line_number = get_line_number(tokens, start_idx)
+                            line_tokens = []
+                            line_text = ""
+
                         # Check if it's an assignment (now optional)
                         if is_token(tokens, start_idx, '='):
                             start_idx += 1
@@ -2149,6 +2200,25 @@ def parseSyntax(tokens, output_text):
                                                     
                             start_idx = skip_spaces(tokens, start_idx)
                         
+                        current_token = tokens[start_idx] if start_idx < len(tokens) else None
+                        
+                        # Find which display line contains this token
+                        matching_line = None
+                        for line in display_lines:
+                            if current_token in line["tokens"]:
+                                matching_line = line
+                                break
+                        
+                        # If we found a matching line, use its line number, otherwise fall back to get_line_number
+                        if matching_line:
+                            line_number = matching_line["line_number"]
+                            line_tokens = matching_line["tokens"]
+                            line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])  # Format without spaces
+                        else:
+                            line_number = get_line_number(tokens, start_idx)
+                            line_tokens = []
+                            line_text = ""
+
                         # Now check for either a semicolon (end of statement) or comma (more assignments)
                         if is_token(tokens, start_idx, ';'):
                             return True, start_idx + 1
@@ -3776,7 +3846,7 @@ def parseSyntax(tokens, output_text):
             else:
                 print(f"Error: Expected a literal or seq type cast at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 print("Syntax Error: Expected a literal or sequence type")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a literal\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a literal but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, start_idx  # Return failure
             
@@ -4384,8 +4454,6 @@ def parseSyntax(tokens, output_text):
         elif first_token == "comment" or first_token == "multiline" or first_token == "tab":
             continue  # Skip the rest of the loop for this line
 
-
-
         else:
             #DAPAT DI TO NAGPAPAKITA KAHIT ERROR SA USER DEF
             output_text.insert(tk.END, f"Expected global declaration, user defined or main function\n")
@@ -4394,7 +4462,7 @@ def parseSyntax(tokens, output_text):
     if valid_line:
             # tokens_info = [f"{token[0]} ({token[1]})" for token in line_tokens]
             # sign_msg = f" (Number is {number_sign})" if number_sign else ""
-            print(f"ignore")
+            valid_syntax = True
     else:
             # # Use display_lines to show the error by actual line number
             # error_line = None
