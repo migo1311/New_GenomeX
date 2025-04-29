@@ -1831,55 +1831,102 @@ def parseCodeGen(tokens, codegen_panel):
             
             # Create a styled frame for input with a subtle background
             input_frame = tk.Frame(codegen_panel, bg="#f0f0ff", padx=8, pady=8, 
-                                  highlightbackground="#7c4dff", highlightthickness=1)
+                                highlightbackground="#7c4dff", highlightthickness=1)
             
             # Create a better styled entry field
             input_entry = tk.Entry(input_frame, width=40, font=("Consolas", 11),
-                                  bg="white", fg="#212121", insertbackground="#5e35b1",
-                                  relief="flat", bd=0)
+                                bg="white", fg="#212121", insertbackground="#5e35b1",
+                                relief="flat", bd=0)
             input_entry.pack(side=tk.LEFT, padx=(0, 8), ipady=6)
             
             # Use a list to store the result
             input_result = [None]
             
-            def on_submit():
-                user_input = input_entry.get().strip()
+            def format_input(input_value):
+                """
+                Format the input according to the following rules:
+                - If integer, validate it's max 13 digits or return error
+                - If float, validate it's max 13 digits total with max 6 decimal places or return error
+                - If starts with ^, convert to negative
+                - If string, leave as is
+                """
+                # Handle ^ prefix for negative numbers
+                if input_value.startswith('^') and len(input_value) > 1:
+                    input_value = '-' + input_value[1:]
                 
-                # Translate caret to minus
-                if user_input.startswith('^'):
-                    user_input = '-' + user_input[1:]
-
+                # Try to interpret as number
                 try:
                     # Check if it's an integer
-                    if user_input.lstrip('-').isdigit():
-                        if len(user_input.lstrip('-')) > 13:
-                            raise ValueError("Integer input exceeds 13 digits.")
-                    else:
-                        # Try float validation
-                        float_val = float(user_input)
-                        before_decimal, dot, after_decimal = user_input.partition('.')
-                        
-                        if before_decimal.startswith('-'):
-                            before_decimal = before_decimal[1:]
-
-                        if len(before_decimal) > 13:
-                            raise ValueError("Float input exceeds 13 digits before decimal point.")
-                        if len(after_decimal) > 6:
-                            raise ValueError("Float input exceeds 6 digits after decimal point.")
+                    if input_value.replace('-', '', 1).isdigit():
+                        # It's an integer
+                        num = int(input_value)
+                        # Check if it exceeds 13 digits
+                        if len(str(abs(num))) > 13:
+                            raise ValueError("ERROR: Integer exceeds maximum limit of 13 digits")
+                        return str(num)
                     
-                    # Passed validation
-                    input_result[0] = user_input
+                    # Check if it's a float
+                    float_val = float(input_value)
+                    
+                    # Get the number of digits in the integer part
+                    int_part = int(abs(float_val))
+                    int_digits = len(str(int_part))
+                    
+                    # Count total digits (excluding sign and decimal point)
+                    formatted = f"{float_val:.6f}".rstrip('0').rstrip('.') if '.' in f"{float_val:.6f}" else f"{float_val:.0f}"
+                    digits = ''.join(c for c in formatted if c.isdigit())
+                    
+                    # Check if total digits exceed 13
+                    if len(digits) > 13:
+                        raise ValueError("ERROR: Number exceeds maximum limit of 13 total digits")
+                        
+                    # Ensure we don't exceed 6 decimal places
+                    decimal_str = formatted.split('.')[-1] if '.' in formatted else ''
+                    if len(decimal_str) > 6:
+                        # Format to exactly 6 decimal places
+                        return f"{float_val:.6f}".rstrip('0').rstrip('.')
+                    
+                    return formatted
+                except ValueError as e:
+                    # If it's our custom error, propagate it
+                    if str(e).startswith("ERROR:"):
+                        raise
+                    # If not a number, return as is
+                    return input_value
+            
+            def on_submit():
+                raw_input = input_entry.get()
+                
+                try:
+                    # Format the input according to the rules
+                    formatted_input = format_input(raw_input)
+                    input_result[0] = formatted_input
+                    
+                    # Add visual feedback for submission
                     input_entry.config(state="disabled", bg="#f5f5f5")
                     submit_button.config(state="disabled")
+                    
+                    # Remove the delay and call finish_input directly
                     finish_input()
-
-                except ValueError as ve:
-                    # Display error inline with warning style
-                    codegen_panel.insert(tk.END, f"\nInput Error: {str(ve)}\n", "warning")
-                    codegen_panel.see(tk.END)
-                    parent_window.update()
-
-
+                except ValueError as e:
+                    # Create error message label
+                    error_msg = str(e)
+                    
+                    # Show error message below input
+                    error_label = tk.Label(input_frame, text=error_msg, fg="#f44336", 
+                                        bg="#f0f0ff", font=("Consolas", 10))
+                    error_label.pack(side=tk.BOTTOM, fill=tk.X, pady=(5, 0))
+                    
+                    # Shake the input field to indicate error
+                    original_bg = input_entry.cget("bg")
+                    input_entry.config(bg="#ffebee")  # Light red background
+                    
+                    # Schedule removal of error message and reset of input background
+                    def reset_error():
+                        error_label.destroy()
+                        input_entry.config(bg=original_bg)
+                        
+                    parent_window.after(3000, reset_error)  # Remove error after 3 seconds
                 
             def finish_input():
                 input_frame.destroy()
@@ -1890,10 +1937,10 @@ def parseCodeGen(tokens, codegen_panel):
             
             # Create a modern styled submit button with fixed width to prevent expansion
             submit_button = tk.Button(input_frame, text="Submit", font=("Segoe UI", 10, "bold"),
-                                     bg="#5e35b1", fg="white", relief="flat",
-                                     activebackground="#7c4dff", activeforeground="white",
-                                     command=on_submit, padx=12, pady=4, bd=0,
-                                     cursor="hand2", width=8)  # Set fixed width
+                                    bg="#5e35b1", fg="white", relief="flat",
+                                    activebackground="#7c4dff", activeforeground="white",
+                                    command=on_submit, padx=12, pady=4, bd=0,
+                                    cursor="hand2", width=8)  # Set fixed width
             submit_button.pack(side=tk.LEFT)
             
             # Insert the frame into the text widget with proper spacing
