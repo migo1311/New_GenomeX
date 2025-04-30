@@ -586,6 +586,8 @@ class GenomeXCodeGenerator:
             # Build the expression as a string
             expression_parts = []
             paren_count = 1  # we've already seen one (
+            dose_variables = []  # Track dose variables found in the expression
+            
             while index < len(self.tokens) and paren_count > 0:
                 token, token_type = self.tokens[index]
 
@@ -595,7 +597,11 @@ class GenomeXCodeGenerator:
                     paren_count -= 1
                     if paren_count == 0:
                         break
-
+                
+                # Track if this token is a dose variable identifier
+                if token_type == "Identifier" and token in self.variable_types and self.variable_types[token] == "dose":
+                    dose_variables.append(token)
+                
                 expression_parts.append(token)
                 index += 1
 
@@ -621,6 +627,12 @@ class GenomeXCodeGenerator:
                     # Replace "seq" with "str"
                     if func_name == "seq":
                         func_name = "str"
+                        
+                        # If the variable is a 'dose' type (integer), ensure it's converted to int first to remove decimal points
+                        if var in self.variable_types and self.variable_types.get(var) == "dose":
+                            processed_words.append(f"str(int({var}))")
+                            i += 4  # Skip all four tokens
+                            continue
 
                     processed_words.append(f"{func_name}({var})")
                     i += 4  # Skip all four tokens
@@ -630,7 +642,33 @@ class GenomeXCodeGenerator:
 
             processed_expression = " ".join(processed_words)
             
-            # Handle array indexing and string concatenation
+            # Replace all seq(dose_var) patterns with str(int(dose_var))
+            for dose_var in dose_variables:
+                processed_expression = re.sub(
+                    fr'seq\s*\(\s*{dose_var}\s*\)', 
+                    fr'str(int({dose_var}))', 
+                    processed_expression
+                )
+            
+            # Handle array indexing for dose variables with string conversion
+            # First check if we're dealing with a dose variable
+            for var_name, var_type in self.variable_types.items():
+                if var_type == "dose" and var_name in processed_expression:
+                    # Replace "seq ( Table [ I ] [ J ] )" with "str(int(Table[I][J]))" for dose variables
+                    processed_expression = re.sub(
+                        fr'seq\s*\(\s*{var_name}\s*\[\s*([A-Za-z0-9_]+)\s*\]\s*\[\s*([A-Za-z0-9_]+)\s*\]\s*\)', 
+                        fr'str(int({var_name}[\1][\2]))', 
+                        processed_expression
+                    )
+                    
+                    # Replace "seq ( Table [ I ] )" with "str(int(Table[I]))" for 1D arrays of dose variables
+                    processed_expression = re.sub(
+                        fr'seq\s*\(\s*{var_name}\s*\[\s*([A-Za-z0-9_]+)\s*\]\s*\)', 
+                        fr'str(int({var_name}[\1]))', 
+                        processed_expression
+                    )
+            
+            # Handle general case array indexing and string concatenation (for non-dose variables)
             # Replace "seq ( Table [ I ] [ J ] )" with "str(Table[I][J])"
             processed_expression = re.sub(r'seq\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*([A-Za-z0-9_]+)\s*\]\s*\[\s*([A-Za-z0-9_]+)\s*\]\s*\)', r'str(\1[\2][\3])', processed_expression)
             
@@ -1299,13 +1337,13 @@ class GenomeXCodeGenerator:
                     if index < len(self.tokens) and self.tokens[index][0] == ")":
                         index += 1
                 
-                # Check variable type to wrap with int() if needed
+                # Check variable type to wrap with appropriate conversion if needed
                 var_type = self.variable_types.get(var_name)
                 print(f"[DEBUG] Variable type of {var_name}: {var_type}")
                 
                 # Generate the appropriate input statement based on variable type
-                if var_type in ["dose", "quant"]:  # Numeric types
-                    # For numerical types, use int(input())
+                if var_type == "dose":  # Integer numeric type
+                    # For dose type, use int(input())
                     if array_indices:
                         array_access = f"{var_name}[{']['.join(array_indices)}]"
                         self.add_line(f"{array_access} {assignment_op} int(input({prompt}))")
@@ -1313,8 +1351,17 @@ class GenomeXCodeGenerator:
                     else:
                         self.add_line(f"{var_name} {assignment_op} int(input({prompt}))")
                         print(f"[DEBUG] Added line: {var_name} {assignment_op} int(input({prompt}))")
+                elif var_type == "quant":  # Float numeric type
+                    # For quant type, use float(input())
+                    if array_indices:
+                        array_access = f"{var_name}[{']['.join(array_indices)}]"
+                        self.add_line(f"{array_access} {assignment_op} float(input({prompt}))")
+                        print(f"[DEBUG] Added line: {array_access} {assignment_op} float(input({prompt}))")
+                    else:
+                        self.add_line(f"{var_name} {assignment_op} float(input({prompt}))")
+                        print(f"[DEBUG] Added line: {var_name} {assignment_op} float(input({prompt}))")
                 else:  # seq, allele, etc.
-                    # For string and other types, use input() without int()
+                    # For string and other types, use input() without conversion
                     if array_indices:
                         array_access = f"{var_name}[{']['.join(array_indices)}]"
                         self.add_line(f"{array_access} {assignment_op} input({prompt})")
@@ -1492,6 +1539,25 @@ class GenomeXCodeGenerator:
                 
             right_value, index = self.extract_expression(index)
             
+            # Special handling for string concatenation with dose variables
+            if operator == "+" and (
+                ('"' in left_value or "str(" in left_value) or 
+                ('"' in right_value or "str(" in right_value)):
+                
+                # Check if left_value is a dose variable and not already wrapped in str() or int()
+                if (left_value in self.variable_types and 
+                    self.variable_types.get(left_value) == "dose" and 
+                    not left_value.startswith("str(") and 
+                    not left_value.startswith("int(")):
+                    left_value = f"str(int({left_value}))"
+                
+                # Check if right_value is a dose variable and not already wrapped in str() or int()
+                if (right_value in self.variable_types and 
+                    self.variable_types.get(right_value) == "dose" and 
+                    not right_value.startswith("str(") and 
+                    not right_value.startswith("int(")):
+                    right_value = f"str(int({right_value}))"
+            
             return f"{left_value} {operator} {right_value}", index
         
         return left_value, index
@@ -1526,10 +1592,32 @@ class GenomeXCodeGenerator:
         # Handle division - convert / to // for integer division when appropriate
         # This is a simplistic approach, would need more context analysis for accuracy
         if re.search(r'(\b|[^/])/(\b|[^/])', statement) and not re.search(r'"/|/"', statement):
-            statement = re.sub(r'(\b|[^/])/(\b|[^/])', r'\1//\2', statement)
+            # Extract variable names from the statement
+            var_names = re.findall(r'\b[A-Za-z_][A-Za-z0-9_]*\b', statement)
+            
+            # Check if all variables involved in division are dose type (integers)
+            all_dose = True
+            for var_name in var_names:
+                if var_name in self.variable_types and self.variable_types[var_name] != "dose":
+                    all_dose = False
+                    break
+            
+            # If all variables are dose type, use integer division
+            if all_dose:
+                statement = re.sub(r'(\b|[^/])/(\b|[^/])', r'\1//\2', statement)
         
         # Fix any incorrect colons that might have been introduced
         statement = statement.replace(":", "")
+        
+        # For dose type variables, ensure any floating point results are converted to int
+        assignment_match = re.match(r'([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)', statement)
+        if assignment_match:
+            var_name = assignment_match.group(1)
+            expression = assignment_match.group(2)
+            
+            # If assigning to a dose variable and expression contains division, wrap in int()
+            if var_name in self.variable_types and self.variable_types[var_name] == "dose" and ('/' in expression):
+                statement = f"{var_name} = int({expression})"
         
         print(f"DEBUG: Exiting extract_statement with statement: '{statement}', next index: {index}")
         return statement, index
@@ -1867,6 +1955,10 @@ def parseCodeGen(tokens, codegen_panel):
                     
                     # Check if it's a float
                     float_val = float(input_value)
+                    
+                    # If it's actually an integer value (like 44.0), convert to int to remove decimal place
+                    if float_val == int(float_val):
+                        return str(int(float_val))
                     
                     # Get the number of digits in the integer part
                     int_part = int(abs(float_val))
