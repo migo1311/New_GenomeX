@@ -1394,7 +1394,12 @@ class GenomeXCodeGenerator:
                             value += "False"
                             print(f"[DEBUG] Replaced 'rec' with 'False'")
                         elif token in ["+", "-", "/", "*", "%"]:
-                            value += " " + token + " "
+                            if token == "/" and self.variable_types.get(var_name) == "dose":
+                                # Use integer division for dose variables
+                                value += " // "
+                                print(f"[DEBUG] Converted '/' to integer division '//' for dose variable")
+                            else:
+                                value += " " + token + " "
                             print(f"[DEBUG] Appended operator to expression: '{token}'")
                         elif token == "[":
                             # Start of array indexing in expression
@@ -1558,6 +1563,12 @@ class GenomeXCodeGenerator:
                     not right_value.startswith("int(")):
                     right_value = f"str(int({right_value}))"
             
+            # Special handling for division with dose variables - use integer division
+            if operator == "/" and (
+                (left_value in self.variable_types and self.variable_types.get(left_value) == "dose") or
+                (right_value in self.variable_types and self.variable_types.get(right_value) == "dose")):
+                operator = "//"  # Replace with integer division
+            
             return f"{left_value} {operator} {right_value}", index
         
         return left_value, index
@@ -1589,22 +1600,27 @@ class GenomeXCodeGenerator:
         # Join tokens but use proper Python syntax
         statement = " ".join(statement_tokens).strip()
         
-        # Handle division - convert / to // for integer division when appropriate
-        # This is a simplistic approach, would need more context analysis for accuracy
-        if re.search(r'(\b|[^/])/(\b|[^/])', statement) and not re.search(r'"/|/"', statement):
+        # Handle division - always convert / to // for integer division when dose variables are involved
+        if "/" in statement and not '"//' in statement and not '//"' in statement:
             # Extract variable names from the statement
             var_names = re.findall(r'\b[A-Za-z_][A-Za-z0-9_]*\b', statement)
             
-            # Check if all variables involved in division are dose type (integers)
-            all_dose = True
+            # Check if any variables involved in division are dose type (integers)
+            has_dose = False
             for var_name in var_names:
-                if var_name in self.variable_types and self.variable_types[var_name] != "dose":
-                    all_dose = False
+                if var_name in self.variable_types and self.variable_types[var_name] == "dose":
+                    has_dose = True
                     break
             
-            # If all variables are dose type, use integer division
-            if all_dose:
-                statement = re.sub(r'(\b|[^/])/(\b|[^/])', r'\1//\2', statement)
+            # If any variables are dose type, use integer division
+            if has_dose:
+                # Use regex to find division operations not inside strings
+                def replace_division(match):
+                    if match.group(0) in ['"/', '/"']:
+                        return match.group(0)  # Don't replace if in string
+                    return match.group(1) + "//" + match.group(2)
+                
+                statement = re.sub(r'([^"/])\/([^"/])', replace_division, statement)
         
         # Fix any incorrect colons that might have been introduced
         statement = statement.replace(":", "")
@@ -1616,7 +1632,7 @@ class GenomeXCodeGenerator:
             expression = assignment_match.group(2)
             
             # If assigning to a dose variable and expression contains division, wrap in int()
-            if var_name in self.variable_types and self.variable_types[var_name] == "dose" and ('/' in expression):
+            if var_name in self.variable_types and self.variable_types[var_name] == "dose" and ('/' in expression and not '//' in expression):
                 statement = f"{var_name} = int({expression})"
         
         print(f"DEBUG: Exiting extract_statement with statement: '{statement}', next index: {index}")
