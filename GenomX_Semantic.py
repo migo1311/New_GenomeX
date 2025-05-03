@@ -365,9 +365,7 @@ class SemanticAnalyzer:
                 if var_type == 'seq':
                     # Remove quotation marks
                     value = token[0].strip('"\'')
-                else:
-                    self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} perms '{const_name}'")
-                    value = None
+
             
             elif token[0] in ['dom', 'rec']:
                 if var_type == 'allele':
@@ -442,10 +440,7 @@ class SemanticAnalyzer:
                     elif token[1] == 'Identifier' and token[0] in self.symbol_table:
                         if self.symbol_table[token[0]]['type'] == 'seq':
                             result += str(self.symbol_table[token[0]]['value'])
-                        else:
-                            self.errors.append(f"Semantic Error: Cannot concatenate non-string variable '{token[0]}' in perms expression")
-                            valid_expression = False
-                            break
+
                     elif token[1] == 'space':
                         continue
                     else:
@@ -1542,8 +1537,7 @@ class SemanticAnalyzer:
                         # Remove quotation marks
                         string_val = token[0].strip('"\'')
                         self.symbol_table[var_name]['value'] = string_val
-                    else:
-                        self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} variable '{var_name}'")
+
                 
                 elif token[0] in ['dom', 'rec']:
                     if var_type == 'allele':
@@ -1627,10 +1621,7 @@ class SemanticAnalyzer:
                             if token[0] in self.symbol_table:
                                 if self.symbol_table[token[0]]['type'] == 'seq':
                                     result += str(self.symbol_table[token[0]]['value'])
-                                else:
-                                    self.errors.append(f"Semantic Error: Cannot concatenate non-string variable '{token[0]}'")
-                                    valid_expression = False
-                                    break
+
                             else:
                                 self.errors.append(f"Semantic Error: Variable '{token[0]}' used before declaration")
                                 valid_expression = False
@@ -1780,8 +1771,7 @@ class SemanticAnalyzer:
                             # Remove quotation marks
                             string_val = token[0].strip('"\'')
                             self.symbol_table[var_name]['value'] = string_val
-                        else:
-                            self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} variable '{var_name}'")
+
                     
                     elif token[0] in ['dom', 'rec']:
                         if var_type == 'allele':
@@ -1862,10 +1852,7 @@ class SemanticAnalyzer:
                             elif token[1] == 'Identifier' and token[0] in self.symbol_table:
                                 if self.symbol_table[token[0]]['type'] == 'seq':
                                     result += str(self.symbol_table[token[0]]['value'])
-                                else:
-                                    self.errors.append(f"Semantic Error: Cannot concatenate non-string variable '{token[0]}'")
-                                    valid_expression = False
-                                    break
+
                             elif token[1] == 'space':
                                 continue  # Skip spaces
                             else:
