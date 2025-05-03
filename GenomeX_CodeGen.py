@@ -219,7 +219,7 @@ class GenomeXCodeGenerator:
             if token == "}":
                 break
                 
-            # Skip spaces and newlines
+            # Skip spaces, newlines and tabs
             if token_type in ["space", "newline", "tab"]:
                 index += 1
                 continue
@@ -238,12 +238,10 @@ class GenomeXCodeGenerator:
 
             elif token_type == "elif":
                 print(f"[DEBUG] Found elif at index {index}: {self.tokens[index]}")
-                # self.indentation -= 1
                 index = self.process_elif_statement(index)
 
             elif token_type == "else":
                 print(f"[DEBUG] Found else at index {index}: {self.tokens[index]}")
-                # self.indentation -= 1
                 index = self.process_else_statement(index)
 
             # Handle while loop
@@ -296,8 +294,7 @@ class GenomeXCodeGenerator:
                 else:
                     self.add_error("Expected ';' after contig statement")
                 
-            elif token_type == "comment":
-                pass
+
             else:
                 index += 1
                 
@@ -1415,6 +1412,10 @@ class GenomeXCodeGenerator:
                             negative_value = f"-{token[1:]}"
                             value += negative_value
                             print(f"[DEBUG] Converted caret number '{token}' to '{negative_value}'")
+                        elif token == "seq":
+                            # Handle seq(Num) pattern by translating to str(Num)
+                            value += "str"  # Replace seq with str
+                            print(f"[DEBUG] Replaced 'seq' with 'str'")
                         else:
                             value += token
                             print(f"[DEBUG] Appended token to expression: '{token}'")
@@ -1645,8 +1646,8 @@ class GenomeXCodeGenerator:
         condition_parts = []
         paren_level = 0
 
-        # Skip spaces at the beginning
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        # Skip spaces and newlines at the beginning
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
 
         # Check for opening parenthesis
@@ -1655,8 +1656,8 @@ class GenomeXCodeGenerator:
             index += 1
             paren_level += 1
 
-            # Skip spaces after opening parenthesis
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            # Skip spaces and newlines after opening parenthesis
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
 
         # Extract the condition
@@ -1679,7 +1680,7 @@ class GenomeXCodeGenerator:
                     condition_parts.append("True")
                 elif token == "rec":
                     condition_parts.append("False")
-                elif token_type != "space":
+                elif token_type not in ["space", "newline"]:
                     condition_parts.append(token)
 
             index += 1
@@ -1949,58 +1950,58 @@ def parseCodeGen(tokens, codegen_panel):
             def format_input(input_value):
                 """
                 Format the input according to the following rules:
-                - If integer, validate it's max 13 digits or return error
-                - If float, validate it's max 13 digits total with max 6 decimal places or return error
                 - If starts with ^, convert to negative
                 - If string, leave as is
+                - If number, validate and format appropriately
                 """
                 # Handle ^ prefix for negative numbers
                 if input_value.startswith('^') and len(input_value) > 1:
                     input_value = '-' + input_value[1:]
                 
-                # Try to interpret as number
-                try:
-                    # Check if it's an integer
-                    if input_value.replace('-', '', 1).isdigit():
-                        # It's an integer
-                        num = int(input_value)
-                        # Check if it exceeds 13 digits
-                        if len(str(abs(num))) > 13:
-                            raise ValueError("ERROR: Integer exceeds maximum limit of 13 digits")
-                        return str(num)
-                    
-                    # Check if it's a float
-                    float_val = float(input_value)
-                    
-                    # If it's actually an integer value (like 44.0), convert to int to remove decimal place
-                    if float_val == int(float_val):
-                        return str(int(float_val))
-                    
-                    # Get the number of digits in the integer part
-                    int_part = int(abs(float_val))
-                    int_digits = len(str(int_part))
-                    
-                    # Count total digits (excluding sign and decimal point)
-                    formatted = f"{float_val:.6f}".rstrip('0').rstrip('.') if '.' in f"{float_val:.6f}" else f"{float_val:.0f}"
-                    digits = ''.join(c for c in formatted if c.isdigit())
-                    
-                    # Check if total digits exceed 13
-                    if len(digits) > 13:
-                        raise ValueError("ERROR: Number exceeds maximum limit of 13 total digits")
+                # Try to interpret as number only if it looks like a number
+                if input_value.replace('-', '', 1).replace('.', '', 1).isdigit():
+                    try:
+                        # Check if it's an integer
+                        if '.' not in input_value:
+                            num = int(input_value)
+                            # Check if it exceeds 13 digits
+                            if len(str(abs(num))) > 13:
+                                raise ValueError("ERROR: Integer exceeds maximum limit of 13 digits")
+                            return str(num)
                         
-                    # Ensure we don't exceed 6 decimal places
-                    decimal_str = formatted.split('.')[-1] if '.' in formatted else ''
-                    if len(decimal_str) > 6:
-                        # Format to exactly 6 decimal places
-                        return f"{float_val:.6f}".rstrip('0').rstrip('.')
-                    
-                    return formatted
-                except ValueError as e:
-                    # If it's our custom error, propagate it
-                    if str(e).startswith("ERROR:"):
-                        raise
-                    # If not a number, return as is
-                    return input_value
+                        # It's a float
+                        float_val = float(input_value)
+                        
+                        # If it's actually an integer value (like 44.0), convert to int to remove decimal place
+                        if float_val == int(float_val):
+                            return str(int(float_val))
+                        
+                        # Get the number of digits in the integer part
+                        int_part = int(abs(float_val))
+                        int_digits = len(str(int_part))
+                        
+                        # Count total digits (excluding sign and decimal point)
+                        formatted = f"{float_val:.6f}".rstrip('0').rstrip('.') if '.' in f"{float_val:.6f}" else f"{float_val:.0f}"
+                        digits = ''.join(c for c in formatted if c.isdigit())
+                        
+                        # Check if total digits exceed 13
+                        if len(digits) > 13:
+                            raise ValueError("ERROR: Number exceeds maximum limit of 13 total digits")
+                            
+                        # Ensure we don't exceed 6 decimal places
+                        decimal_str = formatted.split('.')[-1] if '.' in formatted else ''
+                        if len(decimal_str) > 6:
+                            # Format to exactly 6 decimal places
+                            return f"{float_val:.6f}".rstrip('0').rstrip('.')
+                        
+                        return formatted
+                    except ValueError as e:
+                        # If it's our custom error, propagate it
+                        if str(e).startswith("ERROR:"):
+                            raise
+                
+                # If not a number or number conversion failed, return as is
+                return input_value
             
             def on_submit():
                 raw_input = input_entry.get()
