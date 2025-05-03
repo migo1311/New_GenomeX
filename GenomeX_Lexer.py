@@ -50,6 +50,13 @@ def parseLexer(input_stream):
             '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 
             'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', '/"'}
 
+    ascii2 = {" ", '!', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', 
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', 
+            '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 
+            'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_', 
+            '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 
+            'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', '"'}
+    
     upchar = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 
               'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 
               'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'}
@@ -81,12 +88,12 @@ def parseLexer(input_stream):
     delim_arith = {'(', ' ', '^', } 
     delim_equal = {' ', '{', '(', '"'}
     delim_gen = {' ', ';' } 
-    delim_end = {' ', ';', '=', ',', ')'} 
+    delim_end = {' ', ';', '=', ',', ')'}
     delim_1 = {' ', '('} 
     delim_2 = {' ', '{'} 
     delim_add = {'"', ' ', '^', '(', } 
     delim_string = {' ', '\n', ',', '}', ')', '+', '\t', ';'} 
-    delim_update = {' ', ';', ')'} 
+    delim_update = {' ', ';', ')'}
     delim_id = {' ', '=', '<', '>', ';', '!', '[', '(', '&', '|', '*', ',', ')', '/', ':', ']'}
     delim_logic = {' ', '(', '^'} | allval | upchar
     delim_comp = {' ', '(', '^'} 
@@ -327,7 +334,8 @@ def parseLexer(input_stream):
                 else:
                     #print("ERROR IN STATE 119")
                     state = 1000  # Reset state to recover
-
+            
+            #*
             elif token == '*':
                 state = 125
                 lexeme = token 
@@ -335,11 +343,13 @@ def parseLexer(input_stream):
                     state = 126
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
+                elif lookahead_char == '*':
+                    state = 1125
                 elif lookahead_char == '=':
                     state = 127
                 else:
-                    #print("ERROR IN STATE 125")
                     state = 1000  # Reset state to recover
+
             elif token == '/':
                 state = 129
                 lexeme = token 
@@ -347,12 +357,13 @@ def parseLexer(input_stream):
                     state = 130
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
+                elif lookahead_char == '/':
+                    state = 1129
                 elif lookahead_char == '=':
                     state = 131
                 elif lookahead_char == '*':
                     state = 425
                 else:
-                    #print("ERROR IN STATE 129")
                     state = 1000  # Reset state to recover
 
             elif token == '%':
@@ -1567,6 +1578,52 @@ def parseLexer(input_stream):
                     state = 1000  # Reset state to recover
             else:
                 #print("WRONG IN STATE 135")
+                state = 1000  # Error state
+
+        #**
+        elif state == 1125:
+            lexeme += token
+            if token == '*':
+                if lookahead_char in delim_update or lookahead_char is None or lookahead_char == "\n":
+                    state = 1126
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char in allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in upchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                else:
+                    #print("ERROR IN STATE 1126")
+                    state = 1000  # Reset state to recover
+            else:
+                #print("WRONG IN STATE 1125")
+                state = 1000  # Error state
+
+        #//
+        elif state == 1129:
+            lexeme += token
+            if token == '/':
+                if lookahead_char in delim_update or lookahead_char is None or lookahead_char == "\n":
+                    state = 1130
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char in allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in upchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                else:
+                    #print("ERROR IN STATE 1130")
+                    state = 1000  # Reset state to recover
+            else:
+                #print("WRONG IN STATE 1129")
                 state = 1000  # Error state
 
         #&&
@@ -3853,7 +3910,7 @@ def parseLexer(input_stream):
         elif state == 425:
             #print("Passed state 425")
             lexeme += token
-            if lookahead_char in ascii :
+            if lookahead_char in ascii2 :
                 state = 425            
                 if lookahead_char == '*':
                     state = 426
@@ -4007,7 +4064,7 @@ def parseLexer(input_stream):
                 state = 1000  # Reset state to recover  # Append token to lexeme to process it in the next cycle
 
         #DELIM_UPDATE DELIMITERS
-        elif state in {116, 122}:
+        elif state in {116, 122, 1126, 1130}:
             if token in delim_update:
                 if token == ' ':
                     tokens.append((token, "space"))
