@@ -3426,16 +3426,20 @@ def parseSyntax(tokens, output_text):
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, start_idx
             
+            # Check for seq_type_cast
+            elif is_token(tokens, start_idx, 'seq'):
+                is_valid, cast_value, new_idx = express.seq_type_cast(tokens, start_idx)
+                if is_valid:
+                    return True, new_idx
+                return False, start_idx
+            
             # Check for literal or identifier
             elif is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier') or \
                  is_token(tokens, start_idx, 'string literal') or is_token(tokens, start_idx, 'dom') or \
                  is_token(tokens, start_idx, 'rec'):
                 return True, start_idx + 1
             
-            # If we get here, the token is neither a parenthesized expression nor a valid value
-            print(f"ERROR: Expected parenthesized expression or valid value at index {start_idx}")
-            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid expression\n")
-            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+
             return False, start_idx
 
         @staticmethod
@@ -4209,9 +4213,9 @@ def parseSyntax(tokens, output_text):
         return lines, display_lines
     
     conditional_op = {'<', '>', '>=', '<=', '==', '!=', '&&', '||', '!'}
-    math_operator = {'+', '-', '*', "/", '%'}
+    math_operator = {'+', '-', '*', "/", '%', '**', '//'}
     literals = {'string literal', 'dom', 'rec'}
-    assignment_op = {'+=', '*=', '-=', '/=', '%=', '='}
+    assignment_op = {'+=', '*=', '-=', '/=', '%=', '=',}
 
     program_pattern = [
         ['act'],
