@@ -7,6 +7,9 @@ import sys
 import re
 import builtins
 
+# Remove recursion limit
+sys.setrecursionlimit(1000000000)  # Set to a very high number
+
 class GenomeXCodeGenerator:
 
     print("Initializing GenomeXCodeGenerator...")
@@ -41,7 +44,7 @@ class GenomeXCodeGenerator:
                 
             # Handle global declarations
             if token_type == '_G':
-                i = self.process_global_declaration(i)
+                i = self.process_local_declaration(i)
                 
             # Handle functions
             elif token_type == 'act':
@@ -876,7 +879,7 @@ class GenomeXCodeGenerator:
     
     def process_while_loop(self, index):
         """Process a while loop"""
-        print(f"DEBUG: Entering process_while_loop at index {index}, token: {self.tokens[index]}")
+        #print(f"DEBUG: Entering process_while_loop at index {index}, token: {self.tokens[index]}")
 
         # Skip 'while'
         index += 1
@@ -887,7 +890,7 @@ class GenomeXCodeGenerator:
 
         # Extract condition
         condition, index = self.extract_condition(index)
-        print(f"DEBUG: Extracted condition: '{condition}', new index: {index}")
+        #print(f"DEBUG: Extracted condition: '{condition}', new index: {index}")
 
         # Clean up the condition - remove extra spaces and ensure proper formatting
         condition = condition.strip()
@@ -902,7 +905,7 @@ class GenomeXCodeGenerator:
 
         # Expect opening brace
         if index < len(self.tokens) and self.tokens[index][0] == "{":
-            print(f"DEBUG: Found opening brace")
+            #print(f"DEBUG: Found opening brace")
             index += 1  # Skip '{'
             
             # Store the body start index
@@ -926,29 +929,27 @@ class GenomeXCodeGenerator:
             
             # Process the body with specific start and end indices
             self.process_function_body(body_start_index, stop_at=body_end_index)
-        else:
-            print(f"DEBUG: Expected '{{' but found {self.tokens[index] if index < len(self.tokens) else 'EOF'}")
 
         self.indentation -= 1
-        print(f"DEBUG: Exiting process_while_loop at index {index}")
+        #print(f"DEBUG: Exiting process_while_loop at index {index}")
         return index
     
     def process_for_loop(self, index):
         """Process a for loop and translate it into Python syntax"""
-        print(f"DEBUG: Starting process_for_loop at index {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
-        print(f"DEBUG: Full loop tokens: {self.tokens[index:index+15]}")  # Print more tokens to see the structure
+        #print(f"DEBUG: Starting process_for_loop at index {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
+        #print(f"DEBUG: Full loop tokens: {self.tokens[index:index+15]}")  # Print more tokens to see the structure
         
         index += 1  # Skip 'for'
-        print(f"DEBUG: After skipping 'for', index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
+        #print(f"DEBUG: After skipping 'for', index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
 
         while index < len(self.tokens) and self.tokens[index][1] == "space":
             index += 1
         
-        print(f"DEBUG: After skipping spaces, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
+        #print(f"DEBUG: After skipping spaces, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
 
         if index < len(self.tokens) and self.tokens[index][0] == "(":
             index += 1
-            print(f"DEBUG: After opening parenthesis, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
+            #print(f"DEBUG: After opening parenthesis, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
 
             while index < len(self.tokens) and self.tokens[index][1] == "space":
                 index += 1
@@ -968,7 +969,7 @@ class GenomeXCodeGenerator:
                     
                 if index < len(self.tokens) and self.tokens[index][1] == "Identifier":
                     init_var = self.tokens[index][0]
-                    print(f"DEBUG: Found init_var with type: {type_name} {init_var}")
+                    #print(f"DEBUG: Found init_var with type: {type_name} {init_var}")
                     index += 1
 
                     while index < len(self.tokens) and self.tokens[index][1] == "space":
@@ -983,16 +984,16 @@ class GenomeXCodeGenerator:
                         # Get the numeric value
                         if index < len(self.tokens) and self.tokens[index][1] in ["Number", "Identifier"]:
                             init_value = self.tokens[index][0]
-                            print(f"DEBUG: Found init_value: {init_value}")
+                            #print(f"DEBUG: Found init_value: {init_value}")
                             index += 1
                         else:
                             init_value, index = self.extract_value(index)
-                            print(f"DEBUG: Found extracted init_value: {init_value}")
+                            #print(f"DEBUG: Found extracted init_value: {init_value}")
             
             # Standard case (var = value) if we haven't found a variable yet
             elif index < len(self.tokens) and self.tokens[index][1] == "Identifier":
                 init_var = self.tokens[index][0]
-                print(f"DEBUG: Found init_var: {init_var}")
+                #print(f"DEBUG: Found init_var: {init_var}")
                 index += 1
 
                 while index < len(self.tokens) and self.tokens[index][1] == "space":
@@ -1005,25 +1006,24 @@ class GenomeXCodeGenerator:
                         index += 1
 
                     init_value, index = self.extract_value(index)
-                    print(f"DEBUG: Found init_value: {init_value}")
+                    #print(f"DEBUG: Found init_value: {init_value}")
 
             # Skip semicolon
             while index < len(self.tokens) and self.tokens[index][0] != ";":
                 index += 1
             
             if index < len(self.tokens):
-                print(f"DEBUG: Found semicolon at index: {index}")
+                #print(f"DEBUG: Found semicolon at index: {index}")
                 index += 1
-            else:
-                print(f"DEBUG: Reached end without finding semicolon")
+
 
             while index < len(self.tokens) and self.tokens[index][1] == "space":
                 index += 1
 
             # Condition
-            print(f"DEBUG: Before extracting condition, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
+            #print(f"DEBUG: Before extracting condition, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
             condition, index = self.extract_for_condition(index)
-            print(f"DEBUG: Extracted condition: '{condition}', new index: {index}")
+            #print(f"DEBUG: Extracted condition: '{condition}', new index: {index}")
             
             # Extract condition components for range-based conversion
             condition_var = None
@@ -1036,21 +1036,19 @@ class GenomeXCodeGenerator:
                 condition_var = condition_match.group(1)
                 condition_op = condition_match.group(2)
                 condition_value = condition_match.group(3)
-                print(f"DEBUG: Parsed condition - var: {condition_var}, op: {condition_op}, value: {condition_value}")
-            else:
-                print(f"DEBUG: Failed to parse condition: '{condition}'")
+                #print(f"DEBUG: Parsed condition - var: {condition_var}, op: {condition_op}, value: {condition_value}")
+
 
             # Skip semicolon
-            print(f"DEBUG: Looking for second semicolon, current token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
+            #print(f"DEBUG: Looking for second semicolon, current token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
             while index < len(self.tokens) and self.tokens[index][0] != ";":
                 index += 1
-                print(f"DEBUG: Searching for semicolon, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
+                #print(f"DEBUG: Searching for semicolon, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
             
             if index < len(self.tokens):
-                print(f"DEBUG: Found second semicolon at index: {index}")
+                #print(f"DEBUG: Found second semicolon at index: {index}")
                 index += 1
-            else:
-                print(f"DEBUG: Reached end without finding second semicolon")
+
 
             while index < len(self.tokens) and self.tokens[index][1] == "space":
                 index += 1
@@ -1060,36 +1058,36 @@ class GenomeXCodeGenerator:
             increment_op = None
             increment_value = "1"
 
-            print(f"DEBUG: Before increment part, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
+            #print(f"DEBUG: Before increment part, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
             
             # Check for increment variable
             if index < len(self.tokens) and self.tokens[index][1] == "Identifier":
                 increment_var = self.tokens[index][0]
-                print(f"DEBUG: Found increment_var: {increment_var}")
+                #print(f"DEBUG: Found increment_var: {increment_var}")
                 index += 1
 
                 while index < len(self.tokens) and self.tokens[index][1] == "space":
                     index += 1
 
                 # Check for increment operator (++, --, +=, -=)
-                print(f"DEBUG: Looking for increment operator, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
+                #print(f"DEBUG: Looking for increment operator, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
                 
                 # Handle ++ and -- operators, even if they're split from the variable
                 if index < len(self.tokens):
                     if self.tokens[index][0] in ["++", "--"]:
                         increment_op = "+=" if self.tokens[index][0] == "++" else "-="
-                        print(f"DEBUG: Found increment_op from ++/--: {increment_op}")
+                        #print(f"DEBUG: Found increment_op from ++/--: {increment_op}")
                         index += 1
                     elif self.tokens[index][0] in ["+=", "-="]:
                         increment_op = self.tokens[index][0]
-                        print(f"DEBUG: Found increment_op: {increment_op}")
+                        #print(f"DEBUG: Found increment_op: {increment_op}")
                         index += 1
 
                         while index < len(self.tokens) and self.tokens[index][1] == "space":
                             index += 1
 
                         increment_value, index = self.extract_value(index)
-                        print(f"DEBUG: Found increment_value: {increment_value}")
+                        #print(f"DEBUG: Found increment_value: {increment_value}")
                     # Check for space followed by ++ or -- (for cases like "I ++")
                     elif self.tokens[index][1] == "space":
                         temp_index = index
@@ -1098,37 +1096,36 @@ class GenomeXCodeGenerator:
                         
                         if temp_index < len(self.tokens) and self.tokens[temp_index][0] in ["++", "--"]:
                             increment_op = "+=" if self.tokens[temp_index][0] == "++" else "-="
-                            print(f"DEBUG: Found increment_op (with space) from ++/--: {increment_op}")
+                            #print(f"DEBUG: Found increment_op (with space) from ++/--: {increment_op}")
                             index = temp_index + 1
 
-            print(f"DEBUG: Looking for closing parenthesis, current token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
+            #print(f"DEBUG: Looking for closing parenthesis, current token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
             while index < len(self.tokens) and self.tokens[index][0] != ")":
                 index += 1
-                print(f"DEBUG: Searching for closing parenthesis, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
+                #print(f"DEBUG: Searching for closing parenthesis, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
             
             if index < len(self.tokens):
-                print(f"DEBUG: Found closing parenthesis at index: {index}")
+                #print(f"DEBUG: Found closing parenthesis at index: {index}")
                 index += 1
-            else:
-                print(f"DEBUG: Reached end without finding closing parenthesis")
+
 
             # Attempt to translate to Python range-based for loop
             python_range_generated = False
             
-            print(f"DEBUG: Translation check - init_var: {init_var}, init_value: {init_value}, condition_var: {condition_var}, " +
-                f"condition_op: {condition_op}, condition_value: {condition_value}, " +
-                f"increment_var: {increment_var}, increment_op: {increment_op}")
+            #print(f"DEBUG: Translation check - init_var: {init_var}, init_value: {init_value}, condition_var: {condition_var}, " +
+            #f"condition_op: {condition_op}, condition_value: {condition_value}, " +
+            #f"increment_var: {increment_var}, increment_op: {increment_op}")
             
             # Special case for "for (dose I = 1; I <= Num; I++)" to "for I in range(1, Num + 1):"
             if init_value and condition_var and condition_op == "<=" and condition_value and increment_var and increment_op == "+=":
                 if init_var == increment_var == condition_var:  # Standard case
-                    print(f"DEBUG: Standard case - variables match")
+                    #print(f"DEBUG: Standard case - variables match")
                     end_value = condition_value
                     step = increment_value
                     self.add_line(f"for {init_var} in range({init_value}, {end_value} + 1, {step}):")
                     python_range_generated = True
                 elif increment_var == condition_var:  # Special case with type declaration
-                    print(f"DEBUG: Special case - increment/condition vars match but init_var is different")
+                    #print(f"DEBUG: Special case - increment/condition vars match but init_var is different")
                     # This is the "dose I = 1" special case
                     end_value = condition_value
                     step = increment_value
@@ -1143,33 +1140,33 @@ class GenomeXCodeGenerator:
                 end_value = condition_value
                 step = increment_value if increment_op == "+=" else f"-{increment_value}"
                 
-                print(f"DEBUG: Range translation - end_value: {end_value}, step: {step}, condition_op: {condition_op}")
+                #print(f"DEBUG: Range translation - end_value: {end_value}, step: {step}, condition_op: {condition_op}")
                 
                 if condition_op == "<":
                     # for i = start; i < end; i++ -> range(start, end)
                     self.add_line(f"for {init_var} in range({init_value}, {end_value}, {step}):")
-                    print(f"DEBUG: Generated range with < operator")
+                    #print(f"DEBUG: Generated range with < operator")
                     python_range_generated = True
                 elif condition_op == "<=":
                     # for i = start; i <= end; i++ -> range(start, end + 1)
                     self.add_line(f"for {init_var} in range({init_value}, {end_value} + 1, {step}):")
-                    print(f"DEBUG: Generated range with <= operator")
+                    #print(f"DEBUG: Generated range with <= operator")
                     python_range_generated = True
                 elif condition_op == ">":
                     # for i = start; i > end; i-- -> range(start, end, -step)
                     if increment_op == "-=":
                         self.add_line(f"for {init_var} in range({init_value}, {end_value}, {step}):")
-                        print(f"DEBUG: Generated range with > operator")
+                        #print(f"DEBUG: Generated range with > operator")
                         python_range_generated = True
                 elif condition_op == ">=":
                     # for i = start; i >= end; i-- -> range(start, end - 1, -step)
                     if increment_op == "-=":
                         self.add_line(f"for {init_var} in range({init_value}, {end_value} - 1, {step}):")
-                        print(f"DEBUG: Generated range with >= operator")
+                        #print(f"DEBUG: Generated range with >= operator")
                         python_range_generated = True
 
             if not python_range_generated:
-                print(f"DEBUG: Falling back to while loop")
+                #print(f"DEBUG: Falling back to while loop")
                 if init_var and init_value:
                     self.add_line(f"{init_var} = {init_value}")
                 self.add_line(f"for {condition}:")
@@ -1179,9 +1176,9 @@ class GenomeXCodeGenerator:
             while index < len(self.tokens) and self.tokens[index][1] == "space":
                 index += 1
 
-            print(f"DEBUG: Looking for opening brace, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
+            #print(f"DEBUG: Looking for opening brace, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
             if index < len(self.tokens) and self.tokens[index][0] == "{":
-                print(f"DEBUG: Found opening brace")
+                #print(f"DEBUG: Found opening brace")
                 index += 1
                 
                 # Store the body start index
@@ -1211,7 +1208,7 @@ class GenomeXCodeGenerator:
                     self.add_line(f"{increment_var} {increment_op} {increment_value}")
 
             self.indentation -= 1
-            print(f"DEBUG: Finished process_for_loop, returning index: {index}")
+            #print(f"DEBUG: Finished process_for_loop, returning index: {index}")
 
         return index
     def process_prod_statement(self, index):
@@ -1576,7 +1573,7 @@ class GenomeXCodeGenerator:
     
     def extract_statement(self, index):
         """Extracts a regular statement ending with a semicolon"""
-        print(f"DEBUG: Entering extract_statement at index {index}")
+        #print(f"DEBUG: Entering extract_statement at index {index}")
         statement_tokens = []
         
         # Skip spaces at the beginning
@@ -1636,11 +1633,11 @@ class GenomeXCodeGenerator:
             if var_name in self.variable_types and self.variable_types[var_name] == "dose" and ('/' in expression and not '//' in expression):
                 statement = f"{var_name} = int({expression})"
         
-        print(f"DEBUG: Exiting extract_statement with statement: '{statement}', next index: {index}")
+        #print(f"DEBUG: Exiting extract_statement with statement: '{statement}', next index: {index}")
         return statement, index
     def extract_condition(self, index):
         """Extract a condition expression from tokens starting at the given index"""
-        print(f"DEBUG: Starting extract_condition at index {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
+        #print(f"DEBUG: Starting extract_condition at index {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
         
         start_index = index
         condition_parts = []
@@ -1696,7 +1693,7 @@ class GenomeXCodeGenerator:
         if condition.startswith("(") and condition.endswith(")"):
             condition = condition[1:-1].strip()
 
-        print(f"DEBUG: Extracted condition: '{condition}', from tokens: {self.tokens[start_index:index]}")
+        #print(f"DEBUG: Extracted condition: '{condition}', from tokens: {self.tokens[start_index:index]}")
 
         return condition, index
 
@@ -1839,10 +1836,10 @@ class GenomeXCodeGenerator:
                     
             elif has_params:
                 # This is a normal function call with parameters
-                self.add_line(f"print({function_name}({', '.join(args)}))")
+                self.add_line(f"{function_name}({', '.join(args)})")
             else:
                 # This is just a function reference with no call
-                self.add_line(f"print({function_name})")
+                self.add_line(f"{function_name}")
                 
             # Skip spaces after everything
             while index < len(self.tokens) and self.tokens[index][1] == "space":
@@ -1926,22 +1923,20 @@ def parseCodeGen(tokens, codegen_panel):
         def panel_input(prompt=''):
             # Ensure all previous output is displayed
             parent_window.update()
-            import time
-            time.sleep(0.1)  # Small delay to ensure UI is updated
             
             # Display the prompt
-            codegen_panel.insert(tk.END, prompt, "info")  # Use info tag for prompt styling
+            codegen_panel.insert(tk.END, prompt, "info")
             codegen_panel.see(tk.END)
             parent_window.update()
             
-            # Create a styled frame for input with a subtle background
+            # Create a styled frame for input
             input_frame = tk.Frame(codegen_panel, bg="#f0f0ff", padx=8, pady=8, 
-                                highlightbackground="#7c4dff", highlightthickness=1)
+                                  highlightbackground="#7c4dff", highlightthickness=1)
             
-            # Create a better styled entry field
+            # Create entry field
             input_entry = tk.Entry(input_frame, width=40, font=("Consolas", 11),
-                                bg="white", fg="#212121", insertbackground="#5e35b1",
-                                relief="flat", bd=0)
+                                  bg="white", fg="#212121", insertbackground="#5e35b1",
+                                  relief="flat", bd=0)
             input_entry.pack(side=tk.LEFT, padx=(0, 8), ipady=6)
             
             # Use a list to store the result
@@ -2007,80 +2002,67 @@ def parseCodeGen(tokens, codegen_panel):
                 raw_input = input_entry.get()
                 
                 try:
-                    # Format the input according to the rules
                     formatted_input = format_input(raw_input)
                     input_result[0] = formatted_input
                     
-                    # Add visual feedback for submission
                     input_entry.config(state="disabled", bg="#f5f5f5")
                     submit_button.config(state="disabled")
                     
-                    # Remove the delay and call finish_input directly
-                    finish_input()
+                    # Signal that input is ready
+                    input_frame.event_generate('<<InputReady>>')
                 except ValueError as e:
-                    # Create error message label
                     error_msg = str(e)
-                    
-                    # Show error message below input
                     error_label = tk.Label(input_frame, text=error_msg, fg="#f44336", 
-                                        bg="#f0f0ff", font=("Consolas", 10))
+                                         bg="#f0f0ff", font=("Consolas", 10))
                     error_label.pack(side=tk.BOTTOM, fill=tk.X, pady=(5, 0))
                     
-                    # Shake the input field to indicate error
                     original_bg = input_entry.cget("bg")
-                    input_entry.config(bg="#ffebee")  # Light red background
+                    input_entry.config(bg="#ffebee")
                     
-                    # Schedule removal of error message and reset of input background
                     def reset_error():
                         error_label.destroy()
                         input_entry.config(bg=original_bg)
-                        
-                    parent_window.after(3000, reset_error)  # Remove error after 3 seconds
-                
+                    
+                    parent_window.after(3000, reset_error)
+            
             def finish_input():
                 input_frame.destroy()
-                # Insert the user's input with a different style
                 codegen_panel.insert(tk.END, f"{input_result[0]}\n", "cmd")
                 codegen_panel.see(tk.END)
                 parent_window.update()
             
-            # Create a modern styled submit button with fixed width to prevent expansion
+            # Create submit button
             submit_button = tk.Button(input_frame, text="Submit", font=("Segoe UI", 10, "bold"),
                                     bg="#5e35b1", fg="white", relief="flat",
                                     activebackground="#7c4dff", activeforeground="white",
                                     command=on_submit, padx=12, pady=4, bd=0,
-                                    cursor="hand2", width=8)  # Set fixed width
+                                    cursor="hand2", width=8)
             submit_button.pack(side=tk.LEFT)
             
-            # Insert the frame into the text widget with proper spacing
-            codegen_panel.insert(tk.END, "\n")  # Add space before input
+            # Insert the frame into the text widget
+            codegen_panel.insert(tk.END, "\n")
             codegen_panel.window_create(tk.END, window=input_frame)
-            codegen_panel.insert(tk.END, "\n")  # Add space after input
+            codegen_panel.insert(tk.END, "\n")
             codegen_panel.see(tk.END)
             
-            # Remove the TCL script that was causing button expansion issues
-            parent_window.update()
-            
-            # Give focus to the entry
+            # Focus the entry
             input_entry.focus_set()
             
-            # Add a border effect when entry is focused
             def on_entry_focus(event):
                 input_frame.config(highlightbackground="#9c27b0")
             
             def on_entry_focus_out(event):
                 input_frame.config(highlightbackground="#7c4dff")
-                
+            
             input_entry.bind("<FocusIn>", on_entry_focus)
             input_entry.bind("<FocusOut>", on_entry_focus_out)
-            
-            # Also bind Enter key for submission
             input_entry.bind("<Return>", lambda event: on_submit())
             
-            # Wait until input is provided
-            while input_result[0] is None:
-                parent_window.update()
-                time.sleep(0.05)  # Small delay to prevent CPU hogging
+            # Bind the input ready event
+            input_frame.bind('<<InputReady>>', lambda e: finish_input())
+            
+            # Wait for input using Tkinter's event loop
+            input_frame.wait_window()
             
             return input_result[0]
         
