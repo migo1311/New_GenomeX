@@ -1075,7 +1075,7 @@ def parseSyntax(tokens, output_text):
     class statements:
         @staticmethod
         def func_calling(tokens, start_idx):
-            print(f"DEBUG: Starting function_calling at index {start_idx}")
+            print(f"DEBUG SYNTAX: Starting function_calling at index {start_idx}")
             
             # Get the token at start_idx to find its position in the original token list
             current_token = tokens[start_idx] if start_idx < len(tokens) else None
@@ -1358,7 +1358,7 @@ def parseSyntax(tokens, output_text):
 
         @staticmethod
         def inside_loop_statement(tokens, start_idx):
-            print(f"DEBUG: Starting inside_loop_statement at index {start_idx}")
+            print(f"DEBUG SYNTAX: Starting inside_loop_statement at index {start_idx}")
             start_idx = skip_spaces(tokens, start_idx)
             
             # Check if we have a contig statement
@@ -1669,7 +1669,7 @@ def parseSyntax(tokens, output_text):
                     return line["line_number"], ' '.join([t[0] for t in line["tokens"] if t[1] != "space"])
                 return get_line_number(tokens, idx), token[0] if token else ""
 
-            print(f"DEBUG: Starting assignment_statement at index {start_idx}")
+            print(f"DEBUG SYNTAX: Starting assignment_statement at index {start_idx}")
             
             # Skip leading whitespace
             start_idx = skip_spaces(tokens, start_idx)
@@ -1824,8 +1824,8 @@ def parseSyntax(tokens, output_text):
                 line_tokens = []
                 line_text = ""
 
-            print(f"DEBUG: Starting for_loop_statement at index {start_idx}")
-            print(f"DEBUG: Current tokens: {tokens[start_idx:start_idx+5] if start_idx < len(tokens) else 'end of tokens'}")
+            print(f"DEBUG SYNTAX: Starting for_loop_statement at index {start_idx}")
+            print(f"DEBUG SYNTAX: Current tokens: {tokens[start_idx:start_idx+5] if start_idx < len(tokens) else 'end of tokens'}")
 
             # Skip leading whitespace
             start_idx = skip_spaces(tokens, start_idx)
@@ -2192,17 +2192,17 @@ def parseSyntax(tokens, output_text):
         def do_while_statement(tokens, start_idx):
             print("<do_while_statement>")
             start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG: After initial skip_spaces, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"DEBUG SYNTAX: After initial skip_spaces, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
             
             
             # Check for opening brace
             if not is_token(tokens, start_idx, '{'):
-                print(f"DEBUG: Expected '{{' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: Expected '{{' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 return False, None
             
             # Move past opening brace
             start_idx += 1
-            print(f"DEBUG: After opening brace, start_idx={start_idx}")
+            print(f"DEBUG SYNTAX: After opening brace, start_idx={start_idx}")
             
             # Parse if body statements
             is_valid, new_idx = program.body_statements(tokens, start_idx)
@@ -2212,64 +2212,64 @@ def parseSyntax(tokens, output_text):
             
             start_idx = new_idx
             start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG: After body statements, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"DEBUG SYNTAX: After body statements, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
             
             # Check for closing brace
             if not is_token(tokens, start_idx, '}'):
-                print(f"DEBUG: Expected '}}' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: Expected '}}' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 return False, None
             
             # Move past closing brace
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG: After closing brace, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"DEBUG SYNTAX: After closing brace, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
             
             # Check for 'while' keyword
             if not is_token(tokens, start_idx, 'while'):
-                print(f"DEBUG: Expected 'while' keyword but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: Expected 'while' keyword but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 return False, None
             
             # Move past 'while' keyword
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG: After 'while' keyword, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"DEBUG SYNTAX: After 'while' keyword, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
             
             # Check for opening parenthesis
             if not is_token(tokens, start_idx, '('):
-                print(f"DEBUG: Expected '(' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: Expected '(' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 return False, None
             
             # Move past opening parenthesis
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG: After opening parenthesis, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"DEBUG SYNTAX: After opening parenthesis, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
             
             # Parse condition
             is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
             if not is_valid or new_idx is None:
-                print(f"DEBUG: Invalid condition at index {start_idx}")
+                print(f"DEBUG SYNTAX: Invalid condition at index {start_idx}")
                 return False, None
             
             start_idx = new_idx
             start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG: After condition, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"DEBUG SYNTAX: After condition, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
             
             # Check for closing parenthesis
             if not is_token(tokens, start_idx, ')'):
-                print(f"DEBUG: Expected ')' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in do-while statement")
+                print(f"DEBUG SYNTAX: Expected ')' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in do-while statement")
                 return False, None
             
             # Move past closing parenthesis
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG: After closing parenthesis, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"DEBUG SYNTAX: After closing parenthesis, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
             
             # Check for semicolon
             if is_token(tokens, start_idx, ';'):
                 start_idx += 1  # Move past semicolon
-                print(f"DEBUG: After semicolon, start_idx={start_idx}")
+                print(f"DEBUG SYNTAX: After semicolon, start_idx={start_idx}")
             
-            print(f"DEBUG: Successfully parsed do-while statement, returning True, {start_idx}")
+            print(f"DEBUG SYNTAX: Successfully parsed do-while statement, returning True, {start_idx}")
             return True, start_idx
   
         @staticmethod
@@ -2980,7 +2980,7 @@ def parseSyntax(tokens, output_text):
         @staticmethod
         def validate_clust_seqval(tokens, start_idx):
             start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG: After initial skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"DEBUG SYNTAX: After initial skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
             # Helper function to get the current line number and text
             def get_current_line_info(idx):
@@ -3010,122 +3010,122 @@ def parseSyntax(tokens, output_text):
 
             # Check for identifier
             if not is_token(tokens, start_idx, 'Identifier'):
-                print(f"DEBUG: Expected Identifier at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: Expected Identifier at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
-            print(f"DEBUG: Found Identifier: {tokens[start_idx]}")
+            print(f"DEBUG SYNTAX: Found Identifier: {tokens[start_idx]}")
             start_idx += 1
 
             start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
             # Check for opening bracket
             if not is_token(tokens, start_idx, '['):
-                print(f"DEBUG: Expected '[' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: Expected '[' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an open bracket\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
-            print(f"DEBUG: Found opening bracket")
+            print(f"DEBUG SYNTAX: Found opening bracket")
             start_idx += 1
 
             start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
             # Check for dimension size
             if not is_token(tokens, start_idx, 'numlit'):
-                print(f"DEBUG: Expected numlit at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: Expected numlit at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
 
             literal = tokens[start_idx]
             number_sign = check_number_sign(literal)
-            print(f"DEBUG: Found numlit: {literal}, number_sign: {number_sign}")
+            print(f"DEBUG SYNTAX: Found numlit: {literal}, number_sign: {number_sign}")
             
             if number_sign not in {'doseliteral'}:
-                print(f"DEBUG: Invalid number sign: {number_sign}, expected 'doseliteral'")
+                print(f"DEBUG SYNTAX: Invalid number sign: {number_sign}, expected 'doseliteral'")
                 output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             start_idx += 1
 
             start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
             # Check for closing bracket
             if not is_token(tokens, start_idx, ']'):
-                print(f"DEBUG: Expected ']' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: Expected ']' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing bracket\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
-            print(f"DEBUG: Found closing bracket")
+            print(f"DEBUG SYNTAX: Found closing bracket")
             start_idx += 1
 
             start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
             # Check for second dimension (optional)
             if is_token(tokens, start_idx, '['):
-                print(f"DEBUG: Found second dimension opening bracket")
+                print(f"DEBUG SYNTAX: Found second dimension opening bracket")
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
-                print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
                 if not is_token(tokens, start_idx, 'numlit') or check_number_sign(tokens[start_idx]) != "doseliteral":
-                    print(f"DEBUG: Expected numlit with doseliteral at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                    print(f"DEBUG SYNTAX: Expected numlit with doseliteral at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                     output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
-                print(f"DEBUG: Found second dimension size: {tokens[start_idx]}")
+                print(f"DEBUG SYNTAX: Found second dimension size: {tokens[start_idx]}")
                 start_idx += 1
 
                 start_idx = skip_spaces(tokens, start_idx)
-                print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 
                 if not is_token(tokens, start_idx, ']'):
-                    print(f"DEBUG: Expected ']' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                    print(f"DEBUG SYNTAX: Expected ']' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                     output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing bracket\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
-                print(f"DEBUG: Found second dimension closing bracket")
+                print(f"DEBUG SYNTAX: Found second dimension closing bracket")
                 start_idx += 1
 
             start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
             # Check for initialization (now optional)
             if is_token(tokens, start_idx, '='):
-                print(f"DEBUG: Found equals sign, parsing initialization")
+                print(f"DEBUG SYNTAX: Found equals sign, parsing initialization")
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
 
                 # Check for opening brace
                 if not is_token(tokens, start_idx, '{'):
-                    print(f"DEBUG: Expected '{{' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                    print(f"DEBUG SYNTAX: Expected '{{' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                     output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an opening brace\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
-                print(f"DEBUG: Found opening brace")
+                print(f"DEBUG SYNTAX: Found opening brace")
                 start_idx += 1
 
                 start_idx = skip_spaces(tokens, start_idx)
-                print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
                 # Check what type of array we're dealing with
                 if is_token(tokens, start_idx, '{'):
-                    print(f"DEBUG: Detected 2D array (nested braces)")
+                    print(f"DEBUG SYNTAX: Detected 2D array (nested braces)")
                     # Handle 2D array case (nested braces)
                     while True:
                         if is_token(tokens, start_idx, '{'):
-                            print(f"DEBUG: Found inner opening brace")
+                            print(f"DEBUG SYNTAX: Found inner opening brace")
                             start_idx += 1
                             start_idx = skip_spaces(tokens, start_idx)
-                            print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                            print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
                             while True:
                                 if not is_token(tokens, start_idx, 'string literal'):
-                                    print(f"DEBUG: Expected string literal at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                                    print(f"DEBUG SYNTAX: Expected string literal at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                                     output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal\n")
                                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                     return False, None
@@ -3133,51 +3133,51 @@ def parseSyntax(tokens, output_text):
                                 start_idx += 1
 
                                 start_idx = skip_spaces(tokens, start_idx)
-                                print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                                print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
                                 if is_token(tokens, start_idx, ','):
-                                    print(f"DEBUG: Found comma in inner array")
+                                    print(f"DEBUG SYNTAX: Found comma in inner array")
                                     start_idx += 1
                                     start_idx = skip_spaces(tokens, start_idx)
-                                    print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                                    print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                                 elif is_token(tokens, start_idx, '}'):
-                                    print(f"DEBUG: Found inner closing brace")
+                                    print(f"DEBUG SYNTAX: Found inner closing brace")
                                     start_idx += 1
                                     break
                                 else:
-                                    print(f"DEBUG: Expected ',' or '}}' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                                    print(f"DEBUG SYNTAX: Expected ',' or '}}' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                                     output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a comma or closing brace\n")
                                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                     return False, None
 
                             start_idx = skip_spaces(tokens, start_idx)
-                            print(f"DEBUG: After inner array, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                            print(f"DEBUG SYNTAX: After inner array, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
                             if is_token(tokens, start_idx, ','):
-                                print(f"DEBUG: Found comma after inner array")
+                                print(f"DEBUG SYNTAX: Found comma after inner array")
                                 start_idx += 1
                                 start_idx = skip_spaces(tokens, start_idx)
-                                print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                                print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                             elif is_token(tokens, start_idx, '}'):
-                                print(f"DEBUG: Found outer closing brace")
+                                print(f"DEBUG SYNTAX: Found outer closing brace")
                                 start_idx += 1
                                 break
                             else:
-                                print(f"DEBUG: Expected ',' or '}}' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                                print(f"DEBUG SYNTAX: Expected ',' or '}}' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                                 output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a comma or closing brace\n")
                                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                 return False, None
                         else:
-                            print(f"DEBUG: Expected '{{' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                            print(f"DEBUG SYNTAX: Expected '{{' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                             output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an opening brace\n")
                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
                 else:
-                    print(f"DEBUG: Detected 1D array (direct values)")
+                    print(f"DEBUG SYNTAX: Detected 1D array (direct values)")
                     # Handle 1D array case (direct values)
                     while True:
                         if not is_token(tokens, start_idx, 'string literal'):
-                            print(f"DEBUG: Expected string literal at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                            print(f"DEBUG SYNTAX: Expected string literal at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                             output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal\n")
                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
@@ -3185,30 +3185,30 @@ def parseSyntax(tokens, output_text):
                         start_idx += 1
 
                         start_idx = skip_spaces(tokens, start_idx)
-                        print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                        print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
                         if is_token(tokens, start_idx, ','):
-                            print(f"DEBUG: Found comma in array")
+                            print(f"DEBUG SYNTAX: Found comma in array")
                             start_idx += 1
                             start_idx = skip_spaces(tokens, start_idx)
-                            print(f"DEBUG: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                            print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                         elif is_token(tokens, start_idx, '}'):
-                            print(f"DEBUG: Found closing brace")
+                            print(f"DEBUG SYNTAX: Found closing brace")
                             start_idx += 1
                             break
                         else:
-                            print(f"DEBUG: Expected ',' or '}}' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                            print(f"DEBUG SYNTAX: Expected ',' or '}}' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                             output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a comma or closing brace\n")
                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
 
             # Check for semicolon (required whether there's initialization or not)
             if not is_token(tokens, start_idx, ';'):
-                print(f"DEBUG: Expected ';' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: Expected ';' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a semicolon\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
-            print(f"DEBUG: Found semicolon, array declaration complete")
+            print(f"DEBUG SYNTAX: Found semicolon, array declaration complete")
 
             return True, start_idx + 1
 
@@ -3316,15 +3316,15 @@ def parseSyntax(tokens, output_text):
             while start_idx < len(tokens):
                 print(f"Processing parameter at index: {start_idx}")
 
-                # Check if the current token is an identifier
-                if tokens[start_idx][1] == "Identifier":
-                    print(f"Parameter identifier detected: {tokens[start_idx][0]}")
+                # Check if the current token is an identifier or numlit
+                if tokens[start_idx][1] == "Identifier" or tokens[start_idx][1] == "numlit":
+                    print(f"Parameter value detected: {tokens[start_idx][0]}")
                     start_idx += 1
                     start_idx = skip_spaces(tokens, start_idx)
-                    print(f"Index after skipping spaces post-identifier: {start_idx}")
+                    print(f"Index after skipping spaces post-value: {start_idx}")
                 else:
-                    print(f">> ERROR: Expected identifier at index {start_idx}")
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier\n")
+                    print(f">> ERROR: Expected identifier or number at index {start_idx}")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier or number\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, start_idx
 
