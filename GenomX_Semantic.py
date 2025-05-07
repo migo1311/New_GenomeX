@@ -1220,7 +1220,7 @@ class SemanticAnalyzer:
                     self.check_variable_usage()
                 # Handle break and continue statements
                 elif self.current_token[1] == 'destroy':
-                    self.break_statement()
+                    self.destroy_statement()
                 elif self.current_token[0] == 'contig':
                     self.continue_statement()
                 # Handle array declarations
@@ -1271,8 +1271,8 @@ class SemanticAnalyzer:
                 # If we found a semicolon, move past it
                 if self.current_token is not None and self.current_token[0] == ';':
                     self.next_token()
-    
-    def break_statement(self):
+  
+    def destroy_statement(self):
         """Parse break statement"""
         if not self.in_loop:
             self.errors.append("Semantic Error: 'break' statement can only be used inside a loop")
@@ -2965,16 +2965,22 @@ class SemanticAnalyzer:
                             
                             arg_name = self.current_token[0]
                             
-                            # Check if variable exists in symbol table
-                            if arg_name not in self.symbol_table:
+                            # Check if variable exists in current scope first, then global scope
+                            if arg_name not in self.symbol_table and arg_name not in self.global_symbol_table:
                                 self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration")
                                 break
+                            
+                            # Get variable info from the appropriate scope
+                            if arg_name in self.symbol_table:
+                                arg_info = self.symbol_table[arg_name]
+                            else:
+                                arg_info = self.global_symbol_table[arg_name]
                             
                             # Add argument to the list
                             args.append({
                                 'name': arg_name,
-                                'type': self.symbol_table[arg_name]['type'],
-                                'value': self.symbol_table[arg_name]['value'] if 'value' in self.symbol_table[arg_name] else None
+                                'type': arg_info['type'],
+                                'value': arg_info.get('value', None)
                             })
                             
                             self.next_token()  # Move past argument
@@ -3034,14 +3040,16 @@ class SemanticAnalyzer:
                             func_return_type = self.functions[var_name].get('return_type', 'unknown')
                             param_count = len(self.functions[var_name].get('parameters', []))
                             values_to_print.append(f"Function {var_name} (returns {func_return_type}, takes {param_count} parameters)")
-                    # Regular variable
-                    elif var_name not in self.symbol_table:
-                        # self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement before declaration")
-                        # values_to_print.append(f"undefined({var_name})")
-                        pass
+                    # Regular variable - check in current scope first, then global
+                    elif var_name not in self.symbol_table and var_name not in self.global_symbol_table:
+                        self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement is not declared in current scope")
+                        values_to_print.append(f"undefined({var_name})")
                     else:
                         # Get the value from the symbol table for printing
-                        values_to_print.append(str(self.symbol_table[var_name]['value']))
+                        if var_name in self.symbol_table:
+                            values_to_print.append(str(self.symbol_table[var_name]['value']))
+                        else:
+                            values_to_print.append(str(self.global_symbol_table[var_name]['value']))
             elif self.current_token[1] == 'string literal':
                 # For string literals, strip quotes and handle escape sequences
                 string_val = self.current_token[0].strip('"\'')
