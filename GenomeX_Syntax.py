@@ -1102,7 +1102,7 @@ def parseSyntax(tokens, output_text):
             # Ensure we have a valid identifier
             if not (start_idx < len(tokens) and is_token(tokens, start_idx, "Identifier")):
                 print(f"Error: Expected identifier after 'func' at index {start_idx}")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier after 'func'\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier after 'func' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, start_idx
 
@@ -1147,7 +1147,7 @@ def parseSyntax(tokens, output_text):
                 # Ensure valid identifier after '='
                 if not (start_idx < len(tokens) and is_token(tokens, start_idx, "Identifier")):
                     print(f"Error: Expected identifier after '=' at index {start_idx}")
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier after '='\n")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier after '=' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, start_idx
 
@@ -2345,7 +2345,7 @@ def parseSyntax(tokens, output_text):
 
                     # First identifier check
                     if not is_token(tokens, start_idx, 'Identifier'):
-                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier\n")
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                         output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                         return False, None
                     
@@ -2464,7 +2464,7 @@ def parseSyntax(tokens, output_text):
                         
                         # Next identifier
                         if not is_token(tokens, start_idx, 'Identifier'):
-                            output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected an Identifier\n")
+                            output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected an Identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
                         start_idx += 1
@@ -2497,7 +2497,7 @@ def parseSyntax(tokens, output_text):
 
             # First identifier check
             if not is_token(tokens, start_idx, 'Identifier'):
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
 
@@ -2535,7 +2535,7 @@ def parseSyntax(tokens, output_text):
                 
                 # Next identifier
                 if not is_token(tokens, start_idx, 'Identifier'):
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier\n")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
                 start_idx += 1
@@ -2569,7 +2569,7 @@ def parseSyntax(tokens, output_text):
 
             # First identifier check
             if not is_token(tokens, start_idx, 'Identifier'):
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
 
@@ -2611,7 +2611,7 @@ def parseSyntax(tokens, output_text):
                 
                 # Next identifier
                 if not is_token(tokens, start_idx, 'Identifier'):
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier\n")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
                 start_idx += 1
@@ -2643,7 +2643,7 @@ def parseSyntax(tokens, output_text):
 
                     # First identifier check
                     if not is_token(tokens, start_idx, 'Identifier'):
-                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier\n")
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                         output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                         return False, None
                     
@@ -3011,7 +3011,7 @@ def parseSyntax(tokens, output_text):
             # Check for identifier
             if not is_token(tokens, start_idx, 'Identifier'):
                 print(f"DEBUG SYNTAX: Expected Identifier at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             print(f"DEBUG SYNTAX: Found Identifier: {tokens[start_idx]}")
@@ -3259,7 +3259,7 @@ def parseSyntax(tokens, output_text):
                 # Check if Identifier follows the parameter type
                 if start_idx >= len(tokens) or tokens[start_idx][1] != "Identifier":
                     print(f"Error: Expected Identifier after parameter type '{param_type}' at index {start_idx}")
-                    output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected an Identifier\n")
+                    output_text.insert(tk.END, f"Syntax error at line {line_number}: Expected an Identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None, start_idx
 
@@ -3324,7 +3324,7 @@ def parseSyntax(tokens, output_text):
                     print(f"Index after skipping spaces post-value: {start_idx}")
                 else:
                     print(f">> ERROR: Expected identifier or number at index {start_idx}")
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier or number\n")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier or numlit but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, start_idx
 
