@@ -27,8 +27,8 @@ class SemanticAnalyzer:
         self._condition_nesting_level = 0  # Track nesting level for condition parsing
 
     def next_token(self):
-        while self.token_index < len(self.tokens) and self.tokens[self.token_index][1] == "space":
-            self.token_index += 1  # Skip spaces
+        while self.token_index < len(self.tokens) and self.tokens[self.token_index][1] in ["space", "tab"]:
+            self.token_index += 1  # Skip spaces and tabs
         if self.token_index < len(self.tokens):
             self.current_token = self.tokens[self.token_index]
             self.token_index += 1
@@ -1609,6 +1609,10 @@ class SemanticAnalyzer:
                 
                 # Continue with other operations (like assignment)
                 # Look for assignment operator
+                # Skip any whitespace between array access and assignment operator
+                while self.current_token is not None and self.current_token[1] in ["space", "tab"]:
+                    self.next_token()
+                    
                 if self.current_token is not None and self.current_token[0] == '=':
                     self.next_token()  # Move past '='
                     
@@ -1664,6 +1668,10 @@ class SemanticAnalyzer:
                         bracket_count -= 1
                     self.next_token()
         
+        # Skip any whitespace before assignment operator
+        while self.current_token is not None and self.current_token[1] in ["space", "tab"]:
+            self.next_token()
+            
         # Look for assignment operator
         if self.current_token is not None and self.current_token[0] == '=':
             # Check if the variable is a perms (constant)
@@ -1678,6 +1686,10 @@ class SemanticAnalyzer:
             
             self.next_token()  # Move past '='
             
+            # Skip any whitespace after assignment operator
+            while self.current_token is not None and self.current_token[1] in ["space", "tab"]:
+                self.next_token()
+                
             # Set the current assignment type for type checking
             if is_array_element:
                 self.current_assignment_type = array_element_type
@@ -1874,13 +1886,18 @@ class SemanticAnalyzer:
                     check_type = array_element_type if is_array_element else var_type
                     
                     if check_type == 'dose':
-                        try:
-                            numeric_value = int(token[0])
-                            if not is_array_element:
-                                var_info['value'] = numeric_value
-                        except:
+                        # For dose type, check if the value has a decimal point
+                        if '.' in token[0]:
                             target_name = f"{var_name}[index]" if is_array_element else var_name
                             self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose {target_name}")
+                        else:
+                            try:
+                                numeric_value = int(token[0])
+                                if not is_array_element:
+                                    var_info['value'] = numeric_value
+                            except:
+                                target_name = f"{var_name}[index]" if is_array_element else var_name
+                                self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose {target_name}")
                     elif check_type == 'quant':
                         try:
                             numeric_value = float(token[0])
@@ -1971,8 +1988,8 @@ class SemanticAnalyzer:
                             if token[0] == '/':
                                 contains_division = True
                             expr_str += token[0]
-                        elif token[1] == 'space':
-                            continue  # Skip spaces
+                        elif token[1] in ["space", "tab"]:
+                            continue  # Skip spaces and tabs
                         # else:
                         #     self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in arithmetic expression")
                         #     valid_expression = False
