@@ -1621,7 +1621,7 @@ def parseSyntax(tokens, output_text):
             # Check for opening parenthesis
             if not is_token(tokens, start_idx, '('):
                 print(f"Error: Expected '(' at index {start_idx} (line {line_number})")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an open parenthesis\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an open parenthesis but found {tokens[start_idx][0]}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             start_idx += 1  # Move past '('
@@ -1630,7 +1630,7 @@ def parseSyntax(tokens, output_text):
             # Check for string literal
             if not is_token(tokens, start_idx, 'string literal'):
                 print(f"Error: Expected string literal at index {start_idx} (line {line_number})")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal but found {tokens[start_idx][0]}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             start_idx += 1  # Move past string literal
@@ -1639,7 +1639,7 @@ def parseSyntax(tokens, output_text):
             # Check for closing parenthesis
             if not is_token(tokens, start_idx, ')'):
                 print(f"Error: Expected ')' at index {start_idx} (line {line_number}) in stimuli call")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis but found {tokens[start_idx][0]}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             start_idx += 1  # Move past ')'
@@ -1650,7 +1650,7 @@ def parseSyntax(tokens, output_text):
                 return True, start_idx + 1
             else:
                 print(f"Error: Expected ';' at index {start_idx} (line {line_number})")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a semicolon in stimuli\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a semicolon in stimuli call but found {tokens[start_idx][0]}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
 
@@ -2762,29 +2762,64 @@ def parseSyntax(tokens, output_text):
     class clust:
         @staticmethod
         def validate_clust_quantval(tokens, start_idx):
+            # Get the token at start_idx to find its position in the original token list
+            current_token = tokens[start_idx] if start_idx < len(tokens) else None
+            
+            # Find which display line contains this token
+            matching_line = None
+            for line in display_lines:
+                if current_token in line["tokens"]:
+                    matching_line = line
+                    break
+            
+            # If we found a matching line, use its line number, otherwise fall back to get_line_number
+            if matching_line:
+                line_number = matching_line["line_number"]
+                line_tokens = matching_line["tokens"]
+                line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])  # Format without spaces
+            else:
+                line_number = get_line_number(tokens, start_idx)
+                line_tokens = []
+                line_text = ""
             print('<clust_quantval>')
             start_idx = skip_spaces(tokens, start_idx)
 
             # Check for identifier
             if not is_token(tokens, start_idx, 'Identifier'):
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
 
             # Check for opening bracket
             if not is_token(tokens, start_idx, '['):
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an open bracket but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
 
             # Check for dimension size
             if not is_token(tokens, start_idx, 'numlit'):
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
+            
+                # Verify the number is a dose literal
+            number_sign = check_number_sign(tokens[start_idx])
+            if number_sign in {"quantval", "nequantliteral"}:
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value but found {tokens[start_idx][0]}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                return False, None
+
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
 
             # Check for closing bracket
             if not is_token(tokens, start_idx, ']'):
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing bracket but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
@@ -2795,11 +2830,22 @@ def parseSyntax(tokens, output_text):
                 start_idx = skip_spaces(tokens, start_idx)
 
                 if not is_token(tokens, start_idx, 'numlit'):
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    return False, None
+                
+                # Verify the number is a dose literal
+                number_sign = check_number_sign(tokens[start_idx])
+                if number_sign in {"quantval", "nequantliteral"}:
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value but found {tokens[start_idx][0]}\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
 
                 if not is_token(tokens, start_idx, ']'):
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing bracket but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
@@ -2811,6 +2857,8 @@ def parseSyntax(tokens, output_text):
 
                 # Check for opening brace
                 if not is_token(tokens, start_idx, '{'):
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an opening brace but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
@@ -2820,6 +2868,8 @@ def parseSyntax(tokens, output_text):
                     # 2D array
                     while True:
                         if not is_token(tokens, start_idx, '{'):
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an opening brace but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
                         start_idx += 1
                         start_idx = skip_spaces(tokens, start_idx)
@@ -2827,7 +2877,17 @@ def parseSyntax(tokens, output_text):
                         # Parse inner array
                         while True:
                             if not is_token(tokens, start_idx, 'numlit'):
+                                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                 return False, None
+                            
+                            # Verify the number is a dose literal
+                            number_sign = check_number_sign(tokens[start_idx])
+                            if number_sign in {"neliteral", "doseliteral"}:
+                                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value but found {tokens[start_idx][0]}\n")
+                                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                                return False, None
+                            
                             start_idx += 1
                             start_idx = skip_spaces(tokens, start_idx)
 
@@ -2838,6 +2898,8 @@ def parseSyntax(tokens, output_text):
                                 start_idx += 1
                                 break
                             else:
+                                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing brace but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                 return False, None
 
                         start_idx = skip_spaces(tokens, start_idx)
@@ -2849,11 +2911,22 @@ def parseSyntax(tokens, output_text):
                             start_idx += 1
                             break
                         else:
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing brace but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
                 else:
                     # 1D array
                     while True:
                         if not is_token(tokens, start_idx, 'numlit'):
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                            return False, None
+                        
+                        # Verify the number is a dose literal
+                        number_sign = check_number_sign(tokens[start_idx])
+                        if number_sign in {"neliteral", "doseliteral"}:
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value but found {tokens[start_idx][0]}\n")
+                            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
                         start_idx += 1
                         start_idx = skip_spaces(tokens, start_idx)
@@ -2865,39 +2938,79 @@ def parseSyntax(tokens, output_text):
                             start_idx += 1
                             break
                         else:
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing brace but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
 
             # Check for semicolon
             if not is_token(tokens, start_idx, ';'):
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a semicolon but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
 
             return True, start_idx + 1
 
         @staticmethod
         def validate_clust_doseval(tokens, start_idx):
+            # Get the token at start_idx to find its position in the original token list
+            current_token = tokens[start_idx] if start_idx < len(tokens) else None
+            
+            # Find which display line contains this token
+            matching_line = None
+            for line in display_lines:
+                if current_token in line["tokens"]:
+                    matching_line = line
+                    break
+            
+            # If we found a matching line, use its line number, otherwise fall back to get_line_number
+            if matching_line:
+                line_number = matching_line["line_number"]
+                line_tokens = matching_line["tokens"]
+                line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])  # Format without spaces
+            else:
+                line_number = get_line_number(tokens, start_idx)
+                line_tokens = []
+                line_text = ""
+
             print('<clust_dose>')
             start_idx = skip_spaces(tokens, start_idx)
 
             # Check for identifier
             if not is_token(tokens, start_idx, 'Identifier'):
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
 
             # Check for opening bracket
             if not is_token(tokens, start_idx, '['):
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an open bracket but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
 
             # Check for dimension size
             if not is_token(tokens, start_idx, 'numlit'):
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
+
+            # Verify the number is a dose literal
+            number_sign = check_number_sign(tokens[start_idx])
+            if number_sign in {"quantval", "nequantliteral"}:
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value but found {tokens[start_idx][0]}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                return False, None
+
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
 
             # Check for closing bracket
             if not is_token(tokens, start_idx, ']'):
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing bracket but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
@@ -2908,11 +3021,23 @@ def parseSyntax(tokens, output_text):
                 start_idx = skip_spaces(tokens, start_idx)
 
                 if not is_token(tokens, start_idx, 'numlit'):
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
+
+                # Verify the second dimension is also a dose literal
+                number_sign = check_number_sign(tokens[start_idx])
+                if number_sign in {"quantval", "nequantliteral"}:
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value but found {tokens[start_idx][0]}\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    return False, None
+
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
 
                 if not is_token(tokens, start_idx, ']'):
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing bracket but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
@@ -2924,6 +3049,8 @@ def parseSyntax(tokens, output_text):
 
                 # Check for opening brace
                 if not is_token(tokens, start_idx, '{'):
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an opening brace but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
@@ -2933,6 +3060,8 @@ def parseSyntax(tokens, output_text):
                     # 2D array
                     while True:
                         if not is_token(tokens, start_idx, '{'):
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an opening brace but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
                         start_idx += 1
                         start_idx = skip_spaces(tokens, start_idx)
@@ -2940,7 +3069,17 @@ def parseSyntax(tokens, output_text):
                         # Parse inner array
                         while True:
                             if not is_token(tokens, start_idx, 'numlit'):
+                                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                 return False, None
+
+                            # Verify array value is a dose literal
+                            number_sign = check_number_sign(tokens[start_idx])
+                            if number_sign in {"quantval", "nequantliteral"}:
+                                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value but found {tokens[start_idx][0]}\n")
+                                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                                return False, None
+
                             start_idx += 1
                             start_idx = skip_spaces(tokens, start_idx)
 
@@ -2951,6 +3090,8 @@ def parseSyntax(tokens, output_text):
                                 start_idx += 1
                                 break
                             else:
+                                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing brace but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                 return False, None
 
                         start_idx = skip_spaces(tokens, start_idx)
@@ -2962,12 +3103,24 @@ def parseSyntax(tokens, output_text):
                             start_idx += 1
                             break
                         else:
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing brace but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
                 else:
                     # 1D array
                     while True:
                         if not is_token(tokens, start_idx, 'numlit'):
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
+
+                        # Verify array value is a dose literal
+                        number_sign = check_number_sign(tokens[start_idx])
+                        if number_sign in {"quantval", "nequantliteral"}:
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value but found {tokens[start_idx][0]}\n")
+                            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                            return False, None
+
                         start_idx += 1
                         start_idx = skip_spaces(tokens, start_idx)
 
@@ -2978,10 +3131,14 @@ def parseSyntax(tokens, output_text):
                             start_idx += 1
                             break
                         else:
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing brace but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
 
             # Check for semicolon
             if not is_token(tokens, start_idx, ';'):
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a semicolon but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
 
             return True, start_idx + 1
@@ -3135,7 +3292,7 @@ def parseSyntax(tokens, output_text):
                             while True:
                                 if not is_token(tokens, start_idx, 'string literal'):
                                     print(f"DEBUG SYNTAX: Expected string literal at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal\n")
+                                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal but found {tokens[start_idx][0]}\n")
                                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                     return False, None
 
@@ -3155,7 +3312,7 @@ def parseSyntax(tokens, output_text):
                                     break
                                 else:
                                     print(f"DEBUG SYNTAX: Expected ',' or '}}' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a comma or closing brace\n")
+                                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a comma or closing brace but found {tokens[start_idx][0]}\n")
                                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                     return False, None
 
@@ -3173,12 +3330,12 @@ def parseSyntax(tokens, output_text):
                                 break
                             else:
                                 print(f"DEBUG SYNTAX: Expected ',' or '}}' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a comma or closing brace\n")
+                                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a comma or closing brace but found {tokens[start_idx][0]}\n")
                                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                 return False, None
                         else:
                             print(f"DEBUG SYNTAX: Expected '{{' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an opening brace\n")
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an opening brace but found {tokens[start_idx][0]}\n")
                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
                 else:
@@ -3187,7 +3344,7 @@ def parseSyntax(tokens, output_text):
                     while True:
                         if not is_token(tokens, start_idx, 'string literal'):
                             print(f"DEBUG SYNTAX: Expected string literal at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal\n")
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal but found {tokens[start_idx][0]}\n")
                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
 
@@ -3207,14 +3364,14 @@ def parseSyntax(tokens, output_text):
                             break
                         else:
                             print(f"DEBUG SYNTAX: Expected ',' or '}}' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a comma or closing brace\n")
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a comma or closing brace but found {tokens[start_idx][0]}\n")
                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
 
             # Check for semicolon (required whether there's initialization or not)
             if not is_token(tokens, start_idx, ';'):
                 print(f"DEBUG SYNTAX: Expected ';' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a semicolon\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a semicolon but found {tokens[start_idx][0]}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             print(f"DEBUG SYNTAX: Found semicolon, array declaration complete")
@@ -3533,9 +3690,6 @@ def parseSyntax(tokens, output_text):
                         is_valid, concat_value, next_idx = express.seq_concat(tokens, start_idx)
                         if not is_valid:
                             print("Failed to parse seq_concat")
-                            print("Syntax Error: Expected plus sign")
-                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an plus sign\n")
-                            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, start_idx
                         
                         # Successfully parsed a concatenation expression
@@ -3592,9 +3746,6 @@ def parseSyntax(tokens, output_text):
                         is_valid, concat_value, next_idx = express.seq_concat(tokens, start_idx)
                         if not is_valid:
                             print("Failed to parse seq_concat")
-                            print("Syntax Error: Expected plus sign")
-                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an plus sign\n")
-                            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, start_idx
                             
                         # Successfully parsed a concatenation expression
@@ -3637,7 +3788,7 @@ def parseSyntax(tokens, output_text):
             else:
                 print(f"Error: Expected a literal or seq type cast at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 print("Syntax Error: Expected a literal or sequence type")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a literal\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a literal but found {tokens[start_idx][0]}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, start_idx  # Return failure
             
@@ -3645,8 +3796,7 @@ def parseSyntax(tokens, output_text):
             start_idx = skip_spaces(tokens, start_idx)
             
             # Parse express_value_tail (handling comma-separated values)
-            while start_idx < len(tokens) and is_token(tokens, start_idx, ','):
-                print("Found a comma, proceeding with parsing.")
+            while start_idx < len(tokens) and (is_token(tokens, start_idx, ',') or is_token(tokens, start_idx, '+')):               
                 
                 start_idx += 1  # Move past the comma
                 print(f"Moved past comma, new start_idx: {start_idx}")
@@ -3752,7 +3902,7 @@ def parseSyntax(tokens, output_text):
                 if start_idx >= len(tokens) or tokens[start_idx][1] not in exp_literals:
                     print(f"Error: Expected a literal or seq type cast after ',' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                     print("Syntax Error: Expected a literal or sequence type after comma")
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an literal\n")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a literal but found {tokens[start_idx][0]}\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, start_idx  # Return failure
                 
@@ -3789,69 +3939,75 @@ def parseSyntax(tokens, output_text):
             print("<seq_concat>")
             start_idx = skip_spaces(tokens, start_idx)
             
-            # Parse the first value - either string literal or seq_type_cast
+            # Parse the first value - now accepting string literal, seq_type_cast, or Identifier
             first_value = None
             
             # Try string literal first
             if is_token(tokens, start_idx, 'string literal'):
-                # Get the first string value
                 first_value = tokens[start_idx][1]
                 print(f"First string literal: {first_value}")
-                
-                # Move past the first string literal
                 start_idx += 1
-            else:
-                # Try seq_type_cast
+            # Try Identifier
+            elif is_token(tokens, start_idx, 'Identifier'):
+                first_value = tokens[start_idx][0]  # Get the identifier name
+                print(f"First identifier: {first_value}")
+                start_idx += 1
+            # Try seq_type_cast
+            elif is_token(tokens, start_idx, 'seq'):
                 is_valid, cast_result, next_idx = express.seq_type_cast(tokens, start_idx)
                 if is_valid and cast_result is not None:
                     first_value = cast_result
                     print(f"First seq_type_cast: {first_value}")
                     start_idx = next_idx
                 else:
-                    print(f"Error: Expected string literal or seq_type_cast at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a literal or seq type cast\n")
-                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    print(f"Error: Invalid seq type cast at index {start_idx}")
                     return False, None, start_idx
+            else:
+                print(f"Error: Expected string literal, identifier, or seq_type_cast at index {start_idx}")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal, identifier, or seq type cast but found {tokens[start_idx][0]}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                return False, None, start_idx
             
             start_idx = skip_spaces(tokens, start_idx)
             
             # Check for '+' operator
             if start_idx >= len(tokens) or tokens[start_idx][0] != "+":
-                print(f"Error: Expected '+' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a plus sign\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                print(f"Error: Expected '+' at index {start_idx}")
                 return False, None, start_idx
             
             # Move past the '+' operator
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
             
-            # Parse the second value - either string literal or seq_type_cast
+            # Parse the second value - now accepting string literal, seq_type_cast, or Identifier
             second_value = None
             
             # Try string literal first
             if is_token(tokens, start_idx, 'string literal'):
-                # Get the second string value
                 second_value = tokens[start_idx][1]
                 print(f"Second string literal: {second_value}")
-                
-                # Move past the second string literal
                 start_idx += 1
-            else:
-                # Try seq_type_cast
+            # Try Identifier
+            elif is_token(tokens, start_idx, 'Identifier'):
+                second_value = tokens[start_idx][0]  # Get the identifier name
+                print(f"Second identifier: {second_value}")
+                start_idx += 1
+            # Try seq_type_cast
+            elif is_token(tokens, start_idx, 'seq'):
                 is_valid, cast_result, next_idx = express.seq_type_cast(tokens, start_idx)
                 if is_valid and cast_result is not None:
                     second_value = cast_result
                     print(f"Second seq_type_cast: {second_value}")
                     start_idx = next_idx
                 else:
-                    print(f"Error: Expected string literal or seq_type_cast at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a literal or seq type cast\n")
-                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    print(f"Error: Invalid seq type cast at index {start_idx}")
                     return False, None, start_idx
+            else:
+                print(f"Error: Expected string literal, identifier, or seq_type_cast at index {start_idx}")
+                return False, None, start_idx
             
             # Concatenate the values
-            result = first_value + second_value
+            result = f"{first_value} + {second_value}"  # Changed to keep the + operator visible
             print(f"Concatenated result: {result}")
             
             # Check for additional concatenations in seq_concat_tail
@@ -3914,7 +4070,7 @@ def parseSyntax(tokens, output_text):
                 is_valid, cast_value, next_idx = express.seq_type_cast(tokens, start_idx)
                 if not is_valid or not cast_value:
                     print(f"Error: Invalid seq function call at index {start_idx}")
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a seq\n")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a seq but found {tokens[start_idx][0]}\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None, start_idx
                 next_value = cast_value
@@ -3922,7 +4078,7 @@ def parseSyntax(tokens, output_text):
                 start_idx = next_idx
             else:
                 print(f"Error: Expected string literal or seq function call at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal or seq type cast\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal or seq type cast but found {tokens[start_idx][0]}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None, start_idx
             
