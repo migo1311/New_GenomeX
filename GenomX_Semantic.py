@@ -1029,8 +1029,7 @@ class SemanticAnalyzer:
                         
                     # Expect '{' for row start
                     if self.current_token[0] != '{':
-                        # self.errors.append(f"Semantic Error: Expected '{{' for start of row in 2D array, found {self.current_token}")
-                        pass
+                        self.errors.append(f"Semantic Error: Expected '{{' for start of row in 2D array, found {self.current_token}")
                         return
                         
                     self.next_token()  # Move past '{'
