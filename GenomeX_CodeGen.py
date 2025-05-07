@@ -27,7 +27,7 @@ class GenomeXCodeGenerator:
         indent = "    " * self.indentation
         self.python_code.append(f"{indent}{line}")
         
-    def generate_code(self):
+    def generate_code(self, codegen_panel=None):
         print("Generating Python code from codegen...")
         """Main method to generate Python code from tokens"""
         self.add_line("# Generated Python code from GenomeX")
@@ -44,7 +44,7 @@ class GenomeXCodeGenerator:
                 
             # Handle global declarations
             if token_type == '_G':
-                i = self.process_local_declaration(i)
+                i = self.process_local_declaration(i, codegen_panel)
                 
             # Handle functions
             elif token_type == 'act':
@@ -303,7 +303,7 @@ class GenomeXCodeGenerator:
                 
         return index
 
-    def process_local_declaration(self, index):
+    def process_local_declaration(self, index, codegen_panel=None):
         """Process a local variable declaration (including 1D and 2D arrays)"""
         print(f"Starting local declaration at token index {index}")
         # Skip _L token
@@ -408,92 +408,26 @@ class GenomeXCodeGenerator:
                                 print("Ignoring newline token '\\n'")
                             index += 1
 
-                        elements = []
-                        if current_is_array:
-                            if is_2d_array:
-                                print(f"Processing 2D array initializer for {var_name}")
-                                while index < len(self.tokens) and self.tokens[index][0] != "}":
-                                    row = []
-                                    if index < len(self.tokens) and self.tokens[index][0] == "{":
-                                        index += 1
-                                        print("Detected opening brace '{' for row")
-                                        while index < len(self.tokens) and self.tokens[index][0] != "}":
-                                            if self.tokens[index][1] == "numlit":
-                                                row.append(self.tokens[index][0])
-                                                print(f"Added numeric literal to row: {self.tokens[index][0]}")
-                                            elif self.tokens[index][0] == "dom":
-                                                row.append("True")
-                                                print("Added boolean True to row")
-                                            elif self.tokens[index][0] == "rec":
-                                                row.append("False")
-                                                print("Added boolean False to row")
-                                            elif self.tokens[index][1] == "string literal":
-                                                row.append(self.tokens[index][0])
-                                                print(f"Added string literal to row: {self.tokens[index][0]}")
-                                            elif self.tokens[index][1] == "Identifier":
-                                                row.append(self.tokens[index][0])
-                                                print(f"Added identifier to row: {self.tokens[index][0]}")
-                                            index += 1
-                                            if index < len(self.tokens) and self.tokens[index][0] == ",":
-                                                index += 1
-                                            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
-                                                if self.tokens[index][0] == "\n":
-                                                    print("Ignoring newline token '\\n'")
-                                                index += 1
-                                        if index < len(self.tokens) and self.tokens[index][0] == "}":
-                                            print("Detected closing brace '}' for row")
-                                            index += 1
-                                        elements.append(f"[{', '.join(row)}]")
-                                        print(f"Completed row: {row}")
-
-                                        if index < len(self.tokens) and self.tokens[index][0] == ",":
-                                            index += 1
-                                        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
-                                            if self.tokens[index][0] == "\n":
-                                                print("Ignoring newline token '\\n'")
-                                            index += 1
-                                if index < len(self.tokens) and self.tokens[index][0] == "}":
-                                    print("Detected closing brace '}' for 2D array")
-                                    index += 1
-
-                                self.add_line(f"{var_name} = [{', '.join(elements)}]")
-                                print(f"Generated 2D array assignment: {var_name} = [{', '.join(elements)}]")
+                        # Check for dom/rec values for allele type
+                        if var_type == "allele" and index < len(self.tokens):
+                            if self.tokens[index][0] == "dom":
+                                self.add_line(f"{var_name} = True")
+                                print(f"Assigned True to allele variable {var_name}")
+                                index += 1
+                            elif self.tokens[index][0] == "rec":
+                                self.add_line(f"{var_name} = False")
+                                print(f"Assigned False to allele variable {var_name}")
+                                index += 1
                             else:
-                                print(f"Processing 1D array initializer for {var_name}")
-                                if index < len(self.tokens) and self.tokens[index][0] == "{":
-                                    index += 1
-                                    while index < len(self.tokens) and self.tokens[index][0] != "}":
-                                        if self.tokens[index][1] == "numlit":
-                                            elements.append(self.tokens[index][0])
-                                            print(f"Added numeric literal to array: {self.tokens[index][0]}")
-                                        elif self.tokens[index][0] == "dom":
-                                            elements.append("True")
-                                            print("Added boolean True to array")
-                                        elif self.tokens[index][0] == "rec":
-                                            elements.append("False")
-                                            print("Added boolean False to array")
-                                        elif self.tokens[index][1] == "string literal":
-                                            elements.append(self.tokens[index][0])
-                                            print(f"Added string literal to array: {self.tokens[index][0]}")
-                                        elif self.tokens[index][1] == "Identifier":
-                                            elements.append(self.tokens[index][0])
-                                            print(f"Added identifier to array: {self.tokens[index][0]}")
-                                        index += 1
-                                        if index < len(self.tokens) and self.tokens[index][0] == ",":
-                                            index += 1
-                                        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
-                                            if self.tokens[index][0] == "\n":
-                                                print("Ignoring newline token '\\n'")
-                                            index += 1
-                                    if index < len(self.tokens) and self.tokens[index][0] == "}":
-                                        print("Detected closing brace '}' for 1D array")
-                                        index += 1
-                                    self.add_line(f"{var_name} = [{', '.join(elements)}]")
-                                    print(f"Generated 1D array assignment: {var_name} = [{', '.join(elements)}]")
+                                # Use extract_expression for other values
+                                value, index = self.extract_expression(index)
+                                self.add_line(f"{var_name} = {value}")
+                                print(f"Assigned value to {var_name}: {value}")
                         else:
-                            value, index = self.extract_value(index)
+                            # Use extract_expression for non-allele types
+                            value, index = self.extract_expression(index)
                             self.add_line(f"{var_name} = {value}")
-                            print(f"Assigned scalar value to {var_name}: {value}")
+                            print(f"Assigned value to {var_name}: {value}")
                     else:
                         # Default initialization
                         default_value = self.get_default_value(var_type)
@@ -1388,12 +1322,7 @@ class GenomeXCodeGenerator:
                             value += "False"
                             print(f"[DEBUG] Replaced 'rec' with 'False'")
                         elif token in ["+", "-", "/", "*", "%"]:
-                            if token == "/" and self.variable_types.get(var_name) == "dose":
-                                # Use integer division for dose variables
-                                value += " // "
-                                print(f"[DEBUG] Converted '/' to integer division '//' for dose variable")
-                            else:
-                                value += " " + token + " "
+                            value += " " + token + " "
                             print(f"[DEBUG] Appended operator to expression: '{token}'")
                         elif token == "[":
                             # Start of array indexing in expression
@@ -1479,7 +1408,7 @@ class GenomeXCodeGenerator:
 
         return index
 
-    def extract_value(self, index):
+    def extract_value(self, index, codegen_panel=None):
         """Extract a value expression"""
         if index >= len(self.tokens):
             return "None", index
@@ -1493,19 +1422,23 @@ class GenomeXCodeGenerator:
             else:
                 value = token
             index += 1
-
         elif token_type == "string literal":
             # String
-            value = token
+            if token == "\\0":
+                if codegen_panel:
+                    codegen_panel.insert(tk.END, "\nFOUND ZERO NULL TERMINATOR.\n", "info")
+                value = '""'  # Convert "\0" to empty string
+            else:
+                value = token
             index += 1
         elif token_type == "Identifier":
             # Variable
             value = token
             index += 1
-        elif token == "dom":
+        elif token == "dom":  # Handle dom value
             value = "True"
             index += 1
-        elif token == "rec":
+        elif token == "rec":  # Handle rec value
             value = "False"
             index += 1
         elif token == "(":
@@ -1525,55 +1458,28 @@ class GenomeXCodeGenerator:
         if index >= len(self.tokens):
             return "None", index
             
-        left_value, index = self.extract_value(index)
-        
-        # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        # First, collect all tokens in the expression until we hit a semicolon or comma
+        expr_tokens = []
+        while index < len(self.tokens):
+            token, token_type = self.tokens[index]
+            
+            # Stop at semicolon or comma
+            if token == ";" or token == ",":
+                break
+                
+            # Skip spaces but keep operators and other tokens
+            if token_type != "space" and token_type != "newline":
+                expr_tokens.append(token)
+                
             index += 1
             
-        # Check for operators
-        if index < len(self.tokens) and self.tokens[index][0] in ["+", "-", "*", "/", "%"]:
-            operator = self.tokens[index][0]
-            index += 1
-            
-            # Skip spaces
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
-                index += 1
-                
-            right_value, index = self.extract_expression(index)
-            
-            # Special handling for string concatenation with dose variables
-            if operator == "+" and (
-                ('"' in left_value or "str(" in left_value) or 
-                ('"' in right_value or "str(" in right_value)):
-                
-                # Check if left_value is a dose variable and not already wrapped in str() or int()
-                if (left_value in self.variable_types and 
-                    self.variable_types.get(left_value) == "dose" and 
-                    not left_value.startswith("str(") and 
-                    not left_value.startswith("int(")):
-                    left_value = f"str(int({left_value}))"
-                
-                # Check if right_value is a dose variable and not already wrapped in str() or int()
-                if (right_value in self.variable_types and 
-                    self.variable_types.get(right_value) == "dose" and 
-                    not right_value.startswith("str(") and 
-                    not right_value.startswith("int(")):
-                    right_value = f"str(int({right_value}))"
-            
-            # Special handling for division with dose variables - use integer division
-            if operator == "/" and (
-                (left_value in self.variable_types and self.variable_types.get(left_value) == "dose") or
-                (right_value in self.variable_types and self.variable_types.get(right_value) == "dose")):
-                operator = "//"  # Replace with integer division
-            
-            return f"{left_value} {operator} {right_value}", index
+        # Join the tokens to form the expression
+        expression = " ".join(expr_tokens).strip()
         
-        return left_value, index
+        return expression, index
     
     def extract_statement(self, index):
         """Extracts a regular statement ending with a semicolon"""
-        #print(f"DEBUG: Entering extract_statement at index {index}")
         statement_tokens = []
         
         # Skip spaces at the beginning
@@ -1598,42 +1504,9 @@ class GenomeXCodeGenerator:
         # Join tokens but use proper Python syntax
         statement = " ".join(statement_tokens).strip()
         
-        # Handle division - always convert / to // for integer division when dose variables are involved
-        if "/" in statement and not '"//' in statement and not '//"' in statement:
-            # Extract variable names from the statement
-            var_names = re.findall(r'\b[A-Za-z_][A-Za-z0-9_]*\b', statement)
-            
-            # Check if any variables involved in division are dose type (integers)
-            has_dose = False
-            for var_name in var_names:
-                if var_name in self.variable_types and self.variable_types[var_name] == "dose":
-                    has_dose = True
-                    break
-            
-            # If any variables are dose type, use integer division
-            if has_dose:
-                # Use regex to find division operations not inside strings
-                def replace_division(match):
-                    if match.group(0) in ['"/', '/"']:
-                        return match.group(0)  # Don't replace if in string
-                    return match.group(1) + "//" + match.group(2)
-                
-                statement = re.sub(r'([^"/])\/([^"/])', replace_division, statement)
-        
         # Fix any incorrect colons that might have been introduced
         statement = statement.replace(":", "")
         
-        # For dose type variables, ensure any floating point results are converted to int
-        assignment_match = re.match(r'([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)', statement)
-        if assignment_match:
-            var_name = assignment_match.group(1)
-            expression = assignment_match.group(2)
-            
-            # If assigning to a dose variable and expression contains division, wrap in int()
-            if var_name in self.variable_types and self.variable_types[var_name] == "dose" and ('/' in expression and not '//' in expression):
-                statement = f"{var_name} = int({expression})"
-        
-        #print(f"DEBUG: Exiting extract_statement with statement: '{statement}', next index: {index}")
         return statement, index
     def extract_condition(self, index):
         """Extract a condition expression from tokens starting at the given index"""
@@ -1733,7 +1606,7 @@ class GenomeXCodeGenerator:
         elif var_type == "seq":
             return '""'
         elif var_type == "allele":
-            return "False"
+            return "False"  # Default value for allele type is False (rec)
         else:
             return "None"
     
@@ -1850,15 +1723,10 @@ class GenomeXCodeGenerator:
                 index += 1
 
         return index
-def generate_python_code(tokens, symbol_table=None):
-    """Generate Python code from GenomeX tokens"""
-    code_generator = GenomeXCodeGenerator(tokens, symbol_table)
-    generated_code = code_generator.generate_code()
-    
-    # Fix common issues in the generated code
-    generated_code = generated_code.replace("**name**", "__name__")
-    
-    return generated_code
+def generate_python_code(tokens, symbol_table=None, codegen_panel=None):
+    """Generate Python code from tokens"""
+    generator = GenomeXCodeGenerator(tokens, symbol_table)
+    return generator.generate_code(codegen_panel)
 
 def display_codegen_output(python_code, output_panel):
     """Display the generated Python code in the output panel"""
@@ -1873,7 +1741,7 @@ def parseCodeGen(tokens, codegen_panel):
     
     try:
         # Generate Python code
-        python_code = generate_python_code(tokens)
+        python_code = generate_python_code(tokens, codegen_panel=codegen_panel)
         
         # Replace **name** with __name__ if needed
         fixed_code = python_code.replace("**name**", "__name__")
@@ -1947,7 +1815,9 @@ def parseCodeGen(tokens, codegen_panel):
                 Format the input according to the following rules:
                 - If starts with ^, convert to negative
                 - If string, leave as is
-                - If number, validate and format appropriately
+                - If number, validate and format appropriately:
+                  * Integers: up to 13 digits
+                  * Decimals: up to 13 digits in whole number part, exactly 6 decimal places
                 """
                 # Handle ^ prefix for negative numbers
                 if input_value.startswith('^') and len(input_value) > 1:
@@ -1956,40 +1826,27 @@ def parseCodeGen(tokens, codegen_panel):
                 # Try to interpret as number only if it looks like a number
                 if input_value.replace('-', '', 1).replace('.', '', 1).isdigit():
                     try:
-                        # Check if it's an integer
-                        if '.' not in input_value:
+                        # Split into whole and decimal parts if it's a decimal number
+                        if '.' in input_value:
+                            whole_part, decimal_part = input_value.split('.')
+                            
+                            # Check whole number part length
+                            if len(whole_part.lstrip('-')) > 13:
+                                raise ValueError("ERROR: Whole number part exceeds maximum limit of 13 digits")
+                            
+                            # Check decimal part length
+                            if len(decimal_part) > 6:
+                                raise ValueError("ERROR: Decimal part exceeds maximum limit of 6 digits")
+                            
+                            # Return the original input value if it passes validation
+                            return input_value
+                        else:
+                            # Handle integer case
                             num = int(input_value)
-                            # Check if it exceeds 13 digits
                             if len(str(abs(num))) > 13:
                                 raise ValueError("ERROR: Integer exceeds maximum limit of 13 digits")
                             return str(num)
-                        
-                        # It's a float
-                        float_val = float(input_value)
-                        
-                        # If it's actually an integer value (like 44.0), convert to int to remove decimal place
-                        if float_val == int(float_val):
-                            return str(int(float_val))
-                        
-                        # Get the number of digits in the integer part
-                        int_part = int(abs(float_val))
-                        int_digits = len(str(int_part))
-                        
-                        # Count total digits (excluding sign and decimal point)
-                        formatted = f"{float_val:.6f}".rstrip('0').rstrip('.') if '.' in f"{float_val:.6f}" else f"{float_val:.0f}"
-                        digits = ''.join(c for c in formatted if c.isdigit())
-                        
-                        # Check if total digits exceed 13
-                        if len(digits) > 13:
-                            raise ValueError("ERROR: Number exceeds maximum limit of 13 total digits")
                             
-                        # Ensure we don't exceed 6 decimal places
-                        decimal_str = formatted.split('.')[-1] if '.' in formatted else ''
-                        if len(decimal_str) > 6:
-                            # Format to exactly 6 decimal places
-                            return f"{float_val:.6f}".rstrip('0').rstrip('.')
-                        
-                        return formatted
                     except ValueError as e:
                         # If it's our custom error, propagate it
                         if str(e).startswith("ERROR:"):
