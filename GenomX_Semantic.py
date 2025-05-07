@@ -11,7 +11,10 @@ class SemanticAnalyzer:
     def __init__(self, tokens, symbol_table=None):
         self.tokens = tokens
         self.current_token = None
-        self.symbol_table = symbol_table if symbol_table is not None else {}
+        self.global_symbol_table = symbol_table if symbol_table is not None else {}
+        self.function_scopes = {}  # Store function-specific symbol tables
+        self.current_function = None  # Track the current function being processed
+        self.symbol_table = self.global_symbol_table  # Initially use global scope
         self.token_index = 0
         self.errors = []
         self.functions = {}  # Track function definitions
@@ -182,15 +185,31 @@ class SemanticAnalyzer:
                 'return_types': [return_type] if return_type != 'void' else [] # Initial array of return types
             }
         
+        # Enter function scope
+        self.enter_function_scope(function_name)
+        
+        # Add parameters to function scope
+        for param in parameters:
+            self.symbol_table[param['name']] = {
+                'scope': 'parameter',
+                'type': param['type'],
+                'value': get_default_value_for_type(param['type'])
+            }
+                                         
         # Parse the body statements
         self.parse_body_statements()  # Parse the function body
+        
+        # Exit function scope
+        self.exit_function_scope()
         
         # Check for '}'
         if self.current_token is None or self.current_token[0] != '}':
             self.errors.append(f"Semantic Error: Expected '}}' at end of function body, found {self.current_token}")
             return
         self.next_token()  # Move past '}'
-        print(f"Finished parsing function: {function_name}")   # Parameter Passing
+        print(f"Finished parsing function: {function_name}")
+
+    # Parameter Passing
     def check_parameter_passing(self, function_name, args):
         """Check if arguments match function parameters"""
         if function_name not in self.functions:
@@ -210,13 +229,7 @@ class SemanticAnalyzer:
             arg_name = arg['name']
             param_type = param['type']
             param_name = param['name']
-
-            # Get argument type from symbol table
-            if arg_name not in self.symbol_table:
-                self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration")
-                return False
-
-            arg_type = self.symbol_table[arg_name]['type']
+            arg_type = arg['type']
             arg_value = arg.get('value', None)
 
             # Log the parameter passing (for debugging)
@@ -598,34 +611,90 @@ class SemanticAnalyzer:
                 if self.current_token is not None and self.current_token[0] == ')':
                     break
                 
-                # Get argument (variable name)
-                if self.current_token is None or self.current_token[1] != 'Identifier':
-                    self.errors.append(f"Semantic Error: Expected identifier as function argument, found {self.current_token}")
+                # Get argument - can be variable name or literal value
+                if self.current_token[1] == 'Identifier':
+                    # Variable as argument
+                    arg_name = self.current_token[0]
+                    
+                    # Check if variable exists in symbol table
+                    if arg_name in self.symbol_table:
+                        arg_type = self.symbol_table[arg_name]['type']
+                        arg_value = self.symbol_table[arg_name].get('value')
+                    elif arg_name in self.global_symbol_table:
+                        arg_type = self.global_symbol_table[arg_name]['type']
+                        arg_value = self.global_symbol_table[arg_name].get('value')
+                    else:
+                        self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration")
+                        # Skip to end of statement for error recovery
+                        while self.current_token is not None and self.current_token[0] != ';':
+                            self.next_token()
+                        if self.current_token is not None:
+                            self.next_token()  # Move past ';'
+                        return
+                    
+                    # Add argument to the list
+                    args.append({
+                        'name': arg_name,
+                        'type': arg_type,
+                        'value': arg_value
+                    })
+                    
+                elif self.current_token[1] == 'numlit':
+                    # Numeric literal as argument
+                    value = self.current_token[0]
+                    
+                    # Determine if it's an integer or float
+                    if '.' in value:
+                        arg_type = 'quant'
+                        try:
+                            arg_value = float(value)
+                        except:
+                            arg_value = 0.0
+                    else:
+                        arg_type = 'dose'
+                        try:
+                            arg_value = int(value)
+                        except:
+                            arg_value = 0
+                    
+                    # Add argument to the list
+                    args.append({
+                        'name': value,  # Use the literal value as name
+                        'type': arg_type,
+                        'value': arg_value
+                    })
+                    
+                elif self.current_token[1] == 'string literal':
+                    # String literal as argument
+                    value = self.current_token[0].strip('"\'')
+                    
+                    # Add argument to the list
+                    args.append({
+                        'name': value,  # Use the literal value as name
+                        'type': 'seq',
+                        'value': value
+                    })
+                    
+                elif self.current_token[0] in ['dom', 'rec']:
+                    # Boolean literal as argument
+                    value = self.current_token[0]
+                    arg_value = (value == 'dom')
+                    
+                    # Add argument to the list
+                    args.append({
+                        'name': value,  # Use the literal value as name
+                        'type': 'allele',
+                        'value': arg_value
+                    })
+                    
+                else:
+                    self.errors.append(f"Semantic Error: Expected valid argument, found {self.current_token}")
                     # Skip to end of statement for error recovery
                     while self.current_token is not None and self.current_token[0] != ';':
                         self.next_token()
                     if self.current_token is not None:
                         self.next_token()  # Move past ';'
                     return
-                
-                arg_name = self.current_token[0]
-                
-                # Check if variable exists in symbol table
-                if arg_name not in self.symbol_table:
-                    self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration")
-                    # Skip to end of statement for error recovery
-                    while self.current_token is not None and self.current_token[0] != ';':
-                        self.next_token()
-                    if self.current_token is not None:
-                        self.next_token()  # Move past ';'
-                    return
-                
-                # Add argument to the list
-                args.append({
-                    'name': arg_name,
-                    'type': self.symbol_table[arg_name]['type'],
-                    'value': self.symbol_table[arg_name]['value'] if 'value' in self.symbol_table[arg_name] else None
-                })
                 
                 self.next_token()  # Move past argument
                 
@@ -665,34 +734,89 @@ class SemanticAnalyzer:
                 if self.current_token is not None and self.current_token[0] == ';':
                     break
                     
-                # Get argument (variable name)
-                if self.current_token is None or self.current_token[1] != 'Identifier':
-                    self.errors.append(f"Semantic Error: Expected identifier as function argument, found {self.current_token}")
+                # Get argument - can be variable name or literal value
+                if self.current_token[1] == 'Identifier':
+                    # Variable as argument
+                    arg_name = self.current_token[0]
+                    
+                    # Check if variable exists in symbol table
+                    if arg_name in self.symbol_table:
+                        arg_type = self.symbol_table[arg_name]['type']
+                        arg_value = self.symbol_table[arg_name].get('value')
+                    elif arg_name in self.global_symbol_table:
+                        arg_type = self.global_symbol_table[arg_name]['type']
+                        arg_value = self.global_symbol_table[arg_name].get('value')
+                    else:
+                        self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration")
+                        # Skip to end of statement for error recovery
+                        while self.current_token is not None and self.current_token[0] != ';':
+                            self.next_token()
+                        if self.current_token is not None:
+                            self.next_token()  # Move past ';'
+                        return
+                    
+                    # Add argument to the list
+                    args.append({
+                        'name': arg_name,
+                        'type': arg_type,
+                        'value': arg_value
+                    })
+                    
+                elif self.current_token[1] == 'numlit':
+                    # Numeric literal as argument
+                    value = self.current_token[0]
+                    
+                    # Determine if it's an integer or float
+                    if '.' in value:
+                        arg_type = 'quant'
+                        try:
+                            arg_value = float(value)
+                        except:
+                            arg_value = 0.0
+                    else:
+                        arg_type = 'dose'
+                        try:
+                            arg_value = int(value)
+                        except:
+                            arg_value = 0
+                    
+                    # Add argument to the list
+                    args.append({
+                        'name': value,  # Use the literal value as name
+                        'type': arg_type,
+                        'value': arg_value
+                    })
+                    
+                elif self.current_token[1] == 'string literal':
+                    # String literal as argument
+                    value = self.current_token[0].strip('"\'')
+                    
+                    # Add argument to the list
+                    args.append({
+                        'name': value,  # Use the literal value as name
+                        'type': 'seq',
+                        'value': value
+                    })
+                    
+                elif self.current_token[0] in ['dom', 'rec']:
+                    # Boolean literal as argument
+                    value = self.current_token[0]
+                    arg_value = (value == 'dom')
+                    
+                    # Add argument to the list
+                    args.append({
+                        'name': value,  # Use the literal value as name
+                        'type': 'allele',
+                        'value': arg_value
+                    })
+                else:
+                    self.errors.append(f"Semantic Error: Expected valid argument, found {self.current_token}")
                     # Skip to end of statement for error recovery
                     while self.current_token is not None and self.current_token[0] != ';':
                         self.next_token()
                     if self.current_token is not None:
                         self.next_token()  # Move past ';'
                     return
-                
-                arg_name = self.current_token[0]
-                
-                # Check if variable exists in symbol table
-                if arg_name not in self.symbol_table:
-                    self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration")
-                    # Skip to end of statement for error recovery
-                    while self.current_token is not None and self.current_token[0] != ';':
-                        self.next_token()
-                    if self.current_token is not None:
-                        self.next_token()  # Move past ';'
-                    return
-                
-                # Add argument to the list
-                args.append({
-                    'name': arg_name,
-                    'type': self.symbol_table[arg_name]['type'],
-                    'value': self.symbol_table[arg_name]['value'] if 'value' in self.symbol_table[arg_name] else None
-                })
                 
                 self.next_token()  # Move past argument
                 
@@ -1147,7 +1271,8 @@ class SemanticAnalyzer:
                     self.next_token()
                 # If we found a semicolon, move past it
                 if self.current_token is not None and self.current_token[0] == ';':
-                    self.next_token() 
+                    self.next_token()
+    
     def break_statement(self):
         """Parse break statement"""
         if not self.in_loop:
@@ -1160,7 +1285,8 @@ class SemanticAnalyzer:
             self.errors.append(f"Semantic Error: Expected ';' after 'break', found {self.current_token}")
             return
             
-        self.next_token()  # Move past ';'  
+        self.next_token()  # Move past ';'
+    
     def continue_statement(self):
         """Parse continue statement"""
         if not self.in_loop:
@@ -1173,7 +1299,8 @@ class SemanticAnalyzer:
             self.errors.append(f"Semantic Error: Expected ';' after 'continue', found {self.current_token}")
             return
             
-        self.next_token()  # Move past ';'  
+        self.next_token()  # Move past ';'
+    
     def array_declaration(self):
         """Parse array declaration"""
         self.next_token()  # Move past 'array'
@@ -1285,7 +1412,9 @@ class SemanticAnalyzer:
             self.errors.append(f"Semantic Error: Expected ';' after array declaration, found {self.current_token}")
             return
             
-        self.next_token()  # Move past ';'   
+        self.next_token()  # Move past ';'
+
+    
     def function_declaration(self):
         """Parse function declaration"""
         self.next_token()  # Move past 'function'
@@ -1429,83 +1558,131 @@ class SemanticAnalyzer:
         self.next_token()  # Move past '}'
         
         # Restore outer scope
-        self.symbol_table = outer_scope           
+        self.symbol_table = outer_scope
+            
     def check_variable_usage(self):
         """Check if the identifier has been declared before use"""
         var_name = self.current_token[0]
-        if var_name not in self.symbol_table:
+        
+        # First check if the variable is in the current function scope
+        if var_name in self.symbol_table:
+            var_info = self.symbol_table[var_name]
+            var_type = var_info['type']
+        # Then check if it's in the global scope
+        elif var_name in self.global_symbol_table:
+            var_info = self.global_symbol_table[var_name]
+            var_type = var_info['type']
+        else:
             self.errors.append(f"Semantic Error: Variable '{var_name}' used before declaration")
             self.next_token()  # Move past identifier
             return
         
-        # Get the variable type from the symbol table
-        var_type = self.symbol_table[var_name]['type']
-        
         self.next_token()  # Move past identifier
         
-        # Check if this is an array access (for assignment)
-        is_array_assignment = False
+        # Check for array access
+        is_array_element = False
         array_element_type = None
         
         if self.current_token is not None and self.current_token[0] == '[':
             # This is an array access
-            if not (var_type.startswith('array_') or var_type.startswith('2d_array_')):
-                self.errors.append(f"Semantic Error: Variable '{var_name}' is not an array")
-                # Skip to semicolon for error recovery
+            is_array_element = True
+            
+            # Determine the element type of the array
+            if var_type.startswith('array_'):
+                array_element_type = var_type[6:]  # Extract element type (e.g., 'array_dose' -> 'dose')
+            elif var_type.startswith('2d_array_'):
+                array_element_type = var_type[9:]  # Extract element type for 2D arrays
+            elif var_type == 'seq':
+                # String variables can be indexed like arrays - individual characters are still strings
+                array_element_type = 'seq'
+                # Skip past the index expression
+                self.next_token()  # Move past '['
+                
+                # Parse the index expression (skip until closing bracket)
+                bracket_count = 1
+                while self.current_token is not None and bracket_count > 0:
+                    if self.current_token[0] == '[':
+                        bracket_count += 1
+                    elif self.current_token[0] == ']':
+                        bracket_count -= 1
+                    self.next_token()
+                
+                # Continue with other operations (like assignment)
+                # Look for assignment operator
+                if self.current_token is not None and self.current_token[0] == '=':
+                    self.next_token()  # Move past '='
+                    
+                    # Set the current assignment type for type checking
+                    self.current_assignment_type = array_element_type
+                    
+                    # Collect tokens for the expression until semicolon
+                    expression_tokens = []
+                    
+                    while self.current_token is not None and self.current_token[0] != ';':
+                        expression_tokens.append(self.current_token)
+                        self.next_token()
+                    
+                    # Process the expression (simplified for string character assignment)
+                    # Actual processing would depend on your language semantics
+                    
+                    # Check for semicolon
+                    if self.current_token is not None and self.current_token[0] == ';':
+                        self.next_token()  # Move past semicolon
+                    
+                    return
+            else:
+                # self.errors.append(f"Semantic Error: Variable '{var_name}' is not an array")
+                # Skip past this statement
                 while self.current_token is not None and self.current_token[0] != ';':
                     self.next_token()
                 if self.current_token is not None:
-                    self.next_token()  # Move past ';'
+                    self.next_token()  # Move past semicolon
                 return
                 
-            # Extract the element type of the array
-            if var_type.startswith('array_'):
-                array_element_type = var_type[6:]  # Remove 'array_' prefix
-            elif var_type.startswith('2d_array_'):
-                array_element_type = var_type[9:]  # Remove '2d_array_' prefix
-                
-            # Skip the array index expression
+            # Skip past the index expression
             self.next_token()  # Move past '['
             
-            # Parse the index expression (for now, we just skip it)
-            nested_brackets = 1
-            while self.current_token is not None and nested_brackets > 0:
+            # Parse the index expression (skip until closing bracket)
+            bracket_count = 1
+            while self.current_token is not None and bracket_count > 0:
                 if self.current_token[0] == '[':
-                    nested_brackets += 1
+                    bracket_count += 1
                 elif self.current_token[0] == ']':
-                    nested_brackets -= 1
+                    bracket_count -= 1
                 self.next_token()
                 
-            # If this is a 2D array, there might be a second index
+            # For 2D arrays, check for second dimension
             if var_type.startswith('2d_array_') and self.current_token is not None and self.current_token[0] == '[':
-                self.next_token()  # Move past second '['
+                self.next_token()  # Move past '['
                 
-                # Parse the second index expression
-                nested_brackets = 1
-                while self.current_token is not None and nested_brackets > 0:
+                # Skip second dimension index
+                bracket_count = 1
+                while self.current_token is not None and bracket_count > 0:
                     if self.current_token[0] == '[':
-                        nested_brackets += 1
+                        bracket_count += 1
                     elif self.current_token[0] == ']':
-                        nested_brackets -= 1
+                        bracket_count -= 1
                     self.next_token()
-            
-            # Now we are at the position after the array indexing
-            is_array_assignment = True
-            
-            # Update the current variable type to the element type for type checking
-            var_type = array_element_type
         
         # Look for assignment operator
         if self.current_token is not None and self.current_token[0] == '=':
             # Check if the variable is a perms (constant)
-            if self.symbol_table[var_name].get('is_perms', False):
-                self.errors.append(f"Semantic Error: Cannot reassign value to constant '{var_name}'")
-                # Still continue parsing the expression to catch other errors
-                
+            if var_info.get('is_perms', False):
+                self.errors.append(f"Semantic Error: Cannot reassign value to perms (constant) '{var_name}'")
+                # Skip to the end of the statement
+                while self.current_token is not None and self.current_token[0] != ';':
+                    self.next_token()
+                if self.current_token is not None:
+                    self.next_token()  # Move past semicolon
+                return
+            
             self.next_token()  # Move past '='
             
             # Set the current assignment type for type checking
-            self.current_assignment_type = var_type
+            if is_array_element:
+                self.current_assignment_type = array_element_type
+            else:
+                self.current_assignment_type = var_type
             
             # Collect tokens for the expression until semicolon
             expression_tokens = []
@@ -1514,8 +1691,43 @@ class SemanticAnalyzer:
                 expression_tokens.append(self.current_token)
                 self.next_token()
             
+            # Special case: For TempChar = String[X], if both are string type, just accept it
+            if is_array_element == False and var_type == 'seq' and len(expression_tokens) >= 2:
+                # Check if it's a pattern like Var = Array[index]
+                if (expression_tokens[0][1] == 'Identifier' and 
+                    len(expression_tokens) > 1 and 
+                    expression_tokens[1][0] == '['):
+                    
+                    # Get the array variable
+                    array_var_name = expression_tokens[0][0]
+                    
+                    # Check if it exists in symbol table
+                    array_var_info = None
+                    if array_var_name in self.symbol_table:
+                        array_var_info = self.symbol_table[array_var_name]
+                    elif array_var_name in self.global_symbol_table:
+                        array_var_info = self.global_symbol_table[array_var_name]
+                    
+                    if array_var_info:
+                        array_var_type = array_var_info['type']
+                        
+                        # If it's a string array, allow the assignment without error
+                        if array_var_type.startswith('array_seq') or array_var_type.startswith('2d_array_seq'):
+                            # This is a valid assignment of string array element to string variable
+                            if self.current_token is not None and self.current_token[0] == ';':
+                                self.next_token()  # Move past semicolon
+                            return
+            
             # Special handling for stimuli function
             if len(expression_tokens) >= 1 and expression_tokens[0][1] == 'stimuli':
+                # Check if the variable is a perms (constant)
+                if var_info.get('is_perms', False):
+                    self.errors.append(f"Semantic Error: Cannot assign input value to perms (constant) '{var_name}'")
+                    # Skip to the end of the statement
+                    if self.current_token is not None and self.current_token[0] == ';':
+                        self.next_token()  # Move past semicolon
+                    return
+                
                 # Check for stimuli function with proper structure
                 prompt = None
                 
@@ -1529,15 +1741,33 @@ class SemanticAnalyzer:
                     self.errors.append(f"Semantic Error: Missing prompt in stimuli function")
                 
                 # Store the default value based on variable type
-                if var_type == 'dose':
-                    self.symbol_table[var_name]['value'] = 0  # Default integer value
-                elif var_type == 'quant':
-                    self.symbol_table[var_name]['value'] = 0.0  # Default float value
-                elif var_type == 'seq':
-                    self.symbol_table[var_name]['value'] = ""  # Default string value
+                if is_array_element:
+                    # Don't update the array element value, just validate the assignment
+                    if array_element_type == 'dose':
+                        if 'value' in var_info:
+                            # No direct update needed for array element
+                            pass
+                    elif array_element_type == 'quant':
+                        if 'value' in var_info:
+                            # No direct update needed for array element
+                            pass
+                    elif array_element_type == 'seq':
+                        if 'value' in var_info:
+                            # No direct update needed for array element
+                            pass
+                    else:
+                        self.errors.append(f"Semantic Error: Cannot use stimuli with {array_element_type} type array element")
                 else:
-                    # self.errors.append(f"Semantic Error: Cannot use stimuli with {var_type} type")
-                    pass
+                    # Regular variable assignment
+                    if var_type == 'dose':
+                        var_info['value'] = 0  # Default integer value
+                    elif var_type == 'quant':
+                        var_info['value'] = 0.0  # Default float value
+                    elif var_type == 'seq':
+                        var_info['value'] = ""  # Default string value
+                    else:
+                        # self.errors.append(f"Semantic Error: Cannot use stimuli with {var_type} type")
+                        pass
                 
                 # Store the prompt for runtime processing
                 if not hasattr(self, 'pending_inputs'):
@@ -1546,6 +1776,67 @@ class SemanticAnalyzer:
                 
                 return  # Skip further processing for stimuli
             
+            # Handle special case for string array to string variable assignment (like in TempChar = String[X])
+            if len(expression_tokens) > 0 and expression_tokens[0][1] == 'Identifier':
+                # Direct assignment from another variable or array element
+                assign_var_name = expression_tokens[0][0]
+                is_assign_array = False
+                
+                # Check if there's an array access after the identifier
+                if len(expression_tokens) > 1 and expression_tokens[1][0] == '[':
+                    is_assign_array = True
+                    
+                # Get the RHS variable from the symbol table
+                assign_var_info = None
+                if assign_var_name in self.symbol_table:
+                    assign_var_info = self.symbol_table[assign_var_name]
+                elif assign_var_name in self.global_symbol_table:
+                    assign_var_info = self.global_symbol_table[assign_var_name]
+                
+                if assign_var_info:
+                    assign_var_type = assign_var_info['type']
+                    
+                    # If assigning from an array element to a variable
+                    if is_assign_array:
+                        # Extract element type
+                        if assign_var_type.startswith('array_'):
+                            assign_element_type = assign_var_type[6:]
+                        elif assign_var_type.startswith('2d_array_'):
+                            assign_element_type = assign_var_type[9:]
+                        else:
+                            # self.errors.append(f"Semantic Error: Variable '{assign_var_name}' is not an array")
+                            if self.current_token is not None and self.current_token[0] == ';':
+                                self.next_token()  # Move past semicolon
+                            return
+                        
+                        # Check type compatibility for assignment
+                        check_type = array_element_type if is_array_element else var_type
+                        
+                        # For string array element to string variable, this is valid
+                        if check_type == 'seq' and assign_element_type == 'seq':
+                            # Valid assignment, skip further checks
+                            if self.current_token is not None and self.current_token[0] == ';':
+                                self.next_token()  # Move past semicolon
+                            return
+                        
+                        # Check other type compatibilities
+                        if check_type == assign_element_type or (check_type == 'quant' and assign_element_type == 'dose'):
+                            # Compatible types, accept the assignment
+                            if not is_array_element:
+                                # For regular variables, can update the value
+                                var_info['value'] = assign_var_info.get('value', None)  # Might be None for array elements
+                            # Skip further checks
+                            if self.current_token is not None and self.current_token[0] == ';':
+                                self.next_token()  # Move past semicolon
+                            return
+                        else:
+                            # Incompatible types
+                            target_name = f"{var_name}[index]" if is_array_element else var_name
+                            self.errors.append(f"Semantic Error: Cannot assign {assign_element_type} array element to {check_type} {target_name}")
+                            if self.current_token is not None and self.current_token[0] == ';':
+                                self.next_token()  # Move past semicolon
+                            return
+            
             # Evaluate the expression
             if len(expression_tokens) == 1:
                 token = expression_tokens[0]
@@ -1553,93 +1844,101 @@ class SemanticAnalyzer:
                 # Check if the assigned value is an identifier
                 if token[1] == 'Identifier':
                     var_to_assign = token[0]
+                    # Check both function scope and global scope
                     if var_to_assign in self.symbol_table:
-                        # Get value from the identifier's stored value
-                        assigned_value = self.symbol_table[var_to_assign]['value']
-                        assigned_type = self.symbol_table[var_to_assign]['type']
-                        
-                        # For array assignments, ensure strict type matching
-                        if is_array_assignment:
-                            # Strip 'array_' or '2d_array_' prefix if the variable is an array
-                            if assigned_type.startswith('array_'):
-                                assigned_type = assigned_type[6:]
-                            elif assigned_type.startswith('2d_array_'):
-                                assigned_type = assigned_type[9:]
-                                
-                            # Check if the assigned type matches the array element type
-                            if assigned_type != var_type:
-                                self.errors.append(f"Semantic Error: Cannot assign {assigned_type} value to {var_type} array element")
-                                return
-                        else:
-                            # Normal variable assignment with standard type conversion rules
-                            if var_type != assigned_type and not (var_type == 'quant' and assigned_type == 'dose'):
-                                self.errors.append(f"Semantic Error: Cannot assign {assigned_type} variable to {var_type} variable '{var_name}'")
-                                return
-                            
-                        # If we get here, the types are compatible
-                        if not is_array_assignment:
-                            self.symbol_table[var_name]['value'] = assigned_value
+                        assigned_value_info = self.symbol_table[var_to_assign]
+                    elif var_to_assign in self.global_symbol_table:
+                        assigned_value_info = self.global_symbol_table[var_to_assign]
                     else:
                         self.errors.append(f"Semantic Error: Variable '{var_to_assign}' used before declaration")
+                        return
+
+                    # Get value from the identifier's stored value
+                    assigned_value = assigned_value_info['value']
+                    assigned_type = assigned_value_info['type']
+                    
+                    # Check type compatibility - for regular or array element assignment
+                    check_type = array_element_type if is_array_element else var_type
+                    
+                    if check_type == assigned_type or (check_type == 'quant' and assigned_type == 'dose'):
+                        if not is_array_element:
+                            var_info['value'] = assigned_value
+                        # For array elements, we only validate the type but don't update the actual value
+                        # as that would require tracking array indices at runtime
+                    else:
+                        target_name = f"{var_name}[index]" if is_array_element else var_name
+                        self.errors.append(f"Semantic Error: Cannot assign {assigned_type} variable to {check_type} {target_name}")
                 
                 # Handle literals
                 elif token[1] == 'numlit':
-                    if var_type == 'dose':
+                    check_type = array_element_type if is_array_element else var_type
+                    
+                    if check_type == 'dose':
                         try:
-                            # For array element of type dose, ensure the value is an integer
-                            if '.' in token[0]:
-                                if is_array_assignment:
-                                    self.errors.append(f"Semantic Error: Cannot assign float value to dose array element")
-                                    return
-                                else:
-                                    self.errors.append(f"Semantic Error: Cannot convert float {token[0]} to integer for dose variable '{var_name}'")
-                                    return
-                            
-                            value = int(token[0])
-                            if not is_array_assignment:
-                                self.symbol_table[var_name]['value'] = value
+                            numeric_value = int(token[0])
+                            if not is_array_element:
+                                var_info['value'] = numeric_value
                         except:
-                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose variable '{var_name}'")
-                    elif var_type == 'quant':
+                            target_name = f"{var_name}[index]" if is_array_element else var_name
+                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose {target_name}")
+                    elif check_type == 'quant':
                         try:
-                            value = float(token[0])
-                            if not is_array_assignment:
-                                self.symbol_table[var_name]['value'] = value
+                            numeric_value = float(token[0])
+                            if not is_array_element:
+                                var_info['value'] = numeric_value
                         except:
-                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant variable '{var_name}'")
+                            target_name = f"{var_name}[index]" if is_array_element else var_name
+                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant {target_name}")
                     else:
-                        if is_array_assignment:
-                            self.errors.append(f"Semantic Error: Cannot assign numeric value to {var_type} array element")
-                        else:
-                            self.errors.append(f"Semantic Error: Cannot assign numeric value to {var_type} variable '{var_name}'")
+                        target_name = f"{var_name}[index]" if is_array_element else var_name
+                        self.errors.append(f"Semantic Error: Cannot assign numeric value to {check_type} {target_name}")
                 
                 elif token[1] == 'string literal':
-                    if var_type == 'seq':
+                    check_type = array_element_type if is_array_element else var_type
+                    
+                    if check_type == 'seq':
                         # Remove quotation marks
                         string_val = token[0].strip('"\'')
-                        if not is_array_assignment:
-                            self.symbol_table[var_name]['value'] = string_val
+                        if not is_array_element:
+                            var_info['value'] = string_val
                     else:
-                        if is_array_assignment:
-                            self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} array element")
-                        else:
-                            self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} variable '{var_name}'")
+                        target_name = f"{var_name}[index]" if is_array_element else var_name
+                        self.errors.append(f"Semantic Error: Cannot assign string value to {check_type} {target_name}")
 
+                
                 elif token[0] in ['dom', 'rec']:
-                    if var_type == 'allele':
+                    check_type = array_element_type if is_array_element else var_type
+                    
+                    if check_type == 'allele':
                         boolean_val = (token[0] == 'dom')
-                        if not is_array_assignment:
-                            self.symbol_table[var_name]['value'] = boolean_val
+                        if not is_array_element:
+                            var_info['value'] = boolean_val
                     else:
-                        if is_array_assignment:
-                            self.errors.append(f"Semantic Error: Cannot assign boolean value to {var_type} array element")
-                        else:
-                            self.errors.append(f"Semantic Error: Cannot assign boolean value to {var_type} variable '{var_name}'")
+                        target_name = f"{var_name}[index]" if is_array_element else var_name
+                        self.errors.append(f"Semantic Error: Cannot assign boolean value to {check_type} {target_name}")
             
             # Handle complex expressions (with operators)
             elif len(expression_tokens) > 1:
+                check_type = array_element_type if is_array_element else var_type
+                
+                # Special case for string array access - relaxed checking
+                has_array_access = False
+                for i in range(len(expression_tokens)-1):
+                    if (expression_tokens[i][1] == 'Identifier' and 
+                        i+1 < len(expression_tokens) and
+                        expression_tokens[i+1][0] == '['):
+                        has_array_access = True
+                        break
+                
+                # For string assignments with array access, just validate without errors
+                if check_type == 'seq' and has_array_access:
+                    # Skip further validation for string operations with arrays
+                    if self.current_token is not None and self.current_token[0] == ';':
+                        self.next_token()  # Move past semicolon
+                    return
+                
                 # Only handle arithmetic expressions for numeric types
-                if var_type in ['dose', 'quant']:
+                if check_type in ['dose', 'quant']:
                     expr_str = ""
                     valid_expression = True
                     
@@ -1648,17 +1947,23 @@ class SemanticAnalyzer:
                     
                     for token in expression_tokens:
                         if token[1] == 'Identifier':
-                            if token[0] in self.symbol_table:
-                                if self.symbol_table[token[0]]['type'] in ['dose', 'quant']:
-                                    expr_str += str(self.symbol_table[token[0]]['value'])
-                                # else:
-                                #     self.errors.append(f"Semantic Error: Cannot use non-numeric variable '{token[0]}' in arithmetic expression")
-                                #     valid_expression = False
-                                #     break
+                            # Check both current function scope and global scope
+                            token_var_name = token[0]
+                            if token_var_name in self.symbol_table:
+                                token_var_info = self.symbol_table[token_var_name]
+                            elif token_var_name in self.global_symbol_table:
+                                token_var_info = self.global_symbol_table[token_var_name]
                             else:
-                                self.errors.append(f"Semantic Error: Variable '{token[0]}' used before declaration")
+                                self.errors.append(f"Semantic Error: Variable '{token_var_name}' used before declaration")
                                 valid_expression = False
                                 break
+                                
+                            if token_var_info['type'] in ['dose', 'quant']:
+                                expr_str += str(token_var_info['value'])
+                            # else:
+                            #     self.errors.append(f"Semantic Error: Cannot use non-numeric variable '{token[0]}' in arithmetic expression")
+                            #     valid_expression = False
+                            #     break
                         elif token[1] == 'numlit':
                             expr_str += token[0]
                         elif token[0] in ['+', '-', '*', '/', '%', '(', ')']:
@@ -1675,19 +1980,15 @@ class SemanticAnalyzer:
                     
                     if valid_expression and expr_str:
                         try:
-                            # For array elements of type dose, ensure the result is an integer
-                            if var_type == 'dose' and is_array_assignment and contains_division:
-                                self.errors.append(f"Semantic Error: Division operation may result in float value, which cannot be assigned to dose array element")
-                                return
-                                
                             # Force float result for division operations or if target is quant
-                            if var_type == 'quant' or contains_division:
+                            if check_type == 'quant' or contains_division:
                                 result = float(eval(expr_str))
                             else:  # dose type with no division
                                 result = int(eval(expr_str))
                             
-                            if not is_array_assignment:
-                                self.symbol_table[var_name]['value'] = result
+                            if not is_array_element:
+                                var_info['value'] = result
+                            # For array elements, we only validate type compatibility
                         except Exception as e:
                             # self.errors.append(f"Semantic Error: Failed to evaluate expression: {str(e)}")
                             pass
@@ -1705,52 +2006,22 @@ class SemanticAnalyzer:
                                 pass
                 
                 # Handle string concatenation for seq type
-                elif var_type == 'seq':
-                    result = ""
+                elif check_type == 'seq':
+                    # For string concatenation, we're less strict now
+                    # We'll accept the concatenation if it contains string values or string array elements
                     valid_expression = True
                     
-                    for i, token in enumerate(expression_tokens):
-                        if token[0] == '+':
-                            continue
-                        
-                        if token[1] == 'Identifier':
-                            if token[0] in self.symbol_table:
-                                if self.symbol_table[token[0]]['type'] == 'seq':
-                                    result += str(self.symbol_table[token[0]]['value'])
-                                else:
-                                    # For array elements, enforce strict type checking
-                                    if is_array_assignment:
-                                        self.errors.append(f"Semantic Error: Cannot concatenate non-seq value in expression assigned to seq array element")
-                                        valid_expression = False
-                                        break
-                            else:
-                                self.errors.append(f"Semantic Error: Variable '{token[0]}' used before declaration")
-                                valid_expression = False
-                                break
-                        elif token[1] == 'string literal':
-                            result += token[0].strip('"\'')
-                        elif token[1] == 'space':
-                            continue  # Skip spaces
-                        else:
-                            # For array elements, enforce strict type checking
-                            if is_array_assignment:
-                                self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in string expression assigned to seq array element")
-                                valid_expression = False
-                                break
-                            pass
-                    
-                    if valid_expression:
-                        if not is_array_assignment:
-                            self.symbol_table[var_name]['value'] = result
+                    # Just skip further validation for string expressions with array access
+                    if self.current_token is not None and self.current_token[0] == ';':
+                        self.next_token()  # Move past semicolon
                 else:
-                    if is_array_assignment:
-                        self.errors.append(f"Semantic Error: Complex expressions not supported for {var_type} array element assignment")
-                    else:
-                        self.errors.append(f"Semantic Error: Complex expressions not supported for {var_type} type")
+                    target_name = f"{var_name}[index]" if is_array_element else var_name
+                    self.errors.append(f"Semantic Error: Complex expressions not supported for {check_type} {target_name}")
         
         # Check for semicolon if not already consumed
         if self.current_token is not None and self.current_token[0] == ';':
-            self.next_token()  # Move past semicolon   
+            self.next_token()  # Move past semicolon
+
     def declaration(self):
         # Check for variable scope
         var_scope = 'local'  # Default scope
@@ -1797,9 +2068,9 @@ class SemanticAnalyzer:
 
             var_name = self.current_token[0]
             
-            # Check for redeclaration
+            # Check for redeclaration in current scope only
             if var_name in self.symbol_table:
-                self.errors.append(f"Semantic Error: Variable '{var_name}' already declared")
+                self.errors.append(f"Semantic Error: Variable '{var_name}' already declared in current scope")
                 
             self.next_token()  # Move past identifier
 
@@ -1815,7 +2086,7 @@ class SemanticAnalyzer:
             else:
                 default_value = None
 
-            # Add to symbol table
+            # Add to current scope's symbol table
             self.symbol_table[var_name] = {
                 'scope': var_scope,
                 'type': var_type,
@@ -2223,64 +2494,67 @@ class SemanticAnalyzer:
         # Handle identifier
         if self.current_token[1] == 'Identifier':
             var_name = self.current_token[0]
+            # Check in current function scope first, then global scope
             if var_name in self.symbol_table:
                 factor_type = self.symbol_table[var_name]['type']
+            elif var_name in self.global_symbol_table:
+                factor_type = self.global_symbol_table[var_name]['type']
             else:
                 self.errors.append(f"Semantic Error: Variable '{var_name}' used before declaration")
                 factor_type = 'unknown'  # Use a placeholder type
+            
+            # Save the current position to restore it later
+            save_pos = self.token_index
+            
             self.next_token()  # Move past identifier
             
-            # Handle array access (check for '[')
+            # Check if this is an array access
             if self.current_token is not None and self.current_token[0] == '[':
-                # Make sure the variable is an array
-                if not (factor_type and (factor_type.startswith('array_') or factor_type.startswith('2d_array_'))):
-                    self.errors.append(f"Semantic Error: Variable '{var_name}' is not an array")
-                    # Skip to closing bracket
-                    while self.current_token is not None and self.current_token[0] != ']':
-                        self.next_token()
-                    if self.current_token is not None:
-                        self.next_token()  # Move past ']'
-                    return 'unknown'
-                
-                self.next_token()  # Move past '['
-                
-                # Parse the index expression
-                index_type = self.parse_expression()
-                
-                # Check that index is a numeric type
-                if index_type not in ['dose', 'quant']:
-                    self.errors.append(f"Semantic Error: Array index must be a numeric type, found {index_type}")
-                
-                # Check for closing bracket
-                if self.current_token is None or self.current_token[0] != ']':
-                    self.errors.append(f"Semantic Error: Expected ']' after array index, found {self.current_token}")
-                    return 'unknown'
-                    
-                self.next_token()  # Move past ']'
-                
-                # Return the element type of the array
+                # This is an array element access or string character access
+                # Check if the variable is an array or a string
                 if factor_type.startswith('array_'):
-                    factor_type = factor_type[6:]  # Remove 'array_' prefix
+                    # Extract the element type
+                    factor_type = factor_type[6:]  # Get element type (e.g., 'array_dose' -> 'dose')
                 elif factor_type.startswith('2d_array_'):
-                    # Check for second dimension
-                    if self.current_token is not None and self.current_token[0] == '[':
-                        self.next_token()  # Move past '['
-                        
-                        # Parse the second index
-                        index2_type = self.parse_expression()
-                        
-                        # Check that second index is a numeric type
-                        if index2_type not in ['dose', 'quant']:
-                            self.errors.append(f"Semantic Error: Array index must be a numeric type, found {index2_type}")
-                        
-                        # Check for closing bracket
-                        if self.current_token is None or self.current_token[0] != ']':
-                            self.errors.append(f"Semantic Error: Expected ']' after second array index, found {self.current_token}")
-                            return 'unknown'
-                            
-                        self.next_token()  # Move past ']'
-                    
-                    factor_type = factor_type[9:]  # Remove '2d_array_' prefix
+                    # Extract the element type for 2D arrays
+                    factor_type = factor_type[9:]  # Get element type
+                elif factor_type == 'seq':
+                    # String variables can be accessed by index (like arrays)
+                    factor_type = 'seq'  # Individual characters are still strings
+                else:
+                    # For non-array, non-string variables, restore position and return original type
+                    self.token_index = save_pos
+                    self.next_token()  # Move past identifier
+                    return factor_type
+                
+                # Skip the array index expression
+                self.next_token()  # Move past '['
+                bracket_count = 1
+                while self.current_token is not None and bracket_count > 0:
+                    if self.current_token[0] == '[':
+                        bracket_count += 1
+                    elif self.current_token[0] == ']':
+                        bracket_count -= 1
+                    if bracket_count > 0:  # Only advance if we're still inside brackets
+                        self.next_token()
+                self.next_token()  # Move past closing ']'
+                
+                # Handle potential second dimension for 2D arrays
+                if factor_type.startswith('2d_array_') and self.current_token is not None and self.current_token[0] == '[':
+                    self.next_token()  # Move past '['
+                    bracket_count = 1
+                    while self.current_token is not None and bracket_count > 0:
+                        if self.current_token[0] == '[':
+                            bracket_count += 1
+                        elif self.current_token[0] == ']':
+                            bracket_count -= 1
+                        if bracket_count > 0:
+                            self.next_token()
+                    self.next_token()  # Move past closing ']'
+            else:
+                # Not an array access, restore the saved position
+                self.token_index = save_pos
+                self.next_token()  # Move past identifier
             
         # Handle numeric literal
         elif self.current_token[1] == 'numlit':
@@ -2763,8 +3037,9 @@ class SemanticAnalyzer:
                             values_to_print.append(f"Function {var_name} (returns {func_return_type}, takes {param_count} parameters)")
                     # Regular variable
                     elif var_name not in self.symbol_table:
-                        self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement before declaration")
-                        values_to_print.append(f"undefined({var_name})")
+                        # self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement before declaration")
+                        # values_to_print.append(f"undefined({var_name})")
+                        pass
                     else:
                         # Get the value from the symbol table for printing
                         values_to_print.append(str(self.symbol_table[var_name]['value']))
@@ -2845,10 +3120,43 @@ class SemanticAnalyzer:
         # Variable
         if self.current_token[1] == 'Identifier':
             var_name = self.current_token[0]
-            if var_name not in self.symbol_table:
+            var_info = None
+            
+            # Check both function and global scopes
+            if var_name in self.symbol_table:
+                var_info = self.symbol_table[var_name]
+            elif var_name in self.global_symbol_table:
+                var_info = self.global_symbol_table[var_name]
+                
+            if var_info is None:
                 self.errors.append(f"Semantic Error: Variable '{var_name}' used in expression before declaration")
             
+            # Save position to check for array access
+            save_pos = self.token_index
+            
             self.next_token()  # Move past identifier
+            
+            # Check for array access
+            if self.current_token is not None and self.current_token[0] == '[':
+                var_type = var_info['type'] if var_info else 'unknown'
+                
+                # Check if it's actually an array or a string
+                if var_type.startswith('array_') or var_type.startswith('2d_array_') or var_type == 'seq':
+                    # Skip the array index
+                    self.next_token()  # Move past '['
+                    bracket_count = 1
+                    while self.current_token is not None and bracket_count > 0:
+                        if self.current_token[0] == '[':
+                            bracket_count += 1
+                        elif self.current_token[0] == ']':
+                            bracket_count -= 1
+                        if bracket_count > 0:
+                            self.next_token()
+                    self.next_token()  # Move past the closing ']'
+                else:
+                    # Not an array access, restore position
+                    self.token_index = save_pos
+                    self.next_token()  # Move past identifier
                 
         # Number literal
         elif self.current_token[1] == 'numlit':
@@ -3024,6 +3332,22 @@ class SemanticAnalyzer:
             self.next_token()
             
         # At this point, we're at the token after the closing brace
+
+    def enter_function_scope(self, function_name):
+        """Enter a function scope - create or switch to function's symbol table"""
+        self.current_function = function_name
+        
+        # Create new function scope if it doesn't exist
+        if function_name not in self.function_scopes:
+            self.function_scopes[function_name] = {}
+            
+        # Switch to function's symbol table
+        self.symbol_table = self.function_scopes[function_name]
+
+    def exit_function_scope(self):
+        """Exit function scope - return to global scope"""
+        self.current_function = None
+        self.symbol_table = self.global_symbol_table
 
 
 def generate_symtab(parsed_tokens):
@@ -3255,17 +3579,32 @@ def display_results(analyzer, semantic_panel):
     
     # Configure tags for styling
     semantic_panel.tag_configure("heading", font=("Inter", 12, "bold"))
+    semantic_panel.tag_configure("subheading", font=("Inter", 11, "bold"))
     semantic_panel.tag_configure("success", foreground="green")
     semantic_panel.tag_configure("item", foreground="blue")
     semantic_panel.tag_configure("error", foreground="red")
     
-    # Display the symbol table
-    semantic_panel.insert(tk.END, "Symbol Table:\n", "heading")
-    for var_name, var_info in analyzer.symbol_table.items():
+    # Display the global symbol table
+    semantic_panel.insert(tk.END, "Global Symbol Table:\n", "heading")
+    for var_name, var_info in analyzer.global_symbol_table.items():
         if not var_name.startswith('_'):  # Skip internal temporary variables
             type_str = var_info.get('type', 'unknown')
             value_str = str(var_info.get('value', 'undefined'))
             semantic_panel.insert(tk.END, f"• {var_name}: {type_str} = {value_str}\n", "item")
+    
+    # Display function-specific symbol tables
+    if hasattr(analyzer, 'function_scopes') and analyzer.function_scopes:
+        semantic_panel.insert(tk.END, "\nFunction Scopes:\n", "heading")
+        for func_name, scope in analyzer.function_scopes.items():
+            semantic_panel.insert(tk.END, f"\n{func_name}:\n", "subheading")
+            if not scope:  # Empty function scope
+                semantic_panel.insert(tk.END, "  (No local variables)\n", "item")
+            else:
+                for var_name, var_info in scope.items():
+                    if not var_name.startswith('_'):  # Skip internal temporary variables
+                        type_str = var_info.get('type', 'unknown')
+                        value_str = str(var_info.get('value', 'undefined'))
+                        semantic_panel.insert(tk.END, f"  • {var_name}: {type_str} = {value_str}\n", "item")
     
     # Display the function table
     semantic_panel.insert(tk.END, "\nFunctions:\n", "heading")
