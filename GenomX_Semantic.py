@@ -1450,6 +1450,7 @@ class SemanticAnalyzer:
         # Skip spaces
         while self.current_token is not None and self.current_token[1] == 'space':
             self.next_token()
+            
         
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
