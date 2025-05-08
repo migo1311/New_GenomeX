@@ -3884,7 +3884,7 @@ def parseLexer(input_stream):
             #print("Passed state 422")
             #print(token)
             lexeme += token
-            if lookahead_char in ascii:
+            if lookahead_char in ascii2:
                 state = 422  # Stay in state 219 to continue processing ASCII characters
 
             elif lookahead_char in delim_comment or lookahead_char is None:

@@ -499,5 +499,129 @@ apply_light_mode()
 # Initialize line numbers
 update_line_numbers()
 
+# Add search functionality
+class SearchBox:
+    def __init__(self, parent, text_widget):
+        self.parent = parent
+        self.text_widget = text_widget
+        self.search_frame = ttk.Frame(parent)
+        self.search_frame.place(relx=0.5, rely=0, anchor="n")
+        
+        # Create search widgets
+        self.search_var = tk.StringVar()
+        self.search_entry = ttk.Entry(self.search_frame, textvariable=self.search_var, width=30)
+        self.search_entry.pack(side=tk.LEFT, padx=5)
+        
+        # Find buttons
+        self.prev_btn = RoundedButton(self.search_frame, width=80, height=30, corner_radius=15,
+                                    text="Previous", color="#5e35b1", command=self.find_previous)
+        self.prev_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.next_btn = RoundedButton(self.search_frame, width=80, height=30, corner_radius=15,
+                                    text="Next", color="#5e35b1", command=self.find_next)
+        self.next_btn.pack(side=tk.LEFT, padx=5)
+        
+        # Close button
+        self.close_btn = RoundedButton(self.search_frame, width=30, height=30, corner_radius=15,
+                                     text="✕", color="#f44336", command=self.hide)
+        self.close_btn.pack(side=tk.LEFT, padx=5)
+        
+        # Bind events
+        self.search_var.trace_add("write", self.on_search_change)
+        self.search_entry.bind("<Return>", lambda e: self.find_next())
+        self.search_entry.bind("<Shift-Return>", lambda e: self.find_previous())
+        self.search_entry.bind("<Escape>", lambda e: self.hide())
+        
+        # Initially hide the search box
+        self.search_frame.place_forget()
+        
+        # Configure search highlight tag
+        self.text_widget.tag_configure("search_highlight", background="#ffeb3b", foreground="#000000")
+        self.text_widget.tag_configure("search_highlight_current", background="#ffc107", foreground="#000000")
+        
+        self.current_match = None
+        self.matches = []
+        self.current_match_index = -1
+
+    def show(self):
+        self.search_frame.place(relx=0.5, rely=0, anchor="n")
+        self.search_entry.focus_set()
+        self.search_entry.select_range(0, tk.END)
+
+    def hide(self):
+        self.search_frame.place_forget()
+        self.text_widget.tag_remove("search_highlight", "1.0", tk.END)
+        self.text_widget.tag_remove("search_highlight_current", "1.0", tk.END)
+        self.text_widget.focus_set()
+
+    def on_search_change(self, *args):
+        search_term = self.search_var.get()
+        if not search_term:
+            self.text_widget.tag_remove("search_highlight", "1.0", tk.END)
+            self.text_widget.tag_remove("search_highlight_current", "1.0", tk.END)
+            self.matches = []
+            self.current_match_index = -1
+            return
+
+        # Remove existing highlights
+        self.text_widget.tag_remove("search_highlight", "1.0", tk.END)
+        self.text_widget.tag_remove("search_highlight_current", "1.0", tk.END)
+        
+        # Find all matches
+        self.matches = []
+        start_pos = "1.0"
+        while True:
+            start_pos = self.text_widget.search(search_term, start_pos, tk.END, nocase=True)
+            if not start_pos:
+                break
+            end_pos = f"{start_pos}+{len(search_term)}c"
+            self.matches.append((start_pos, end_pos))
+            self.text_widget.tag_add("search_highlight", start_pos, end_pos)
+            start_pos = end_pos
+
+        if self.matches:
+            self.current_match_index = 0
+            self.highlight_current_match()
+
+    def highlight_current_match(self):
+        if not self.matches:
+            return
+        
+        # Remove current match highlight
+        self.text_widget.tag_remove("search_highlight_current", "1.0", tk.END)
+        
+        # Add highlight to current match
+        start_pos, end_pos = self.matches[self.current_match_index]
+        self.text_widget.tag_add("search_highlight_current", start_pos, end_pos)
+        
+        # Ensure the current match is visible
+        self.text_widget.see(start_pos)
+
+    def find_next(self):
+        if not self.matches:
+            return
+        
+        self.current_match_index = (self.current_match_index + 1) % len(self.matches)
+        self.highlight_current_match()
+
+    def find_previous(self):
+        if not self.matches:
+            return
+        
+        self.current_match_index = (self.current_match_index - 1) % len(self.matches)
+        self.highlight_current_match()
+
+# Create the search box instance
+search_box = None
+
+def show_search_box(event=None):
+    global search_box
+    if search_box is None:
+        search_box = SearchBox(root, text_editor)
+    search_box.show()
+
+# Add Ctrl+F binding
+text_editor.bind("<Control-f>", show_search_box)
+
 # Run the application
 root.mainloop()
