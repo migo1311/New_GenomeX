@@ -97,6 +97,17 @@ class SemanticAnalyzer:
             self.errors.append(f"Semantic Error: Expected 'gene', 'void', or identifier after 'act', but found {self.current_token}")
             return
         
+        # Check if function name already exists in symbol table (as a variable)
+        if function_name in self.global_symbol_table:
+            self.errors.append(f"Semantic Error: Function name '{function_name}' already used as a variable")
+            return
+        
+        # Check if function name exists in any function scope
+        for scope_name, scope in self.function_scopes.items():
+            if function_name in scope:
+                self.errors.append(f"Semantic Error: Function name '{function_name}' already used as a variable in function '{scope_name}'")
+                return
+            
         print(f"Function type: {function_type}, Function name: {function_name}")
         
         # Skip Spaces
@@ -176,13 +187,28 @@ class SemanticAnalyzer:
         
         # Add function to function table if it's not gene
         if function_name != 'gene':
-            return_type = 'void' if function_type == 'void' else param_type or 'regular'
+            # For regular functions, determine the return type
+            if function_type == 'void':
+                return_type = 'void'
+                return_types = []
+            else:
+                # For functions with parameters, each parameter type can be a return type
+                if parameters:
+                    # Use the type of the first parameter as primary return type (for compatibility)
+                    return_type = parameters[0]['type']
+                    # Create a list of all parameter types as potential return types
+                    return_types = [param['type'] for param in parameters]
+                else:
+                    # For functions with no parameters, use 'regular' as the return type
+                    return_type = 'regular'
+                    return_types = [return_type]
+                    
             # Support for multiple return values
             self.functions[function_name] = {
-                'return_type': return_type,                # Primary return type for backward compatibility
+                'return_type': return_type,                # Primary return type (first parameter) for backward compatibility
                 'parameters': parameters,                  # Parameters list
-                'multiple_returns': False,                 # Initially set to false, will be updated if multiple returns are found
-                'return_types': [return_type] if return_type != 'void' else [] # Initial array of return types
+                'multiple_returns': len(parameters) > 1,   # Set to true if function has multiple parameters
+                'return_types': return_types               # Array of potential return types (matches parameters)
             }
         
         # Enter function scope
@@ -221,8 +247,24 @@ class SemanticAnalyzer:
 
         # Check number of arguments matches parameters
         if len(args) != len(expected_params):
-            self.errors.append(f"Semantic Error: Function '{function_name}' expects {len(expected_params)} arguments but got {len(args)}")
-            return False
+            # Only report an error if the function has parameters but was called with a different number
+            # Allow calling a no-parameter function with no arguments
+            if not (len(expected_params) == 0 and len(args) == 0):
+                self.errors.append(f"Semantic Error: Function '{function_name}' expects {len(expected_params)} arguments but got {len(args)}")
+                return False
+
+        # If there are no parameters, nothing to check further
+        if len(expected_params) == 0:
+            return True
+
+        # Get expected return types for the function
+        expected_return_types = func_info.get('return_types', [])
+        is_multi_return = func_info.get('multiple_returns', False) or len(expected_return_types) > 1
+        
+        # If we have multiple returns but no return_types yet, initialize them from parameters
+        if not expected_return_types and len(expected_params) > 1:
+            expected_return_types = [param['type'] for param in expected_params]
+            func_info['return_types'] = expected_return_types
 
         # Check each argument matches parameter type
         for i, (arg, param) in enumerate(zip(args, expected_params)):
@@ -232,10 +274,10 @@ class SemanticAnalyzer:
             arg_type = arg['type']
             arg_value = arg.get('value', None)
 
-            # Log the parameter passing (for debugging)
-            # print(f"Passing {arg_name} ({arg_type}) with value {arg_value} to parameter {param_name} ({param_type})")
+            # Get the expected return type for this parameter index
+            expected_return_type = expected_return_types[i] if i < len(expected_return_types) else param_type
 
-            # Check type compatibility
+            # Check type compatibility - with the correct expected type for this position
             if arg_type != param_type:
                 # Special cases for type compatibility
                 if param_type == 'quant' and arg_type == 'dose':
@@ -288,195 +330,248 @@ class SemanticAnalyzer:
         # Skip spaces
         while self.current_token is not None and self.current_token[1] == 'space':
             self.next_token()
-            
-        # Get constant name
-        if self.current_token is None or self.current_token[1] != 'Identifier':
-            self.errors.append(f"Semantic Error: Expected identifier after type in perms declaration, found {self.current_token}")
-            return
+        
+        # Process multiple perms declarations separated by commas
+        while True:
+            # Get constant name
+            if self.current_token is None or self.current_token[1] != 'Identifier':
+                self.errors.append(f"Semantic Error: Expected identifier after type in perms declaration, found {self.current_token}")
+                return
 
-        const_name = self.current_token[0]
-        
-        # Check for redeclaration
-        if const_name in self.symbol_table:
-            self.errors.append(f"Semantic Error: Constant '{const_name}' already declared")
+            const_name = self.current_token[0]
             
-        self.next_token()  # Move past identifier
+            # Check for redeclaration
+            if const_name in self.symbol_table:
+                self.errors.append(f"Semantic Error: Constant '{const_name}' already declared")
+                
+            # Check if constant name already exists as a function name
+            if const_name in self.functions:
+                self.errors.append(f"Semantic Error: Constant name '{const_name}' already used as a function")
+                
+            self.next_token()  # Move past identifier
 
-        # Skip spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+                
+            # Check for assignment (required for perms)
+            if self.current_token is None or self.current_token[0] != '=':
+                self.errors.append(f"Semantic Error: Perms declaration for '{const_name}' requires initialization with '='")
+                return
+                
+            self.next_token()  # Move past '='
             
-        # Check for assignment (required for perms)
-        if self.current_token is None or self.current_token[0] != '=':
-            self.errors.append(f"Semantic Error: Perms declaration for '{const_name}' requires initialization with '='")
-            return
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+                
+            # Set the current assignment type for type checking
+            self.current_assignment_type = var_type
             
-        self.next_token()  # Move past '='
-        
-        # Skip spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()
+            # Collect tokens for the expression until semicolon or comma
+            expression_tokens = []
             
-        # Set the current assignment type for type checking
-        self.current_assignment_type = var_type
-        
-        # Collect tokens for the expression until semicolon
-        expression_tokens = []
-        
-        while self.current_token is not None and self.current_token[0] != ';':
-            expression_tokens.append(self.current_token)
-            self.next_token()
-        
-        # Check if there's an initialization value
-        if not expression_tokens:
-            self.errors.append(f"Semantic Error: Perms declaration for '{const_name}' requires a value")
-            return
+            while self.current_token is not None and self.current_token[0] != ';' and self.current_token[0] != ',':
+                expression_tokens.append(self.current_token)
+                self.next_token()
             
-        # Evaluate the expression for the constant
-        if len(expression_tokens) == 1:
-            token = expression_tokens[0]
-            
-            # Check if the assigned value is an identifier
-            if token[1] == 'Identifier':
-                var_to_assign = token[0]
-                if var_to_assign in self.symbol_table:
-                    # Get value from the identifier's stored value
-                    assigned_value = self.symbol_table[var_to_assign]['value']
-                    assigned_type = self.symbol_table[var_to_assign]['type']
-                    
-                    # Check type compatibility
-                    if var_type == assigned_type or (var_type == 'quant' and assigned_type == 'dose'):
-                        value = assigned_value
+            # Check if there's an initialization value
+            if not expression_tokens:
+                self.errors.append(f"Semantic Error: Perms declaration for '{const_name}' requires a value")
+                return
+                
+            # Evaluate the expression for the constant
+            if len(expression_tokens) == 1:
+                token = expression_tokens[0]
+                
+                # Check if the assigned value is an identifier
+                if token[1] == 'Identifier':
+                    var_to_assign = token[0]
+                    if var_to_assign in self.symbol_table:
+                        # Get value from the identifier's stored value
+                        assigned_value = self.symbol_table[var_to_assign]['value']
+                        assigned_type = self.symbol_table[var_to_assign]['type']
+                        
+                        # Check type compatibility
+                        if var_type == assigned_type or (var_type == 'quant' and assigned_type == 'dose'):
+                            value = assigned_value
+                        else:
+                            self.errors.append(f"Semantic Error: Cannot assign {assigned_type} value to {var_type} perms '{const_name}'")
+                            value = None
                     else:
-                        self.errors.append(f"Semantic Error: Cannot assign {assigned_type} value to {var_type} perms '{const_name}'")
+                        self.errors.append(f"Semantic Error: Variable '{var_to_assign}' used before declaration")
+                        value = None
+                
+                # Handle literals
+                elif token[1] == 'numlit':
+                    if var_type == 'dose':
+                        try:
+                            value = int(token[0])
+                        except:
+                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose perms '{const_name}'")
+                            value = 0
+                    elif var_type == 'quant':
+                        try:
+                            value = float(token[0])
+                        except:
+                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant perms '{const_name}'")
+                            value = 0.0
+                    else:
+                        self.errors.append(f"Semantic Error: Cannot assign numeric value to {var_type} perms '{const_name}'")
+                        value = None
+                
+                elif token[1] == 'string literal':
+                    if var_type == 'seq':
+                        # Remove quotation marks
+                        value = token[0].strip('"\'')
+                    else:
+                        self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} perms '{const_name}'")
+                        value = None
+                
+                elif token[0] in ['dom', 'rec']:
+                    if var_type == 'allele':
+                        value = (token[0] == 'dom')
+                    else:
+                        self.errors.append(f"Semantic Error: Cannot assign boolean value to {var_type} perms '{const_name}'")
                         value = None
                 else:
-                    self.errors.append(f"Semantic Error: Variable '{var_to_assign}' used before declaration")
+                    self.errors.append(f"Semantic Error: Invalid value for perms '{const_name}'")
                     value = None
             
-            # Handle literals
-            elif token[1] == 'numlit':
-                if var_type == 'dose':
-                    try:
-                        value = int(token[0])
-                    except:
-                        self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose perms '{const_name}'")
-                        value = 0
-                elif var_type == 'quant':
-                    try:
-                        value = float(token[0])
-                    except:
-                        self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant perms '{const_name}'")
-                        value = 0.0
-                else:
-                    self.errors.append(f"Semantic Error: Cannot assign numeric value to {var_type} perms '{const_name}'")
-                    value = None
-            
-            elif token[1] == 'string literal':
-                if var_type == 'seq':
-                    # Remove quotation marks
-                    value = token[0].strip('"\'')
-
-            
-            elif token[0] in ['dom', 'rec']:
-                if var_type == 'allele':
-                    value = (token[0] == 'dom')
-                else:
-                    self.errors.append(f"Semantic Error: Cannot assign boolean value to {var_type} perms '{const_name}'")
-                    value = None
-            else:
-                self.errors.append(f"Semantic Error: Invalid value for perms '{const_name}'")
-                value = None
-        
-        # Handle complex expressions
-        elif len(expression_tokens) > 1:
-            # Only handle arithmetic expressions for numeric types
-            if var_type in ['dose', 'quant']:
-                expr_str = ""
-                valid_expression = True
-                
-                # Track if division is used, which forces quant result type
-                contains_division = False
-                
-                for token in expression_tokens:
-                    if token[1] == 'Identifier':
-                        if token[0] in self.symbol_table:
-                            if self.symbol_table[token[0]]['type'] in ['dose', 'quant']:
-                                expr_str += str(self.symbol_table[token[0]]['value'])
-                            else:
-                                self.errors.append(f"Semantic Error: Cannot use non-numeric variable '{token[0]}' in perms arithmetic expression")
-                                valid_expression = False
-                                break
-                        else:
-                            self.errors.append(f"Semantic Error: Variable '{token[0]}' used before declaration")
+            # Handle complex expressions
+            elif len(expression_tokens) > 1:
+                # Only handle arithmetic expressions for numeric types
+                if var_type in ['dose', 'quant']:
+                    expr_str = ""
+                    valid_expression = True
+                    
+                    # Track if division is used, which forces quant result type
+                    contains_division = False
+                    
+                    # Check for string literals or seq variables in numeric expressions
+                    has_string_operand = False
+                    for token in expression_tokens:
+                        if token[1] == 'string literal':
+                            has_string_operand = True
+                            self.errors.append(f"Semantic Error: Cannot use string '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}'")
                             valid_expression = False
                             break
-                    elif token[1] == 'numlit':
-                        expr_str += token[0]
-                    elif token[0] in ['+', '-', '*', '/', '%', '(', ')']:
-                        # Track division for type conversion
-                        if token[0] == '/':
-                            contains_division = True
-                        expr_str += token[0]
-                    elif token[1] == 'space':
-                        continue  # Skip spaces
-                    else:
-                        self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in perms arithmetic expression")
-                        valid_expression = False
-                        break
-                
-                if valid_expression and expr_str:
-                    try:
-                        # Force float result for division operations or if target is quant
-                        if var_type == 'quant' or contains_division:
-                            value = float(eval(expr_str))
-                        else:  # dose type with no division
-                            value = int(eval(expr_str))
-                    except Exception as e:
-                        self.errors.append(f"Semantic Error: Failed to evaluate perms expression: {str(e)}")
-                        value = 0 if var_type == 'dose' else 0.0
-                else:
-                    value = 0 if var_type == 'dose' else 0.0
-            
-            # Handle string concatenation for seq type
-            elif var_type == 'seq':
-                result = ""
-                valid_expression = True
-                
-                for i, token in enumerate(expression_tokens):
-                    if token[0] == '+':
+                        elif token[1] == 'Identifier':
+                            if token[0] in self.symbol_table:
+                                if self.symbol_table[token[0]]['type'] == 'seq':
+                                    has_string_operand = True
+                                    self.errors.append(f"Semantic Error: Cannot use string variable '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}'")
+                                    valid_expression = False
+                                    break
+                            elif token[0] in self.global_symbol_table:
+                                if self.global_symbol_table[token[0]]['type'] == 'seq':
+                                    has_string_operand = True
+                                    self.errors.append(f"Semantic Error: Cannot use string variable '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}'")
+                                    valid_expression = False
+                                    break
+                    
+                    # If there are string operands, don't proceed with evaluating the expression
+                    if has_string_operand:
+                        self.symbol_table[var_name]['value'] = 0 if var_type == 'dose' else 0.0
                         continue
-                    elif token[1] == 'string literal':
-                        result += token[0].strip('"\'')
-                    elif token[1] == 'Identifier' and token[0] in self.symbol_table:
-                        if self.symbol_table[token[0]]['type'] == 'seq':
-                            result += str(self.symbol_table[token[0]]['value'])
-
-                    elif token[1] == 'space':
-                        continue
-                    else:
-                        self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in perms string expression")
-                        valid_expression = False
-                        break
+                    
+                    for token in expression_tokens:
+                        if token[1] == 'Identifier':
+                            if token[0] in self.symbol_table:
+                                if self.symbol_table[token[0]]['type'] in ['dose', 'quant']:
+                                    expr_str += str(self.symbol_table[token[0]]['value'])
+                                else:
+                                    self.errors.append(f"Semantic Error: Cannot use non-numeric variable '{token[0]}' in arithmetic expression")
+                                    valid_expression = False
+                                    break
+                            else:
+                                self.errors.append(f"Semantic Error: Variable '{token[0]}' used before declaration")
+                                valid_expression = False
+                                break
+                        elif token[1] == 'numlit':
+                            expr_str += token[0]
+                        elif token[0] in ['+', '-', '*', '/', '%', '(', ')']:
+                            # Track division for type conversion
+                            if token[0] == '/':
+                                contains_division = True
+                            expr_str += token[0]
+                        elif token[1] == 'space':
+                            continue  # Skip spaces
+                        else:
+                            self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in arithmetic expression")
+                            valid_expression = False
+                            break
+                    
+                    if valid_expression and expr_str:
+                        try:
+                            # Force float result for division operations or if target is quant
+                            if var_type == 'quant' or contains_division:
+                                result = float(eval(expr_str))
+                            else:  # dose type with no division
+                                result = int(eval(expr_str))
+                            
+                            self.symbol_table[var_name]['value'] = result
+                        except Exception as e:
+                            self.errors.append(f"Semantic Error: Failed to evaluate expression: {str(e)}")
+                            pass
+                        # Check for division by zero
+                        if contains_division and '/' in expr_str:
+                            try:
+                                # This is just a simple check - a more robust solution would parse the expression
+                                eval(expr_str.replace('/', '//'))
+                            except ZeroDivisionError:
+                                self.errors.append(f"Semantic Error: Division by zero in expression for variable '{var_name}'")
+                            except:
+                                pass
                 
-                if valid_expression:
-                    value = result
+                # Handle string concatenation for seq type
+                elif var_type == 'seq':
+                    result = ""
+                    valid_expression = True
+                    
+                    for i, token in enumerate(expression_tokens):
+                        if token[0] == '+':
+                            continue
+                        elif token[1] == 'string literal':
+                            result += token[0].strip('"\'')
+                        elif token[1] == 'Identifier' and token[0] in self.symbol_table:
+                            if self.symbol_table[token[0]]['type'] == 'seq':
+                                result += str(self.symbol_table[token[0]]['value'])
+                        elif token[1] == 'space':
+                            continue
+                        else:
+                            self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in perms string expression")
+                            valid_expression = False
+                            break
+                    
+                    if valid_expression:
+                        value = result
+                    else:
+                        value = ""
                 else:
-                    value = ""
+                    self.errors.append(f"Semantic Error: Complex expressions not supported for {var_type} perms")
+                    value = None
             else:
-                self.errors.append(f"Semantic Error: Complex expressions not supported for {var_type} perms")
+                self.errors.append(f"Semantic Error: Empty expression for perms '{const_name}'")
                 value = None
-        else:
-            self.errors.append(f"Semantic Error: Empty expression for perms '{const_name}'")
-            value = None
+                
+            # Add to symbol table
+            self.symbol_table[const_name] = {
+                'scope': scope,       # Use the scope we determined earlier
+                'type': var_type,
+                'value': value,
+                'is_perms': True      # Mark as a perms constant
+            }
             
-        # Add to symbol table
-        self.symbol_table[const_name] = {
-            'scope': scope,       # Use the scope we determined earlier
-            'type': var_type,
-            'value': value,
-            'is_perms': True      # Mark as a perms constant
-        }
+            # Check if we need to continue for multiple perms declarations
+            if self.current_token is None or self.current_token[0] != ',':
+                break
+                
+            self.next_token()  # Move past comma
+            
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
@@ -494,6 +589,7 @@ class SemanticAnalyzer:
         # Check if we're in a function
         if not self.functions:
             self.errors.append("Semantic Error: 'prod' statement can only be used inside a function")
+            return
             
         # Get the current function's return type
         current_function = None
@@ -502,6 +598,14 @@ class SemanticAnalyzer:
             current_function = list(self.functions.keys())[-1]
             function_info = self.functions[current_function]
             return_type = function_info['return_type']
+            
+            # Get expected return types and track which ones have been returned
+            is_multi_return = function_info.get('multiple_returns', False)
+            expected_return_types = function_info.get('return_types', [])
+            
+            # Initialize returned values tracking if not present
+            if 'returned_indexes' not in function_info:
+                function_info['returned_indexes'] = set()
             
         # Handle void functions (no return value)
         if return_type == 'void':
@@ -512,51 +616,71 @@ class SemanticAnalyzer:
                 # Skip until semicolon
                 while self.current_token is not None and self.current_token[0] != ';':
                     self.next_token()
-        else:
-            # Process multiple return values if present
-            return_values = []
+            return
             
-            while True:
-                # Non-void functions must return a value of the correct type
-                value_type = self.parse_expression()
-                return_values.append(value_type)
+        # Parse the expression being returned
+        value_type = self.parse_expression()
+        
+        # For functions with multiple expected return values
+        if is_multi_return and expected_return_types:
+            # Get the value being returned in this prod statement
+            if self.current_token is not None and self.current_token[1] == 'Identifier':
+                returned_var = self.current_token[0]
                 
-                # Check if there's a comma indicating another return value
-                if self.current_token is not None and self.current_token[0] == ',':
-                    self.next_token()  # Move past ','
-                    # Skip spaces after comma
-                    while self.current_token is not None and self.current_token[1] == 'space':
-                        self.next_token()
-                else:
-                    break
-            
-            # If multiple values are being returned
-            if len(return_values) > 1:
-                # Update the function to indicate it returns multiple values
-                function_info['multiple_returns'] = True
+                # Find which parameter this corresponds to
+                parameter_index = -1
+                for i, param in enumerate(function_info['parameters']):
+                    if param['name'] == returned_var:
+                        parameter_index = i
+                        break
                 
-                # If this is the first prod statement with multiple returns, update return types
-                if 'return_types' not in function_info or len(function_info.get('return_types', [])) <= 1:
-                    function_info['return_types'] = return_values
+                # If we found a matching parameter, mark it as returned
+                if parameter_index >= 0:
+                    function_info['returned_indexes'].add(parameter_index)
+                    
+                    # Check that the return type matches the parameter type
+                    expected_type = expected_return_types[parameter_index]
+                    if value_type != expected_type:
+                        # Allow certain implicit conversions
+                        if not ((expected_type == 'quant' and value_type == 'dose') or
+                               (expected_type == 'seq' and value_type == 'chr') or
+                               (expected_type == 'allele' and value_type in ['dose', 'quant'])):
+                            self.errors.append(f"Semantic Error: Function's return value for parameter '{returned_var}' should be {expected_type} but got {value_type}")
                 else:
-                    # Check if the number of return values matches previous returns
-                    if len(return_values) != len(function_info['return_types']):
-                        self.errors.append(f"Semantic Error: Inconsistent number of return values. Function has previously returned {len(function_info['return_types'])} values but is now returning {len(return_values)} values.")
-                    else:
-                        # Check each return value for type compatibility
-                        for i, (current_type, expected_type) in enumerate(zip(return_values, function_info['return_types'])):
-                            if current_type != expected_type:
+                    # Handle the case where the returned value doesn't match a parameter name
+                    # Find the first unused expected return type
+                    for i, expected_type in enumerate(expected_return_types):
+                        if i not in function_info['returned_indexes']:
+                            function_info['returned_indexes'].add(i)
+                            
+                            # Check type compatibility
+                            if value_type != expected_type:
                                 # Allow certain implicit conversions
-                                if not ((expected_type == 'quant' and current_type == 'dose') or 
-                                       (expected_type == 'seq' and current_type == 'chr') or
-                                       (expected_type == 'allele' and current_type in ['dose', 'quant'])):
-                                    self.errors.append(f"Semantic Error: Function's return value at position {i+1} should be {expected_type} but got {current_type}")
+                                if not ((expected_type == 'quant' and value_type == 'dose') or
+                                       (expected_type == 'seq' and value_type == 'chr') or
+                                       (expected_type == 'allele' and value_type in ['dose', 'quant'])):
+                                    self.errors.append(f"Semantic Error: Function's return value at position {i+1} should be {expected_type} but got {value_type}")
+                            break
             else:
-                # Single return value - check against the function's primary return type
-                if return_values[0] != return_type:
-                    # Allow dose to be returned from a quant function
-                    if not (return_type == 'quant' and return_values[0] == 'dose'):
-                        self.errors.append(f"Semantic Error: Function returns {return_type} but got {return_values[0]}")
+                # For literal values or complex expressions, find the first unused expected return type
+                for i, expected_type in enumerate(expected_return_types):
+                    if i not in function_info['returned_indexes']:
+                        function_info['returned_indexes'].add(i)
+                        
+                        # Check type compatibility
+                        if value_type != expected_type:
+                            # Allow certain implicit conversions
+                            if not ((expected_type == 'quant' and value_type == 'dose') or
+                                   (expected_type == 'seq' and value_type == 'chr') or
+                                   (expected_type == 'allele' and value_type in ['dose', 'quant'])):
+                                self.errors.append(f"Semantic Error: Function's return value at position {i+1} should be {expected_type} but got {value_type}")
+                        break
+        else:
+            # Single return value - check against the function's primary return type
+            if value_type != return_type:
+                # Allow dose to be returned from a quant function
+                if not (return_type == 'quant' and value_type == 'dose'):
+                    self.errors.append(f"Semantic Error: Function returns {return_type} but got {value_type}")
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';': 
@@ -598,6 +722,21 @@ class SemanticAnalyzer:
         if self.current_token is not None and self.current_token[0] == '(':
             has_parentheses = True
             self.next_token()  # Move past '('
+            
+            # Check for empty parameter list (directly followed by a closing parenthesis)
+            if self.current_token is not None and self.current_token[0] == ')':
+                # Handle the case of func Multiply(); - empty parameter list
+                self.next_token()  # Move past ')'
+                # Validate against the function definition
+                self.check_parameter_passing(function_name, args)
+                
+                # Check for semicolon
+                if self.current_token is None or self.current_token[0] != ';':
+                    self.errors.append(f"Semantic Error: Expected ';' after function call, found {self.current_token}")
+                    return
+                    
+                self.next_token()  # Move past ';'
+                return
         
         # For cases like: func Multiply(Number);
         if has_parentheses:
@@ -1672,8 +1811,29 @@ class SemanticAnalyzer:
         while self.current_token is not None and self.current_token[1] in ["space", "tab"]:
             self.next_token()
             
+        # Look for assignment operator or compound assignment operators
+        is_compound_assignment = False
+        compound_operator = None
+        
+        if self.current_token is not None:
+            if self.current_token[0] == '=':
+                # Regular assignment
+                pass
+            elif self.current_token[0] in ['+=', '-=', '*=', '/=', '%=']:
+                # Compound assignment
+                is_compound_assignment = True
+                compound_operator = self.current_token[0][0]  # Extract the operator part
+            else:
+                # Not an assignment operation
+                # Skip any other statements like function calls or non-assignment operations
+                while self.current_token is not None and self.current_token[0] != ';':
+                    self.next_token()
+                if self.current_token is not None:
+                    self.next_token()  # Move past semicolon
+                return
+                
         # Look for assignment operator
-        if self.current_token is not None and self.current_token[0] == '=':
+        if self.current_token is not None and (self.current_token[0] == '=' or self.current_token[0] in ['+=', '-=', '*=', '/=', '%=']):
             # Check if the variable is a perms (constant)
             if var_info.get('is_perms', False):
                 self.errors.append(f"Semantic Error: Cannot reassign value to perms (constant) '{var_name}'")
@@ -1684,7 +1844,7 @@ class SemanticAnalyzer:
                     self.next_token()  # Move past semicolon
                 return
             
-            self.next_token()  # Move past '='
+            self.next_token()  # Move past assignment operator
             
             # Skip any whitespace after assignment operator
             while self.current_token is not None and self.current_token[1] in ["space", "tab"]:
@@ -1702,6 +1862,63 @@ class SemanticAnalyzer:
             while self.current_token is not None and self.current_token[0] != ';':
                 expression_tokens.append(self.current_token)
                 self.next_token()
+            
+            # For compound assignments (+=, -=, etc.), check if types are compatible with the operation
+            if is_compound_assignment:
+                check_type = array_element_type if is_array_element else var_type
+                
+                # Check for division by zero in /= operation
+                if compound_operator == '/' and len(expression_tokens) == 1:
+                    # Check for direct division by zero
+                    if expression_tokens[0][1] == 'numlit' and float(expression_tokens[0][0]) == 0:
+                        target_name = f"{var_name}[index]" if is_array_element else var_name
+                        self.errors.append(f"Semantic Error: Division by zero in assignment '{target_name} /= 0'")
+                        if self.current_token is not None and self.current_token[0] == ';':
+                            self.next_token()  # Move past semicolon
+                        return
+                
+                # Type compatibility checks for compound assignments
+                if check_type == 'seq':
+                    # For strings, only += (concatenation) is allowed, not other arithmetic ops
+                    if compound_operator != '+':
+                        target_name = f"{var_name}[index]" if is_array_element else var_name
+                        self.errors.append(f"Semantic Error: Invalid operation '{target_name} {compound_operator}=' for {check_type} type. Only '+=' is supported for strings.")
+                        if self.current_token is not None and self.current_token[0] == ';':
+                            self.next_token()  # Move past semicolon
+                        return
+                    
+                    # For += on strings, check the RHS is also a string
+                    has_non_string_operand = False
+                    for token in expression_tokens:
+                        if token[1] == 'numlit' or (token[1] == 'Identifier' and 
+                            ((token[0] in self.symbol_table and self.symbol_table[token[0]]['type'] in ['dose', 'quant']) or
+                             (token[0] in self.global_symbol_table and self.global_symbol_table[token[0]]['type'] in ['dose', 'quant']))):
+                            has_non_string_operand = True
+                            break
+                    
+                    if has_non_string_operand:
+                        target_name = f"{var_name}[index]" if is_array_element else var_name
+                        self.errors.append(f"Semantic Error: Cannot concatenate non-string value to {check_type} variable '{target_name}'")
+                        if self.current_token is not None and self.current_token[0] == ';':
+                            self.next_token()  # Move past semicolon
+                        return
+                
+                elif check_type in ['dose', 'quant']:
+                    # For numeric types, check for string operands
+                    has_string_operand = False
+                    for token in expression_tokens:
+                        if token[1] == 'string literal' or (token[1] == 'Identifier' and 
+                            ((token[0] in self.symbol_table and self.symbol_table[token[0]]['type'] == 'seq') or
+                             (token[0] in self.global_symbol_table and self.global_symbol_table[token[0]]['type'] == 'seq'))):
+                            has_string_operand = True
+                            break
+                    
+                    if has_string_operand:
+                        target_name = f"{var_name}[index]" if is_array_element else var_name
+                        self.errors.append(f"Semantic Error: Cannot use string operands in arithmetic operation for {check_type} variable '{target_name}'")
+                        if self.current_token is not None and self.current_token[0] == ';':
+                            self.next_token()  # Move past semicolon
+                        return
             
             # Special case: For TempChar = String[X], if both are string type, just accept it
             if is_array_element == False and var_type == 'seq' and len(expression_tokens) >= 2:
@@ -1954,6 +2171,47 @@ class SemanticAnalyzer:
                         self.next_token()  # Move past semicolon
                     return
                 
+                # Check for arithmetic operations in the expression (*, /, +, -, %)
+                has_arithmetic_ops = False
+                for token in expression_tokens:
+                    if token[0] in ['*', '/', '+', '-', '%']:
+                        has_arithmetic_ops = True
+                        break
+                
+                # Check for string literals or seq variables in arithmetic expressions for dose/quant variables
+                if check_type in ['dose', 'quant'] and has_arithmetic_ops:
+                    has_string_operands = False
+                    
+                    # First, check for string literals
+                    for token in expression_tokens:
+                        if token[1] == 'string literal':
+                            has_string_operands = True
+                            break
+                            
+                    # Then check for seq variables
+                    if not has_string_operands:
+                        for token in expression_tokens:
+                            if token[1] == 'Identifier':
+                                token_var_name = token[0]
+                                token_var_info = None
+                                
+                                if token_var_name in self.symbol_table:
+                                    token_var_info = self.symbol_table[token_var_name]
+                                elif token_var_name in self.global_symbol_table:
+                                    token_var_info = self.global_symbol_table[token_var_name]
+                                    
+                                if token_var_info and token_var_info['type'] == 'seq':
+                                    has_string_operands = True
+                                    break
+                    
+                    # Display error if string operands were found in arithmetic operation
+                    if has_string_operands:
+                        target_name = f"{var_name}[index]" if is_array_element else var_name
+                        self.errors.append(f"Semantic Error: Cannot use string operands in arithmetic expression for {check_type} variable '{target_name}'")
+                        if self.current_token is not None and self.current_token[0] == ';':
+                            self.next_token()  # Move past semicolon
+                        return
+                
                 # Only handle arithmetic expressions for numeric types
                 if check_type in ['dose', 'quant']:
                     expr_str = ""
@@ -1961,6 +2219,37 @@ class SemanticAnalyzer:
                     
                     # Track if division is used, which forces quant result type
                     contains_division = False
+                    
+                    # Check for string literals or seq variables in arithmetic expressions
+                    has_string_operands = False
+                    for token in expression_tokens:
+                        if token[1] == 'string literal':
+                            has_string_operands = True
+                            target_name = f"{var_name}[index]" if is_array_element else var_name
+                            self.errors.append(f"Semantic Error: Cannot use string '{token[0]}' in arithmetic expression for {check_type} variable '{target_name}'")
+                            valid_expression = False
+                            break
+                        elif token[1] == 'Identifier':
+                            token_var_name = token[0]
+                            token_var_info = None
+                            
+                            if token_var_name in self.symbol_table:
+                                token_var_info = self.symbol_table[token_var_name]
+                            elif token_var_name in self.global_symbol_table:
+                                token_var_info = self.global_symbol_table[token_var_name]
+                                
+                            if token_var_info and token_var_info['type'] == 'seq':
+                                has_string_operands = True
+                                target_name = f"{var_name}[index]" if is_array_element else var_name
+                                self.errors.append(f"Semantic Error: Cannot use string variable '{token_var_name}' in arithmetic expression for {check_type} variable '{target_name}'")
+                                valid_expression = False
+                                break
+                    
+                    # If there are string operands, don't proceed with evaluating the expression
+                    if has_string_operands:
+                        if self.current_token is not None and self.current_token[0] == ';':
+                            self.next_token()  # Move past semicolon
+                        return
                     
                     for token in expression_tokens:
                         if token[1] == 'Identifier':
@@ -2006,6 +2295,12 @@ class SemanticAnalyzer:
                             if not is_array_element:
                                 var_info['value'] = result
                             # For array elements, we only validate type compatibility
+                        except ZeroDivisionError:
+                            target_name = f"{var_name}[index]" if is_array_element else var_name
+                            self.errors.append(f"Semantic Error: Division by zero in expression for '{target_name}'")
+                            if self.current_token is not None and self.current_token[0] == ';':
+                                self.next_token()  # Move past semicolon
+                            return
                         except Exception as e:
                             # self.errors.append(f"Semantic Error: Failed to evaluate expression: {str(e)}")
                             pass
@@ -2015,15 +2310,26 @@ class SemanticAnalyzer:
                             try:
                                 # This is just a simple check - a more robust solution would parse the expression
                                 parts = expr_str.split('/')
-                                if len(parts) > 1 and float(eval(parts[1].strip())) == 0:
-                                    # self.errors.append(f"Semantic Error: Division by zero detected in expression for '{var_name}'")
-                                    pass
+                                for part in parts[1:]:  # Check all divisors
+                                    if float(eval(part.strip())) == 0:
+                                        target_name = f"{var_name}[index]" if is_array_element else var_name
+                                        self.errors.append(f"Semantic Error: Division by zero detected in expression for '{target_name}'")
+                                        break
                             except:
                                 # If we can't evaluate the right side, we ignore this check
                                 pass
                 
                 # Handle string concatenation for seq type
                 elif check_type == 'seq':
+                    # Check if this is an arithmetic operation (not string concatenation)
+                    if has_arithmetic_ops:
+                        # Look specifically for multiplication, division, or modulo
+                        for token in expression_tokens:
+                            if token[0] in ['*', '/', '%']:
+                                target_name = f"{var_name}[index]" if is_array_element else var_name
+                                self.errors.append(f"Semantic Error: Cannot assign arithmetic expression result to {check_type} variable '{target_name}'")
+                                break
+                    
                     # For string concatenation, we're less strict now
                     # We'll accept the concatenation if it contains string values or string array elements
                     valid_expression = True
@@ -2085,6 +2391,10 @@ class SemanticAnalyzer:
 
             var_name = self.current_token[0]
             
+            # Check if variable name already exists as a function name
+            if var_name in self.functions:
+                self.errors.append(f"Semantic Error: Variable name '{var_name}' already used as a function")
+                
             # Check for redeclaration in current scope only
             if var_name in self.symbol_table:
                 self.errors.append(f"Semantic Error: Variable '{var_name}' already declared in current scope")
@@ -2183,6 +2493,21 @@ class SemanticAnalyzer:
                         
                         # Track if division is used, which forces quant result type
                         contains_division = False
+                        
+                        # First, check for string literals in numeric expression
+                        for token in expression_tokens:
+                            if token[1] == 'string literal':
+                                self.errors.append(f"Semantic Error: Cannot use string '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}'")
+                                valid_expression = False
+                                break
+                            elif token[1] == 'Identifier' and token[0] in self.symbol_table and self.symbol_table[token[0]]['type'] == 'seq':
+                                self.errors.append(f"Semantic Error: Cannot use string variable '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}'")
+                                valid_expression = False
+                                break
+                        
+                        # If we found string literals in numeric expression, skip the rest of processing
+                        if not valid_expression:
+                            continue
                         
                         for token in expression_tokens:
                             if token[1] == 'Identifier':
