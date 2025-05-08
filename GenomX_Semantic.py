@@ -686,7 +686,7 @@ class SemanticAnalyzer:
         if self.current_token is None or self.current_token[0] != ';': 
             self.errors.append(f"Semantic Error: Expected ';' after prod statement, found {self.current_token}")
             return
-            # GIT PUSH
+            # GIT PUSH ULITasd
         self.next_token()  # Move past ';'
     def function_call(self):
         """Parse function call statement starting with 'func'"""
