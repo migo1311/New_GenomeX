@@ -686,7 +686,7 @@ class SemanticAnalyzer:
         if self.current_token is None or self.current_token[0] != ';': 
             self.errors.append(f"Semantic Error: Expected ';' after prod statement, found {self.current_token}")
             return
-            # GIT PUSH ULITasd
+            # GIT PUSH
         self.next_token()  # Move past ';'
     def function_call(self):
         """Parse function call statement starting with 'func'"""
@@ -1368,8 +1368,16 @@ class SemanticAnalyzer:
                 # Handle function declarations
                 elif self.current_token[1] == 'function':
                     self.function_declaration()
-                elif self.current_token[1] == 'comment':    
+                # Handle single-line comments (with #)
+                elif self.current_token[1] == 'comment' or self.current_token[0] == '#':    
+                    self.next_token()  # Skip single-line comment
+                # Handle multi-line comments
+                elif self.current_token[1] == 'multiline' or self.current_token[0] == '/*':
+                    # Skip the multi-line comment token
                     self.next_token()
+                    # Skip any tokens until we find '*/' if we're using '/*' token checks
+                    if self.current_token is not None and self.current_token[0] == '*/':
+                        self.next_token()  # Skip the closing */
                 # Handle conversion functions
                 elif self.current_token[1] == 'seq':
                     # Simple approach: skip tokens until semicolon
