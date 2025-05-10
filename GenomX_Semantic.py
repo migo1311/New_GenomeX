@@ -27,8 +27,8 @@ class SemanticAnalyzer:
         self._condition_nesting_level = 0  # Track nesting level for condition parsing
 
     def next_token(self):
-        while self.token_index < len(self.tokens) and self.tokens[self.token_index][1] in ["space", "tab"]:
-            self.token_index += 1  # Skip spaces and tabs
+        while self.token_index < len(self.tokens) and self.tokens[self.token_index][1] in ["space", "tab", "newline"]:
+            self.token_index += 1  # Skip spaces, tabs, and newlines
         if self.token_index < len(self.tokens):
             self.current_token = self.tokens[self.token_index]
             self.token_index += 1
@@ -44,8 +44,6 @@ class SemanticAnalyzer:
                 self.act_gene_function()
             elif self.current_token[1] == 'perms' or self.current_token[0] == 'perms':
                 self.perms_declaration()
-            elif self.current_token[1] == 'newline':
-                self.next_token()  # Skip newlines
             elif self.current_token[1] == 'space':
                 self.next_token()
             else:
@@ -1313,8 +1311,8 @@ class SemanticAnalyzer:
         was_in_loop = self.in_loop  # Save previous loop state
         
         while self.current_token is not None and self.current_token[0] != '}':
-            # Skip newlines and spaces
-            while self.current_token is not None and self.current_token[1] in ['newline', 'space']:
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
                 self.next_token()
                 
             if self.current_token is None or self.current_token[0] == '}':
