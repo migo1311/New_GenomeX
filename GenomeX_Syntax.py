@@ -2208,10 +2208,14 @@ def parseSyntax(tokens, output_text):
                     start_idx = skip_spaces(tokens, start_idx)
                     
                     
-                    if is_token(tokens, start_idx, 'string literal'):
+                    if is_token(tokens, start_idx, 'string literal') or is_token(tokens, start_idx, 'Identifier'):
                         start_idx += 1
+<<<<<<< HEAD
                     if is_token(tokens, start_idx, 'Identifier'):
                         start_idx += 1
+=======
+
+>>>>>>> 76cbd680e04e7700d1719ef59f41ca026a6144c9
                     else:
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                         output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected string literal or Identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
