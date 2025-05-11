@@ -1174,6 +1174,9 @@ def parseSyntax(tokens, output_text):
 
             if not is_token(tokens, start_idx, ')'):
                 print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in if statement")
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis or conditional operator but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
 
             start_idx += 1  
@@ -1181,6 +1184,7 @@ def parseSyntax(tokens, output_text):
 
             if not is_token(tokens, start_idx, '{'):
                 print(f"Error: Expected '{{' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                 return False, None
 
             start_idx += 1  
