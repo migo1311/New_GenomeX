@@ -188,7 +188,6 @@ def parseSyntax(tokens, output_text):
                     'prod': statements.prod_statement,
                     'Identifier': statements.stimuli_statement,
                     'for': statements.for_loop_statement,
-                    'do': statements.do_while_statement,
                     'while': statements.while_statement,
                     'func': statements.func_calling,
                 }
@@ -1010,9 +1009,9 @@ def parseSyntax(tokens, output_text):
                     print(f"Found literal '{tokens[start_idx][0]}' of type {tokens[start_idx][1]} at index {start_idx}")
                     return True, start_idx + 1  
                 
-                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a condition value but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                # line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                # output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a condition value but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}\n")
+                # output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 print(f"Error: Expected condition value at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 return False, None
 
@@ -1175,7 +1174,7 @@ def parseSyntax(tokens, output_text):
             if not is_token(tokens, start_idx, ')'):
                 print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in if statement")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis or conditional operator but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis, math operator or conditional operator but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
 
@@ -2074,90 +2073,6 @@ def parseSyntax(tokens, output_text):
             
             
             return False, None
-
-        @staticmethod
-        def do_while_statement(tokens, start_idx):
-            print("<do_while_statement>")
-            start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG SYNTAX: After initial skip_spaces, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-            
-            
-            
-            if not is_token(tokens, start_idx, '{'):
-                print(f"DEBUG SYNTAX: Expected '{{' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                return False, None
-            
-            
-            start_idx += 1
-            print(f"DEBUG SYNTAX: After opening brace, start_idx={start_idx}")
-            
-            
-            is_valid, new_idx = program.body_statements(tokens, start_idx)
-            if not is_valid:
-                return False, None
-                        
-            
-            start_idx = new_idx
-            start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG SYNTAX: After body statements, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-            
-            
-            if not is_token(tokens, start_idx, '}'):
-                print(f"DEBUG SYNTAX: Expected '}}' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                return False, None
-            
-            
-            start_idx += 1
-            start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG SYNTAX: After closing brace, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-            
-            
-            if not is_token(tokens, start_idx, 'while'):
-                print(f"DEBUG SYNTAX: Expected 'while' keyword but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                return False, None
-            
-            
-            start_idx += 1
-            start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG SYNTAX: After 'while' keyword, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-            
-            
-            if not is_token(tokens, start_idx, '('):
-                print(f"DEBUG SYNTAX: Expected '(' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                return False, None
-            
-            
-            start_idx += 1
-            start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG SYNTAX: After opening parenthesis, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-            
-            
-            is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
-            if not is_valid or new_idx is None:
-                print(f"DEBUG SYNTAX: Invalid condition at index {start_idx}")
-                return False, None
-            
-            start_idx = new_idx
-            start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG SYNTAX: After condition, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-            
-            
-            if not is_token(tokens, start_idx, ')'):
-                print(f"DEBUG SYNTAX: Expected ')' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in do-while statement")
-                return False, None
-            
-            
-            start_idx += 1
-            start_idx = skip_spaces(tokens, start_idx)
-            print(f"DEBUG SYNTAX: After closing parenthesis, start_idx={start_idx}, token={tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-            
-            
-            if is_token(tokens, start_idx, ';'):
-                start_idx += 1  
-                print(f"DEBUG SYNTAX: After semicolon, start_idx={start_idx}")
-            
-            print(f"DEBUG SYNTAX: Successfully parsed do-while statement, returning True, {start_idx}")
-            return True, start_idx
   
         @staticmethod
         def while_statement(tokens, start_idx):
@@ -2295,9 +2210,11 @@ def parseSyntax(tokens, output_text):
                     
                     if is_token(tokens, start_idx, 'string literal'):
                         start_idx += 1
+                    if is_token(tokens, start_idx, 'Identifier'):
+                        start_idx += 1
                     else:
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected string literal but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected string literal or Identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                         output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                         return False, None
                                         
@@ -2353,7 +2270,8 @@ def parseSyntax(tokens, output_text):
                         start_idx += 1
                     elif is_token(tokens, start_idx, 'rec'):
                         start_idx += 1
-
+                    elif is_token(tokens, start_idx, 'Identifier'):
+                        start_idx += 1
                     else:
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                         output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected dom, rec but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
