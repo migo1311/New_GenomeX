@@ -1415,10 +1415,18 @@ class GenomeXCodeGenerator:
                             in_array_access = False
                             value += token
                             print(f"[DEBUG] Ended array access: '{token}'")
-                        elif token_type == "numlit" and token.startswith("^") and token[1:].isdigit():
-                            negative_value = f"-{token[1:]}"
-                            value += negative_value
-                            print(f"[DEBUG] Converted caret number '{token}' to '{negative_value}'")
+                        elif token_type == "numlit" and token.startswith("^"):
+                            # Handle negative numbers using caret (^) for both integers and floats
+                            try:
+                                # Check if it's a valid number by attempting to convert to float
+                                float(token[1:])
+                                negative_value = f"-{token[1:]}"
+                                value += negative_value
+                                print(f"[DEBUG] Converted caret number '{token}' to '{negative_value}'")
+                            except ValueError:
+                                # If not a valid number format, keep as is
+                                value += token
+                                print(f"[DEBUG] Kept original token (not a valid number): '{token}'")
                         elif token == "seq":
                             # Handle seq(Num) pattern by translating to str(Num)
                             value += "str"  # Replace seq with str
@@ -1498,8 +1506,16 @@ class GenomeXCodeGenerator:
 
         if token_type == "numlit":
             # Handle negative numbers using caret (^)
-            if token.startswith("^") and token[1:].isdigit():
-                value = f"-{token[1:]}"
+            if token.startswith("^"):
+                # Check if it's a valid number (integer or float)
+                try:
+                    # Remove the caret and try to convert to float to validate
+                    float(token[1:])
+                    # If successful, replace caret with minus sign
+                    value = f"-{token[1:]}"
+                except ValueError:
+                    # If not a valid number, keep as is
+                    value = token
             else:
                 value = token
             index += 1
