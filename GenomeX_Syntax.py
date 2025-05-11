@@ -819,6 +819,7 @@ def parseSyntax(tokens, output_text):
                 start_idx = new_idx
                 start_idx = skip_spaces(tokens, start_idx)
                 
+                
                 has_array_stimuli = False
                 if is_token(tokens, start_idx, '['):
                     has_array_stimuli = True
@@ -1193,7 +1194,13 @@ def parseSyntax(tokens, output_text):
             is_valid, new_idx = program.body_statements(tokens, start_idx)
             if not is_valid:
                 return False, None
-                        
+
+            if new_idx == start_idx:  # No tokens were consumed, meaning empty body
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Empty if statement body is not allowed\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                return False, None
+ 
             start_idx = new_idx
             start_idx = skip_spaces(tokens, start_idx)
 
@@ -1254,8 +1261,15 @@ def parseSyntax(tokens, output_text):
                     if not is_valid:
                         return False, None
                     
+                    if new_idx == start_idx:  # No tokens were consumed, meaning empty body
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Empty if statement body is not allowed\n")
+                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                        return False, None
+
                     start_idx = new_idx
                     start_idx = skip_spaces(tokens, start_idx)
+
 
                     is_valid, new_idx = statements.inside_loop_statement(tokens, start_idx)
                     if not is_valid:
@@ -1294,9 +1308,15 @@ def parseSyntax(tokens, output_text):
                     if not is_valid:
                         return False, None
                     
+
+                    if new_idx == start_idx:  # No tokens were consumed, meaning empty body
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Empty if statement body is not allowed\n")
+                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                        return False, None
+
                     start_idx = new_idx
                     start_idx = skip_spaces(tokens, start_idx)
-
 
                     if not is_token(tokens, start_idx, '}'):
                         print(f"Error: Expected '}}' at index {start_idx}")
@@ -1680,7 +1700,6 @@ def parseSyntax(tokens, output_text):
                         
                         if start_idx < len(tokens) and tokens[start_idx][1] == "numlit":
                             start_idx += 1  
-                        
                     
                     elif tokens[start_idx][1] in ["Identifier", "numlit"]:
                         start_idx += 1  
@@ -1946,14 +1965,18 @@ def parseSyntax(tokens, output_text):
             if not is_valid:
                 return False, None
                         
-            start_idx = new_idx
+            if new_idx == start_idx:  # No tokens were consumed, meaning empty body
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Empty if statement body is not allowed\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                return False, None
             
             
             if not (start_idx < len(tokens) and tokens[start_idx][0] == '}'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected '}}' but found {found_token}\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected '}}' in for loopbut found {found_token} \n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             
@@ -2271,9 +2294,11 @@ def parseSyntax(tokens, output_text):
                         start_idx += 1
                     elif is_token(tokens, start_idx, 'Identifier'):
                         start_idx += 1
+                    elif is_token(tokens, start_idx, 'numlit'):
+                        start_idx += 1
                     else:
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected dom, rec but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected dom, rec, Identifier or numlit but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                         output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                         return False, None
                                         
@@ -2387,23 +2412,21 @@ def parseSyntax(tokens, output_text):
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
 
-            
-            if not is_token(tokens, start_idx, 'numlit'):
-
+                        
+            if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier')):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
-            
-                
-            number_sign = check_number_sign(tokens[start_idx])
-            if number_sign in {"quantval", "nequantliteral"}:
-                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a quant value but found {tokens[start_idx][0]}\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                return False, None
+            # Only check number_sign if it's a numlit
+            if is_token(tokens, start_idx, 'numlit'):
+                number_sign = check_number_sign(tokens[start_idx])
+                if number_sign in {"quantval", "nequantliteral"}:
+                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a quant value but found {tokens[start_idx][0]}\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    return False, None
 
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
@@ -2423,21 +2446,20 @@ def parseSyntax(tokens, output_text):
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
 
-                if not is_token(tokens, start_idx, 'numlit'):
+                if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier')):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
-                
-                
-                number_sign = check_number_sign(tokens[start_idx])
-                if number_sign in {"quantval", "nequantliteral"}:
-                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a quant value but found {tokens[start_idx][0]}\n")
-                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                    return False, None
+                # Only check number_sign if it's a numlit
+                if is_token(tokens, start_idx, 'numlit'):
+                    number_sign = check_number_sign(tokens[start_idx])
+                    if number_sign in {"quantval", "nequantliteral"}:
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a quant value but found {tokens[start_idx][0]}\n")
+                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                        return False, None
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
 
@@ -2572,9 +2594,6 @@ def parseSyntax(tokens, output_text):
 
         @staticmethod
         def validate_clust_doseval(tokens, start_idx):
-            
-
-
             print('<clust_dose>')
             start_idx = skip_spaces(tokens, start_idx)
 
@@ -2599,21 +2618,20 @@ def parseSyntax(tokens, output_text):
             start_idx = skip_spaces(tokens, start_idx)
 
             
-            if not is_token(tokens, start_idx, 'numlit'):
+            if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier')):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
 
-            
-            number_sign = check_number_sign(tokens[start_idx])
-            if number_sign in {"quantval", "nequantliteral"}:
-                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value but found {tokens[start_idx][0]}\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                return False, None
+            # Only check number_sign if it's a numlit
+            if is_token(tokens, start_idx, 'numlit'):
+                number_sign = check_number_sign(tokens[start_idx])
+                if number_sign in {"quantval", "nequantliteral"}:
+                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a quant value but found {tokens[start_idx][0]}\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    return False, None
 
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
@@ -2633,22 +2651,20 @@ def parseSyntax(tokens, output_text):
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
 
-                if not is_token(tokens, start_idx, 'numlit'):
+                if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier')):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
 
-                
-                number_sign = check_number_sign(tokens[start_idx])
-                if number_sign in {"quantval", "nequantliteral"}:
-                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value but found {tokens[start_idx][0]}\n")
-                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                    return False, None
-
+                # Only check number_sign if it's a numlit
+                if is_token(tokens, start_idx, 'numlit'):
+                    number_sign = check_number_sign(tokens[start_idx])
+                    if number_sign in {"quantval", "nequantliteral"}:
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a quant value but found {tokens[start_idx][0]}\n")
+                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                        return False, None
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
 
@@ -2817,25 +2833,20 @@ def parseSyntax(tokens, output_text):
             print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
             
-            if not is_token(tokens, start_idx, 'numlit'):
+            if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier')):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                print(f"DEBUG SYNTAX: Expected numlit at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a numlit but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
 
-            literal = tokens[start_idx]
-            number_sign = check_number_sign(literal)
-            print(f"DEBUG SYNTAX: Found numlit: {literal}, number_sign: {number_sign}")
-            
-            if number_sign not in {'doseliteral'}:
-                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                print(f"DEBUG SYNTAX: Invalid number sign: {number_sign}, expected 'doseliteral'")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                return False, None
+            # Only check number_sign if it's a numlit
+            if is_token(tokens, start_idx, 'numlit'):
+                number_sign = check_number_sign(tokens[start_idx])
+                if number_sign in {"quantval", "nequantliteral"}:
+                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a quant value but found {tokens[start_idx][0]}\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    return False, None
             start_idx += 1
 
             start_idx = skip_spaces(tokens, start_idx)
@@ -2862,13 +2873,20 @@ def parseSyntax(tokens, output_text):
                 start_idx = skip_spaces(tokens, start_idx)
                 print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
-                if not is_token(tokens, start_idx, 'numlit') or check_number_sign(tokens[start_idx]) != "doseliteral":
+                if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier')):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                    print(f"DEBUG SYNTAX: Expected numlit with doseliteral at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a dose value but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a number or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     return False, None
+
+                # Only check number_sign if it's a numlit
+                if is_token(tokens, start_idx, 'numlit'):
+                    number_sign = check_number_sign(tokens[start_idx])
+                    if number_sign in {"quantval", "nequantliteral"}:
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a quant value but found {tokens[start_idx][0]}\n")
+                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                        return False, None
                 print(f"DEBUG SYNTAX: Found second dimension size: {tokens[start_idx]}")
                 start_idx += 1
 
@@ -2920,11 +2938,11 @@ def parseSyntax(tokens, output_text):
                             print(f"DEBUG SYNTAX: After skip_spaces, index: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
                             while True:
-                                if not is_token(tokens, start_idx, 'string literal'):
+                                if not is_token(tokens, start_idx, 'string literal') and not is_token(tokens, start_idx, 'Identifier'):
                                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                                    print(f"DEBUG SYNTAX: Expected string literal at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal but found {tokens[start_idx][0]}\n")
+                                    print(f"DEBUG SYNTAX: Expected string literal or Identifier at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal or Identifier but found {tokens[start_idx][0]}\n")
                                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                                     return False, None
 
@@ -2980,11 +2998,11 @@ def parseSyntax(tokens, output_text):
                     print(f"DEBUG SYNTAX: Detected 1D array (direct values)")
                     
                     while True:
-                        if not is_token(tokens, start_idx, 'string literal'):
+                        if not is_token(tokens, start_idx, 'string literal') and not is_token(tokens, start_idx, 'Identifier'):
                             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                            print(f"DEBUG SYNTAX: Expected string literal at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal but found {tokens[start_idx][0]}\n")
+                            print(f"DEBUG SYNTAX: Expected string literal or Identifier at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a string literal or Identifier but found {tokens[start_idx][0]}\n")
                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
 
@@ -3995,7 +4013,27 @@ def parseSyntax(tokens, output_text):
             
             
             print(f"ignore")
-    else:        
+    else:
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+                        
             valid_syntax = False
             
 
