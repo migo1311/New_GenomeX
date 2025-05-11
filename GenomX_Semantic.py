@@ -1028,6 +1028,7 @@ class SemanticAnalyzer:
         
         if self.current_token is not None and self.current_token[0] == ';':
             self.next_token()  # Move past ';'
+            
     def clust_declaration(self):
         
         """Parse clust declaration"""
@@ -1194,12 +1195,20 @@ class SemanticAnalyzer:
                         # Store element
                         if element_type == 'dose':
                             try:
-                                row_elements.append(int(self.current_token[0]))
+                                # Handle ^ as negative sign for dose
+                                if self.current_token[0].startswith('^'):
+                                    row_elements.append(-int(self.current_token[0][1:]))
+                                else:
+                                    row_elements.append(int(self.current_token[0]))
                             except:
                                 pass
                         elif element_type == 'quant':
                             try:
-                                row_elements.append(float(self.current_token[0]))
+                                # Handle ^ as negative sign for quant
+                                if self.current_token[0].startswith('^'):
+                                    row_elements.append(-float(self.current_token[0][1:]))
+                                else:
+                                    row_elements.append(float(self.current_token[0]))
                             except:
                                 pass
                         elif element_type == 'seq':
@@ -1264,12 +1273,20 @@ class SemanticAnalyzer:
                     # Store element
                     if element_type == 'dose':
                         try:
-                            elements.append(int(self.current_token[0]))
+                            # Handle ^ as negative sign for dose
+                            if self.current_token[0].startswith('^'):
+                                elements.append(-int(self.current_token[0][1:]))
+                            else:
+                                elements.append(int(self.current_token[0]))
                         except:
                             pass
                     elif element_type == 'quant':
                         try:
-                            elements.append(float(self.current_token[0]))
+                            # Handle ^ as negative sign for quant
+                            if self.current_token[0].startswith('^'):
+                                elements.append(-float(self.current_token[0][1:]))
+                            else:
+                                elements.append(float(self.current_token[0]))
                         except:
                             pass
                     elif element_type == 'seq':
@@ -1791,9 +1808,22 @@ class SemanticAnalyzer:
             # Skip past the index expression
             self.next_token()  # Move past '['
             
+            # Before skipping the index expression, check if it's a splicing operation with negative float
+            # Look for splicing pattern: [: ^1.1] - splicing uses colons
+            is_splicing = False
+            if self.current_token is not None and self.current_token[0] == ':':
+                is_splicing = True
+                
             # Parse the index expression (skip until closing bracket)
             bracket_count = 1
             while self.current_token is not None and bracket_count > 0:
+                # Check for negative float value in splicing operation
+                if is_splicing and self.current_token is not None and self.current_token[1] == 'numlit':
+                    # Check if it's a negative float (starts with ^ and has a decimal point)
+                    value = self.current_token[0]
+                    if value.startswith('^') and '.' in value:
+                        self.errors.append("Semantic Error: negative quant values are not allowed in array splicing")
+                
                 if self.current_token[0] == '[':
                     bracket_count += 1
                 elif self.current_token[0] == ']':
@@ -2115,7 +2145,12 @@ class SemanticAnalyzer:
                             self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose {target_name}")
                         else:
                             try:
-                                numeric_value = int(token[0])
+                                # Handle ^ as negative sign for dose
+                                if token[0].startswith('^'):
+                                    numeric_value = -int(token[0][1:])
+                                else:
+                                    numeric_value = int(token[0])
+                                
                                 if not is_array_element:
                                     var_info['value'] = numeric_value
                             except:
@@ -2123,7 +2158,12 @@ class SemanticAnalyzer:
                                 self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose {target_name}")
                     elif check_type == 'quant':
                         try:
-                            numeric_value = float(token[0])
+                            # Handle ^ as negative sign for quant
+                            if token[0].startswith('^'):
+                                numeric_value = -float(token[0][1:])
+                            else:
+                                numeric_value = float(token[0])
+                                
                             if not is_array_element:
                                 var_info['value'] = numeric_value
                         except:
@@ -2277,7 +2317,11 @@ class SemanticAnalyzer:
                             #     valid_expression = False
                             #     break
                         elif token[1] == 'numlit':
-                            expr_str += token[0]
+                            # Handle ^ as negative sign in complex expressions
+                            if token[0].startswith('^'):
+                                expr_str += f"-{token[0][1:]}"
+                            else:
+                                expr_str += token[0]
                         elif token[0] in ['+', '-', '*', '/', '%', '(', ')']:
                             # Track division for type conversion
                             if token[0] == '/':
@@ -2465,12 +2509,22 @@ class SemanticAnalyzer:
                     elif token[1] == 'numlit':
                         if var_type == 'dose':
                             try:
-                                self.symbol_table[var_name]['value'] = int(token[0])
+                                # Handle ^ as negative sign
+                                if token[0].startswith('^'):
+                                    converted_value = -int(token[0][1:])
+                                else:
+                                    converted_value = int(token[0])
+                                self.symbol_table[var_name]['value'] = converted_value
                             except:
                                 self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose variable '{var_name}'")
                         elif var_type == 'quant':
                             try:
-                                self.symbol_table[var_name]['value'] = float(token[0])
+                                # Handle ^ as negative sign
+                                if token[0].startswith('^'):
+                                    converted_value = -float(token[0][1:])
+                                else:
+                                    converted_value = float(token[0])
+                                self.symbol_table[var_name]['value'] = converted_value
                             except:
                                 self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant variable '{var_name}'")
                         else:
@@ -2529,7 +2583,11 @@ class SemanticAnalyzer:
                                     valid_expression = False
                                     break
                             elif token[1] == 'numlit':
-                                expr_str += token[0]
+                                # Handle ^ as negative sign in complex expressions
+                                if token[0].startswith('^'):
+                                    expr_str += f"-{token[0][1:]}"
+                                else:
+                                    expr_str += token[0]
                             elif token[0] in ['+', '-', '*', '/', '%', '(', ')']:
                                 # Track division for type conversion
                                 if token[0] == '/':
@@ -2564,7 +2622,7 @@ class SemanticAnalyzer:
                                 except:
                                     pass
                     
-                    # Handle string concatenation
+                    # Handle string concatenation for seq type
                     elif var_type == 'seq':
                         result = ""
                         valid_expression = True
@@ -2787,7 +2845,13 @@ class SemanticAnalyzer:
                 # String concatenation is allowed
                 expr_type = 'seq'
             else:
-                self.errors.append(f"Semantic Error: Operator '{operator}' cannot be used with types {expr_type} and {term_type}")
+                if operator == '+' and ((expr_type in ['dose', 'quant'] and term_type == 'seq') or 
+                                       (expr_type == 'seq' and term_type in ['dose', 'quant'])):
+                    # Specific error for string/number concatenation
+                    self.errors.append(f"Semantic Error: Cannot concatenate {expr_type} and {term_type} directly. Use seq() function to convert numeric values to strings.")
+                else:
+                    # General error for other incompatible types
+                    self.errors.append(f"Semantic Error: Operator '{operator}' cannot be used with types {expr_type} and {term_type}")
         
         return expr_type
     
@@ -2877,8 +2941,22 @@ class SemanticAnalyzer:
                 
                 # Skip the array index expression
                 self.next_token()  # Move past '['
+                
+                # Before skipping the index expression, check if it's a splicing operation with negative float
+                # Look for splicing pattern: [: ^1.1] - splicing uses colons
+                is_splicing = False
+                if self.current_token is not None and self.current_token[0] == ':':
+                    is_splicing = True
+                    
                 bracket_count = 1
                 while self.current_token is not None and bracket_count > 0:
+                    # Check for negative float value in splicing operation
+                    if is_splicing and self.current_token is not None and self.current_token[1] == 'numlit':
+                        # Check if it's a negative float (starts with ^ and has a decimal point)
+                        value = self.current_token[0]
+                        if value.startswith('^') and '.' in value:
+                            self.errors.append("Semantic Error: negative quant values are not allowed in array splicing")
+                    
                     if self.current_token[0] == '[':
                         bracket_count += 1
                     elif self.current_token[0] == ']':
@@ -2906,6 +2984,7 @@ class SemanticAnalyzer:
             
         # Handle numeric literal
         elif self.current_token[1] == 'numlit':
+            # Check if it has a decimal point to determine type
             if '.' in self.current_token[0]:
                 factor_type = 'quant'
             else:
@@ -3284,6 +3363,118 @@ class SemanticAnalyzer:
                 self.errors.append("Semantic Error: Unexpected end of tokens in express statement")
                 return
             
+            # Check for array access with splicing using negative float
+            if self.current_token[1] == 'Identifier':
+                var_name = self.current_token[0]
+                # Check if variable exists
+                var_info = None
+                if var_name in self.symbol_table:
+                    var_info = self.symbol_table[var_name]
+                elif var_name in self.global_symbol_table:
+                    var_info = self.global_symbol_table[var_name]
+                
+                # Save current position
+                save_pos = self.token_index
+                
+                self.next_token()  # Move past identifier
+                
+                # Check if this is an array access
+                if self.current_token is not None and self.current_token[0] == '[':
+                    self.next_token()  # Move past '['
+                    
+                    # Check for splicing pattern with colon
+                    if self.current_token is not None and self.current_token[0] == ':':
+                        is_splicing = True
+                        self.next_token()  # Move past ':'
+                        
+                        # Look for negative float after colon
+                        while self.current_token is not None and self.current_token[0] != ']':
+                            if self.current_token is not None and self.current_token[1] == 'numlit':
+                                # Check if it's a negative float (starts with ^ and has a decimal point)
+                                value = self.current_token[0]
+                                if value.startswith('^') and '.' in value:
+                                    self.errors.append("Semantic Error: negative quant values are not allowed in array splicing")
+                            self.next_token()
+                    
+                    # Skip the rest of the array index expression
+                    bracket_count = 1
+                    while self.current_token is not None and bracket_count > 0:
+                        if self.current_token[0] == '[':
+                            bracket_count += 1
+                        elif self.current_token[0] == ']':
+                            bracket_count -= 1
+                        if bracket_count > 0:
+                            self.next_token()
+                    
+                    # Move past closing bracket
+                    if self.current_token is not None and self.current_token[0] == ']':
+                        self.next_token()
+                
+                # Restore position to process the value normally
+                self.token_index = save_pos
+                self.current_token = self.tokens[self.token_index - 1] if self.token_index > 0 else None
+            
+            # Check for expressions with + operator (concatenation)
+            # Save the current position to restore it after checking
+            save_position = self.token_index
+            
+            # Check if this is an expression with concatenation
+            first_operand_type = None
+            if self.current_token[1] == 'Identifier':
+                var_name = self.current_token[0]
+                # Check both scopes
+                if var_name in self.symbol_table:
+                    first_operand_type = self.symbol_table[var_name]['type']
+                elif var_name in self.global_symbol_table:
+                    first_operand_type = self.global_symbol_table[var_name]['type']
+            elif self.current_token[1] == 'numlit':
+                first_operand_type = 'dose' if '.' not in self.current_token[0] else 'quant'
+            elif self.current_token[1] == 'string literal':
+                first_operand_type = 'seq'
+                
+            # Move past the first operand
+            self.next_token()
+            
+            # Skip spaces
+            while self.current_token is not None and self.current_token[1] == 'space':
+                self.next_token()
+                
+            # Check if there's a + operator
+            if self.current_token is not None and self.current_token[0] == '+':
+                self.next_token()  # Move past +
+                
+                # Skip spaces
+                while self.current_token is not None and self.current_token[1] == 'space':
+                    self.next_token()
+                    
+                # Check second operand type
+                second_operand_type = None
+                if self.current_token[1] == 'Identifier':
+                    var_name = self.current_token[0]
+                    # Check both scopes
+                    if var_name in self.symbol_table:
+                        second_operand_type = self.symbol_table[var_name]['type']
+                    elif var_name in self.global_symbol_table:
+                        second_operand_type = self.global_symbol_table[var_name]['type']
+                elif self.current_token[1] == 'numlit':
+                    second_operand_type = 'dose' if '.' not in self.current_token[0] else 'quant'
+                elif self.current_token[1] == 'string literal':
+                    second_operand_type = 'seq'
+                elif self.current_token[1] == 'seq':
+                    # This is a seq() function call, which is allowed for conversion
+                    second_operand_type = 'seq'
+                
+                # Check if types are compatible for concatenation
+                if first_operand_type and second_operand_type:
+                    if (first_operand_type in ['dose', 'quant'] and second_operand_type == 'seq') or \
+                       (first_operand_type == 'seq' and second_operand_type in ['dose', 'quant']):
+                        # Error: Cannot directly concatenate numbers and strings
+                        self.errors.append(f"Semantic Error: Cannot concatenate {first_operand_type} and {second_operand_type} directly. Use seq() function to convert numeric values to strings.")
+            
+            # Restore position to process the value normally
+            self.token_index = save_position
+            self.current_token = self.tokens[self.token_index - 1] if self.token_index > 0 else None
+            
             # Process the current value
             if self.current_token[1] == 'Identifier':
                 var_name = self.current_token[0]
@@ -3374,31 +3565,78 @@ class SemanticAnalyzer:
                         if self.current_token is not None and self.current_token[0] == ')':
                             self.next_token()  # Move past ')'
                 else:
-                    # Handle function reference in express(Multiply) syntax
-                    # This is a reference to a function without calling it (displaying function info)
-                    if var_name in self.functions:
-                        # Check if the function returns multiple values
-                        if self.functions[var_name].get('multiple_returns', False):
-                            # Get all return types
-                            return_types = self.functions[var_name].get('return_types', [])
-                            return_types_str = ', '.join(return_types)
-                            param_count = len(self.functions[var_name].get('parameters', []))
-                            values_to_print.append(f"Function {var_name} (returns multiple values: {return_types_str}, takes {param_count} parameters)")
-                        else:
-                            # Just print the function information (single return)
-                            func_return_type = self.functions[var_name].get('return_type', 'unknown')
-                            param_count = len(self.functions[var_name].get('parameters', []))
-                            values_to_print.append(f"Function {var_name} (returns {func_return_type}, takes {param_count} parameters)")
-                    # Regular variable - check in current scope first, then global
-                    elif var_name not in self.symbol_table and var_name not in self.global_symbol_table:
-                        self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement is not declared in current scope")
-                        values_to_print.append(f"undefined({var_name})")
-                    else:
-                        # Get the value from the symbol table for printing
+                    # Check for array access after identifier
+                    if self.current_token is not None and self.current_token[0] == '[':
+                        # This is an array access
+                        var_type = None
                         if var_name in self.symbol_table:
-                            values_to_print.append(str(self.symbol_table[var_name]['value']))
+                            var_type = self.symbol_table[var_name]['type']
+                        elif var_name in self.global_symbol_table:
+                            var_type = self.global_symbol_table[var_name]['type']
+                            
+                        # Process array access notation
+                        if var_type and (var_type.startswith('array_') or var_type.startswith('clust_') or var_type.startswith('2d_array_')):
+                            self.next_token()  # Move past '['
+                            
+                            # Check for splicing with colon
+                            if self.current_token is not None and self.current_token[0] == ':':
+                                self.next_token()  # Move past ':'
+                                
+                                # Check for negative float value in splicing
+                                if self.current_token is not None and self.current_token[1] == 'numlit':
+                                    value = self.current_token[0]
+                                    if value.startswith('^') and '.' in value:
+                                        self.errors.append("Semantic Error: negative quant values are not allowed in array splicing")
+                            
+                            # Skip to the end of the array access
+                            bracket_count = 1
+                            while self.current_token is not None and bracket_count > 0:
+                                if self.current_token[0] == '[':
+                                    bracket_count += 1
+                                elif self.current_token[0] == ']':
+                                    bracket_count -= 1
+                                self.next_token()
+                            
+                            # Add to values_to_print
+                            values_to_print.append(f"{var_name}[...] (array element)")
                         else:
-                            values_to_print.append(str(self.global_symbol_table[var_name]['value']))
+                            # Add to values_to_print anyway
+                            values_to_print.append(f"{var_name}[...]")
+                            
+                            # Skip to the end of the invalid array access
+                            bracket_count = 1
+                            while self.current_token is not None and bracket_count > 0:
+                                if self.current_token[0] == '[':
+                                    bracket_count += 1
+                                elif self.current_token[0] == ']':
+                                    bracket_count -= 1
+                                self.next_token()
+                    else:
+                        # Handle function reference in express(Multiply) syntax
+                        # This is a reference to a function without calling it (displaying function info)
+                        if var_name in self.functions:
+                            # Check if the function returns multiple values
+                            if self.functions[var_name].get('multiple_returns', False):
+                                # Get all return types
+                                return_types = self.functions[var_name].get('return_types', [])
+                                return_types_str = ', '.join(return_types)
+                                param_count = len(self.functions[var_name].get('parameters', []))
+                                values_to_print.append(f"Function {var_name} (returns multiple values: {return_types_str}, takes {param_count} parameters)")
+                            else:
+                                # Just print the function information (single return)
+                                func_return_type = self.functions[var_name].get('return_type', 'unknown')
+                                param_count = len(self.functions[var_name].get('parameters', []))
+                                values_to_print.append(f"Function {var_name} (returns {func_return_type}, takes {param_count} parameters)")
+                        # Regular variable - check in current scope first, then global
+                        elif var_name not in self.symbol_table and var_name not in self.global_symbol_table:
+                            self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement is not declared in current scope")
+                            values_to_print.append(f"undefined({var_name})")
+                        else:
+                            # Get the value from the symbol table for printing
+                            if var_name in self.symbol_table:
+                                values_to_print.append(str(self.symbol_table[var_name]['value']))
+                            else:
+                                values_to_print.append(str(self.global_symbol_table[var_name]['value']))
             elif self.current_token[1] == 'string literal':
                 # For string literals, strip quotes and handle escape sequences
                 string_val = self.current_token[0].strip('"\'')
