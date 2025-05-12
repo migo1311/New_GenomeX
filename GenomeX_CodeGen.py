@@ -545,6 +545,7 @@ class GenomeXCodeGenerator:
             expression_parts = []
             paren_count = 1  # we've already seen one (
             dose_variables = []  # Track dose variables found in the expression
+            allele_variables = []  # Track allele variables found in the expression
             
             while index < len(self.tokens) and paren_count > 0:
                 token, token_type = self.tokens[index]
@@ -557,8 +558,11 @@ class GenomeXCodeGenerator:
                         break
                 
                 # Track if this token is a dose variable identifier
-                if token_type == "Identifier" and token in self.variable_types and self.variable_types[token] == "dose":
-                    dose_variables.append(token)
+                if token_type == "Identifier" and token in self.variable_types:
+                    if self.variable_types[token] == "dose":
+                        dose_variables.append(token)
+                    elif self.variable_types[token] == "allele":
+                        allele_variables.append(token)
                 
                 # Normalize numeric literals
                 if token_type == "numlit":
@@ -652,7 +656,49 @@ class GenomeXCodeGenerator:
             # Replace "Table [ I ] + \" \"" with "Table[I] + \" \"" for 1D arrays
             processed_expression = re.sub(r'([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*([A-Za-z0-9_]+)\s*\]\s*\+\s*\"\s*\"', r'\1[\2] + " "', processed_expression)
             
-            self.add_line(f"print({processed_expression})")
+            # Wrap allele variables with bool()
+            for allele_var in allele_variables:
+                # Handle simple variable case
+                processed_expression = re.sub(
+                    fr'\b{allele_var}\b(?!\s*\()',  # Match variable name not followed by (
+                    f'bool({allele_var})',
+                    processed_expression
+                )
+                
+                # Handle array access cases
+                processed_expression = re.sub(
+                    fr'{allele_var}\s*\[\s*([A-Za-z0-9_]+)\s*\]',
+                    f'bool({allele_var}[\\1])',
+                    processed_expression
+                )
+                
+                processed_expression = re.sub(
+                    fr'{allele_var}\s*\[\s*([A-Za-z0-9_]+)\s*\]\s*\[\s*([A-Za-z0-9_]+)\s*\]',
+                    f'bool({allele_var}[\\1][\\2])',
+                    processed_expression
+                )
+            
+            # Add a function to convert True/False to dom/rec and handle negative numbers
+            self.add_line("def convert_bool_to_domrec(value):")
+            self.indentation += 1
+            self.add_line("if value is True:")
+            self.indentation += 1
+            self.add_line("return 'dom'")
+            self.indentation -= 1
+            self.add_line("elif value is False:")
+            self.indentation += 1
+            self.add_line("return 'rec'")
+            self.indentation -= 1
+            self.add_line("elif isinstance(value, (int, float)) and value < 0:")
+            self.indentation += 1
+            self.add_line("return f'^{abs(value)}'")
+            self.indentation -= 1
+            self.add_line("return value")
+            self.indentation -= 1
+            self.add_line("")
+            
+            # Use the conversion function in the print statement
+            self.add_line(f"print(convert_bool_to_domrec({processed_expression}))")
 
         return index
 
@@ -1410,6 +1456,15 @@ class GenomeXCodeGenerator:
                                 token = f"T{token}" if token == "True" else f"F{token}"
                             value += token
                             print(f"[DEBUG] Appended identifier to expression: '{token}'")
+                        elif token == "||":
+                            value += " or "
+                            print(f"[DEBUG] Replaced '||' with 'or'")
+                        elif token == "&&":
+                            value += " and "
+                            print(f"[DEBUG] Replaced '&&' with 'and'")
+                        elif token == "!":
+                            value += "not "
+                            print(f"[DEBUG] Replaced '!' with 'not'")
                         else:
                             value += token
                             print(f"[DEBUG] Appended token to expression: '{token}'")
