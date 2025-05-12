@@ -1337,7 +1337,7 @@ class SemanticAnalyzer:
                 
             try:
                 # Handle variable declarations
-                if self.current_token[0] in ['_L'] or self.current_token[1] in ['dose', 'quant', 'seq', 'allele']:
+                if self.current_token[0] in ['_L'] or self.current_token[1] in ['dose', 'quant', 'seq', ' ']:
                     self.declaration()
                 # Handle if statements
                 elif self.current_token[1] == 'if':
@@ -2130,6 +2130,22 @@ class SemanticAnalyzer:
                             var_info['value'] = assigned_value
                         # For array elements, we only validate the type but don't update the actual value
                         # as that would require tracking array indices at runtime
+                    elif check_type == 'allele':
+                        # Allow assigning any type to allele based on truthiness
+                        if assigned_type == 'seq':
+                            # For strings, empty is falsy (rec), non-empty is truthy (dom)
+                            boolean_val = (assigned_value != "")
+                            if not is_array_element:
+                                var_info['value'] = boolean_val
+                        elif assigned_type in ['dose', 'quant']:
+                            # For numeric types, 0 is falsy (rec), non-zero is truthy (dom)
+                            boolean_val = (assigned_value != 0)
+                            if not is_array_element:
+                                var_info['value'] = boolean_val
+                        else:
+                            # For other types, use the value directly if it's a boolean
+                            if not is_array_element:
+                                var_info['value'] = bool(assigned_value)
                     else:
                         target_name = f"{var_name}[index]" if is_array_element else var_name
                         self.errors.append(f"Semantic Error: Cannot assign {assigned_type} variable to {check_type} {target_name}")
@@ -2169,6 +2185,21 @@ class SemanticAnalyzer:
                         except:
                             target_name = f"{var_name}[index]" if is_array_element else var_name
                             self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant {target_name}")
+                    elif check_type == 'allele':
+                        # Allow numeric values for allele type, non-zero is dom (true)
+                        try:
+                            # Handle ^ as negative sign for numeric values
+                            if token[0].startswith('^'):
+                                numeric_value = -float(token[0][1:])
+                            else:
+                                numeric_value = float(token[0])
+                            
+                            boolean_val = (numeric_value != 0)
+                            if not is_array_element:
+                                var_info['value'] = boolean_val
+                        except:
+                            target_name = f"{var_name}[index]" if is_array_element else var_name
+                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to allele value for {target_name}")
                     else:
                         target_name = f"{var_name}[index]" if is_array_element else var_name
                         self.errors.append(f"Semantic Error: Cannot assign numeric value to {check_type} {target_name}")
@@ -2181,21 +2212,15 @@ class SemanticAnalyzer:
                         string_val = token[0].strip('"\'')
                         if not is_array_element:
                             var_info['value'] = string_val
-                    else:
-                        target_name = f"{var_name}[index]" if is_array_element else var_name
-                        self.errors.append(f"Semantic Error: Cannot assign string value to {check_type} {target_name}")
-
-                
-                elif token[0] in ['dom', 'rec']:
-                    check_type = array_element_type if is_array_element else var_type
-                    
-                    if check_type == 'allele':
-                        boolean_val = (token[0] == 'dom')
+                    elif check_type == 'allele':
+                        # Allow string values for allele type, non-empty is dom (true)
+                        string_val = token[0].strip('"\'')
+                        boolean_val = (string_val != "")
                         if not is_array_element:
                             var_info['value'] = boolean_val
                     else:
                         target_name = f"{var_name}[index]" if is_array_element else var_name
-                        self.errors.append(f"Semantic Error: Cannot assign boolean value to {check_type} {target_name}")
+                        self.errors.append(f"Semantic Error: Cannot assign string value to {check_type} {target_name}")
             
             # Handle complex expressions (with operators)
             elif len(expression_tokens) > 1:
@@ -2500,6 +2525,17 @@ class SemanticAnalyzer:
                             # Check type compatibility
                             if var_type == assigned_type or (var_type == 'quant' and assigned_type == 'dose'):
                                 self.symbol_table[var_name]['value'] = assigned_value
+                            elif var_type == 'allele':
+                                # Allow any type to be converted to allele based on truthiness
+                                if assigned_type == 'seq':
+                                    # For strings, empty string is falsy (rec), non-empty is truthy (dom)
+                                    self.symbol_table[var_name]['value'] = (assigned_value != "")
+                                elif assigned_type in ['dose', 'quant']:
+                                    # For numeric types, 0 is falsy (rec), non-zero is truthy (dom)
+                                    self.symbol_table[var_name]['value'] = (assigned_value != 0)
+                                else:
+                                    # For other types, use the value directly if it's a boolean
+                                    self.symbol_table[var_name]['value'] = bool(assigned_value)
                             else:
                                 self.errors.append(f"Semantic Error: Cannot assign {assigned_type} variable to {var_type} variable '{var_name}'")
                         else:
@@ -2527,6 +2563,18 @@ class SemanticAnalyzer:
                                 self.symbol_table[var_name]['value'] = converted_value
                             except:
                                 self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant variable '{var_name}'")
+                        elif var_type == 'allele':
+                            # Allow numeric values for allele type, non-zero is dom (true)
+                            try:
+                                # Handle ^ as negative sign
+                                if token[0].startswith('^'):
+                                    numeric_value = -float(token[0][1:])
+                                else:
+                                    numeric_value = float(token[0])
+                                # Convert to boolean - any non-zero value is dom (true)
+                                self.symbol_table[var_name]['value'] = (numeric_value != 0)
+                            except:
+                                self.errors.append(f"Semantic Error: Cannot convert {token[0]} to allele value for variable '{var_name}'")
                         else:
                             self.errors.append(f"Semantic Error: Cannot assign numeric value to {var_type} variable '{var_name}'")
                     
@@ -2535,6 +2583,12 @@ class SemanticAnalyzer:
                             # Remove quotation marks
                             string_val = token[0].strip('"\'')
                             self.symbol_table[var_name]['value'] = string_val
+                        elif var_type == 'allele':
+                            # Allow string values for allele type, non-empty string is dom (true)
+                            string_val = token[0].strip('"\'')
+                            self.symbol_table[var_name]['value'] = (string_val != "")
+                        else:
+                            self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} variable '{var_name}'")
 
                     
                     elif token[0] in ['dom', 'rec']:
@@ -2682,28 +2736,26 @@ class SemanticAnalyzer:
         else:
             self.next_token()  # Move past '('
             
-            # Skip the entire condition - we'll just count parentheses to find the matching ')'
-            parenthesis_count = 1
-            while self.current_token is not None and parenthesis_count > 0:
-                if self.current_token[0] == '(':
-                    parenthesis_count += 1
-                elif self.current_token[0] == ')':
-                    parenthesis_count -= 1
-                self.next_token()
-                
+            # Instead of skipping, actually parse the condition to check variable usage
+            self.parse_condition()
+            
+            # Check for closing parenthesis - parse_condition might not consume it
+            if self.current_token is not None and self.current_token[0] == ')':
+                self.next_token()  # Move past ')'
+            
             # Skip spaces after the closing parenthesis
             while self.current_token is not None and self.current_token[1] == 'space':
                 self.next_token()
         
         # Check for opening brace
-        if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after if condition, found {self.current_token}")
-            return
+        # if self.current_token is None or self.current_token[0] != '{':
+        #     self.errors.append(f"Semantic Error: Expected '{{' after if condition, found {self.current_token}")
+        #     return
             
         self.next_token()  # Move past '{'
         
-        # Skip the entire if block body
-        self.skip_to_end_of_block()
+        # Instead of skipping the block, parse the body statements to check variable declarations
+        self.parse_body_statements()
         
         # Now we're at the token after the closing brace
         # Check for elif or else
@@ -2731,15 +2783,13 @@ class SemanticAnalyzer:
         else:
             self.next_token()  # Move past '('
             
-            # Skip the entire condition - we'll just count parentheses to find the matching ')'
-            parenthesis_count = 1
-            while self.current_token is not None and parenthesis_count > 0:
-                if self.current_token[0] == '(':
-                    parenthesis_count += 1
-                elif self.current_token[0] == ')':
-                    parenthesis_count -= 1
-                self.next_token()
-                
+            # Instead of skipping, actually parse the condition to check variable usage
+            self.parse_condition()
+            
+            # Check for closing parenthesis - parse_condition might not consume it
+            if self.current_token is not None and self.current_token[0] == ')':
+                self.next_token()  # Move past ')'
+            
             # Skip spaces after the closing parenthesis
             while self.current_token is not None and self.current_token[1] == 'space':
                 self.next_token()
@@ -2751,8 +2801,8 @@ class SemanticAnalyzer:
             
         self.next_token()  # Move past '{'
         
-        # Skip the entire elif block body
-        self.skip_to_end_of_block()
+        # Instead of skipping the block, parse the body statements to check variable declarations
+        self.parse_body_statements()
         
         # Now we're at the token after the closing brace
         # Check for another elif or else
