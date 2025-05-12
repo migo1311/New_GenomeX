@@ -2743,6 +2743,8 @@ class SemanticAnalyzer:
             if self.current_token is not None and self.current_token[0] == ')':
                 self.next_token()  # Move past ')'
             
+    # push error
+    
             # Skip spaces after the closing parenthesis
             while self.current_token is not None and self.current_token[1] == 'space':
                 self.next_token()
