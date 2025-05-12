@@ -321,38 +321,50 @@ class GenomeXCodeGenerator:
         index += 1
 
         # Skip spaces and newline tokens (\n)
-        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][1] == "newline" or self.tokens[index][0] == "\n"):
+        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+            if self.tokens[index][0] == "\n":
+                print("Ignoring newline token '\\n'")
             index += 1
 
         # Skip 'perms' token if present
         if index < len(self.tokens) and self.tokens[index][1] == "perms":
+            print("Ignoring 'perms' keyword in local declaration")
             index += 1
-            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][1] == "newline" or self.tokens[index][0] == "\n"):
+            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                if self.tokens[index][0] == "\n":
+                    print("Ignoring newline token '\\n'")
                 index += 1
 
         # Check for optional 'clust' (array)
         is_array = False
         if index < len(self.tokens) and self.tokens[index][1] == "clust":
+            print("Detected 'clust' keyword (array)")
             is_array = True
             index += 1
-            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][1] == "newline" or self.tokens[index][0] == "\n"):
+            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                if self.tokens[index][0] == "\n":
+                    print("Ignoring newline token '\\n'")
                 index += 1
 
         # Get variable type
         if index < len(self.tokens) and self.tokens[index][1] in ["dose", "quant", "seq", "allele"]:
             var_type = self.tokens[index][1]
+            print(f"Detected variable type: {var_type}")
             index += 1
 
             while index < len(self.tokens):
-                # Skip spaces and newlines before variable name
-                while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][1] == "newline" or self.tokens[index][0] == "\n"):
+                while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                    if self.tokens[index][0] == "\n":
+                        print("Ignoring newline token '\\n'")
                     index += 1
 
                 # Variable name
                 if index < len(self.tokens) and self.tokens[index][1] == "Identifier":
                     var_name = self.tokens[index][0]
+                    # Handle True/False identifier renaming
                     if var_name in ["True", "False"]:
                         var_name = f"T{var_name}" if var_name == "True" else f"F{var_name}"
+                    print(f"Detected variable name: {var_name}")
                     self.variable_types[var_name] = var_type
                     index += 1
 
@@ -363,27 +375,38 @@ class GenomeXCodeGenerator:
                     # Check for [size] (array declaration)
                     array_dimensions = 0
                     while current_is_array and index < len(self.tokens):
-                        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][1] == "newline" or self.tokens[index][0] == "\n"):
+                        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                            if self.tokens[index][0] == "\n":
+                                print("Ignoring newline token '\\n'")
                             index += 1
                         if index < len(self.tokens) and self.tokens[index][0] == "[":
                             array_dimensions += 1
                             index += 1
-                            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][1] == "newline" or self.tokens[index][0] == "\n"):
+                            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                                if self.tokens[index][0] == "\n":
+                                    print("Ignoring newline token '\\n'")
                                 index += 1
                             # Get size (numlit, identifier, dom, rec)
                             size_value = None
                             if index < len(self.tokens) and self.tokens[index][1] in ("numlit", "Identifier"):
                                 if self.tokens[index][1] == "numlit":
+                                    # Normalize the number (remove leading/trailing zeros)
                                     size_value = self._normalize_number(self.tokens[index][0])
                                 else:
                                     size_value = self.tokens[index][0]
+                                print(f"Detected array size token: {size_value}")
                                 index += 1
                             elif index < len(self.tokens) and self.tokens[index][0] in ("dom", "rec"):
                                 size_value = "True" if self.tokens[index][0] == "dom" else "False"
+                                print(f"Detected array size token (boolean): {size_value}")
                                 index += 1
+                            
                             if size_value is not None:
                                 array_sizes.append(size_value)
-                            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][1] == "newline" or self.tokens[index][0] == "\n"):
+                            
+                            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                                if self.tokens[index][0] == "\n":
+                                    print("Ignoring newline token '\\n'")
                                 index += 1
                             if index < len(self.tokens) and self.tokens[index][0] == "]":
                                 index += 1
@@ -394,70 +417,193 @@ class GenomeXCodeGenerator:
 
                     if array_dimensions == 2:
                         is_2d_array = True
+                        print("Detected 2D array")
                     elif array_dimensions == 1:
-                        pass
+                        print("Detected 1D array")
 
-                    # Skip spaces/newlines before assignment
-                    while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][1] == "newline" or self.tokens[index][0] == "\n"):
+                    while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                        if self.tokens[index][0] == "\n":
+                            print("Ignoring newline token '\\n'")
                         index += 1
 
                     # Assignment
                     if index < len(self.tokens) and self.tokens[index][0] == "=":
+                        print(f"Detected assignment '=' for {var_name}")
                         index += 1
-                        # Skip spaces/newlines before value
-                        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][1] == "newline" or self.tokens[index][0] == "\n"):
+                        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                            if self.tokens[index][0] == "\n":
+                                print("Ignoring newline token '\\n'")
                             index += 1
+
                         elements = []
                         if current_is_array:
-                            # Only handle array initialization if array_sizes is valid
-                            if is_2d_array and len(array_sizes) >= 2 and all(s is not None for s in array_sizes[:2]):
-                                # ... existing 2D array initializer ...
-                                pass
-                            elif array_dimensions == 1 and len(array_sizes) >= 1 and array_sizes[0] is not None:
-                                # ... existing 1D array initializer ...
-                                pass
+                            if is_2d_array:
+                                print(f"Processing 2D array initializer for {var_name}")
+                                while index < len(self.tokens) and self.tokens[index][0] != "}":
+                                    row = []
+                                    if index < len(self.tokens) and self.tokens[index][0] == "{":
+                                        index += 1
+                                        print("Detected opening brace '{' for row")
+                                        while index < len(self.tokens) and self.tokens[index][0] != "}":
+                                            if self.tokens[index][1] == "numlit":
+                                                # Normalize the number (remove leading/trailing zeros)
+                                                normalized_value = self._normalize_number(self.tokens[index][0])
+                                                row.append(normalized_value)
+                                                print(f"Added normalized numeric literal to row: {normalized_value} (from {self.tokens[index][0]})")
+                                            elif self.tokens[index][0] == "dom":
+                                                row.append("True")
+                                                print("Added boolean True to array")
+                                            elif self.tokens[index][0] == "rec":
+                                                row.append("False")
+                                                print("Added boolean False to array")
+                                            elif self.tokens[index][1] == "string literal":
+                                                row.append(self.tokens[index][0])
+                                                print(f"Added string literal to row: {self.tokens[index][0]}")
+                                            elif self.tokens[index][1] == "Identifier":
+                                                # Handle True/False identifier renaming
+                                                identifier = self.tokens[index][0]
+                                                if identifier in ["True", "False"]:
+                                                    identifier = f"T{identifier}" if identifier == "True" else f"F{identifier}"
+                                                row.append(identifier)
+                                                print(f"Added identifier to row: {identifier}")
+                                            index += 1
+                                            if index < len(self.tokens) and self.tokens[index][0] == ",":
+                                                index += 1
+                                            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                                                if self.tokens[index][0] == "\n":
+                                                    print("Ignoring newline token '\\n'")
+                                                index += 1
+                                        if index < len(self.tokens) and self.tokens[index][0] == "}":
+                                            print("Detected closing brace '}' for row")
+                                            index += 1
+                                        elements.append(f"[{', '.join(row)}]")
+                                        print(f"Completed row: {row}")
+
+                                        if index < len(self.tokens) and self.tokens[index][0] == ",":
+                                            index += 1
+                                        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                                            if self.tokens[index][0] == "\n":
+                                                print("Ignoring newline token '\\n'")
+                                            index += 1
+                                if index < len(self.tokens) and self.tokens[index][0] == "}":
+                                    print("Detected closing brace '}' for 2D array")
+                                    index += 1
+
+                                self.add_line(f"{var_name} = [{', '.join(elements)}]")
+                                print(f"Generated 2D array assignment: {var_name} = [{', '.join(elements)}]")
                             else:
-                                # No valid size, treat as empty array
-                                self.add_line(f"{var_name} = []")
+                                print(f"Processing 1D array initializer for {var_name}")
+                                if index < len(self.tokens) and self.tokens[index][0] == "{":
+                                    index += 1
+                                    while index < len(self.tokens) and self.tokens[index][0] != "}":
+                                        if self.tokens[index][1] == "numlit":
+                                            # Normalize the number (remove leading/trailing zeros)
+                                            normalized_value = self._normalize_number(self.tokens[index][0])
+                                            elements.append(normalized_value)
+                                            print(f"Added normalized numeric literal to array: {normalized_value} (from {self.tokens[index][0]})")
+                                        elif self.tokens[index][0] == "dom":
+                                            elements.append("True")
+                                            print("Added boolean True to array")
+                                        elif self.tokens[index][0] == "rec":
+                                            elements.append("False")
+                                            print("Added boolean False to array")
+                                        elif self.tokens[index][1] == "string literal":
+                                            elements.append(self.tokens[index][0])
+                                            print(f"Added string literal to array: {self.tokens[index][0]}")
+                                        elif self.tokens[index][1] == "Identifier":
+                                            # Handle True/False identifier renaming
+                                            identifier = self.tokens[index][0]
+                                            if identifier in ["True", "False"]:
+                                                identifier = f"T{identifier}" if identifier == "True" else f"F{identifier}"
+                                            elements.append(identifier)
+                                            print(f"Added identifier to array: {identifier}")
+                                        index += 1
+                                        if index < len(self.tokens) and self.tokens[index][0] == ",":
+                                            index += 1
+                                        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                                            if self.tokens[index][0] == "\n":
+                                                print("Ignoring newline token '\\n'")
+                                            index += 1
+                                    if index < len(self.tokens) and self.tokens[index][0] == "}":
+                                        print("Detected closing brace '}' for 1D array")
+                                        index += 1
+                                    self.add_line(f"{var_name} = [{', '.join(elements)}]")
+                                    print(f"Generated 1D array assignment: {var_name} = [{', '.join(elements)}]")
                         else:
                             value, index = self.extract_value(index)
                             self.add_line(f"{var_name} = {value}")
+                            print(f"Assigned scalar value to {var_name}: {value}")
                     else:
                         # Default initialization
                         default_value = self.get_default_value(var_type)
                         if current_is_array:
-                            # Only handle array initialization if array_sizes is valid
-                            if is_2d_array and len(array_sizes) >= 2 and all(s is not None for s in array_sizes[:2]):
-                                try:
+                            if array_sizes:  # If array size is specified
+                                if is_2d_array and len(array_sizes) >= 2:
+                                    # Initialize 2D array with default values
+                                    # Ensure array sizes are properly converted to integers
                                     rows = int(array_sizes[0])
                                     cols = int(array_sizes[1])
-                                except Exception:
-                                    self.add_line(f"{var_name} = []")
-                                    break
-                                # ... existing 2D array default initialization ...
-                                pass
-                            elif array_dimensions == 1 and len(array_sizes) >= 1 and array_sizes[0] is not None:
-                                try:
+                                    
+                                    # Create default value based on type
+                                    if var_type == "dose":
+                                        default_element = "0"
+                                    elif var_type == "quant":
+                                        default_element = "0.0"
+                                    elif var_type == "seq":
+                                        default_element = '""'
+                                    elif var_type == "allele":
+                                        default_element = "False"
+                                    else:
+                                        default_element = "None"
+                                    
+                                    # Create the 2D array initialization
+                                    rows_list = []
+                                    for _ in range(rows):
+                                        cols_list = [default_element] * cols
+                                        rows_list.append(f"[{', '.join(cols_list)}]")
+                                    
+                                    self.add_line(f"{var_name} = [{', '.join(rows_list)}]")
+                                    print(f"Initialized 2D array {var_name} with size [{rows}][{cols}] and default value {default_element}")
+                                else:
+                                    # Initialize 1D array with default values
+                                    # Ensure array size is properly converted to integer
                                     size = int(array_sizes[0])
-                                except Exception:
-                                    self.add_line(f"{var_name} = []")
-                                    break
-                                # ... existing 1D array default initialization ...
-                                pass
+                                    
+                                    # Create default value based on type
+                                    if var_type == "dose":
+                                        default_element = "0"
+                                    elif var_type == "quant":
+                                        default_element = "0.0"
+                                    elif var_type == "seq":
+                                        default_element = '""'
+                                    elif var_type == "allele":
+                                        default_element = "False"
+                                    else:
+                                        default_element = "None"
+                                    
+                                    # Create the 1D array initialization
+                                    elements = [default_element] * size
+                                    self.add_line(f"{var_name} = [{', '.join(elements)}]")
+                                    print(f"Initialized 1D array {var_name} with size {size} and default value {default_element}")
                             else:
-                                # No valid size, treat as empty array
+                                # No size specified, initialize as empty array
                                 self.add_line(f"{var_name} = []")
+                                print(f"Default initialized empty array {var_name}")
                         else:
                             self.add_line(f"{var_name} = {default_value}")
+                            print(f"Default initialized scalar {var_name} = {default_value}")
 
-                    # Skip spaces/newlines before semicolon
-                    while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][1] == "newline" or self.tokens[index][0] == "\n"):
+                    while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                        if self.tokens[index][0] == "\n":
+                            print("Ignoring newline token '\\n'")
                         index += 1
 
                     if index < len(self.tokens) and self.tokens[index][0] == ";":
+                        print("Detected semicolon ';' end of statement")
                         index += 1
                         break
                     elif index < len(self.tokens) and self.tokens[index][0] == ",":
+                        print("Detected comma ',' more variables declared")
                         index += 1
                         continue
                     else:
@@ -581,6 +727,13 @@ class GenomeXCodeGenerator:
             
             # Replace "seq ( Table [ I ] )" with "str(Table[I])" for 1D arrays
             processed_expression = re.sub(r'seq\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*([A-Za-z0-9_]+)\s*\]\s*\)', r'str(\1[\2])', processed_expression)
+            
+            # Handle string concatenation with array access
+            # Replace "Table [ I ] [ J ] + \" \"" with "Table[I][J] + \" \""
+            processed_expression = re.sub(r'([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*([A-Za-z0-9_]+)\s*\]\s*\[\s*([A-Za-z0-9_]+)\s*\]\s*\+\s*\"\s*\"', r'\1[\2][\3] + " "', processed_expression)
+            
+            # Replace "Table [ I ] + \" \"" with "Table[I] + \" \"" for 1D arrays
+            processed_expression = re.sub(r'([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*([A-Za-z0-9_]+)\s*\]\s*\+\s*\"\s*\"', r'\1[\2] + " "', processed_expression)
             
             self.add_line(f"print({processed_expression})")
 
