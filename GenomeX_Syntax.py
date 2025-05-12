@@ -3736,66 +3736,132 @@ def parseSyntax(tokens, output_text):
         @staticmethod
         def express_array_value(tokens, start_idx, identifier, dimension=0):
             print(f"<express_array_value> dimension={dimension}")
-            
+
             if start_idx >= len(tokens) or tokens[start_idx][0] != '[':
                 print(f"Error: Expected '[' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 return False, None, start_idx
-            
+
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
-            
-            default_value = None
-            if start_idx < len(tokens):
-                if tokens[start_idx][1] == 'numlit' or tokens[start_idx][1] == 'Identifier' :
-                    default_value = tokens[start_idx][0]
-                    print(f"Found default value: {default_value}")
-                    start_idx += 1
-                    start_idx = skip_spaces(tokens, start_idx)
-                elif tokens[start_idx][0] != ':' and tokens[start_idx][0] != ']':
-                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    print(f"Error: Expected number literal as default value, but found {tokens[start_idx]}")
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a numlit or Identifier but found {tokens[start_idx][0]}\n")
-                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                    return False, None, start_idx
-            
-            splice_operations = []
-            if start_idx < len(tokens) and tokens[start_idx][0] == ':':
-                print("Found ':', parsing as express_array_splice")
-                is_valid, splice_ops, next_idx = express.express_array_splice(tokens, start_idx)
-                if not is_valid:
-                    print("Failed to parse express_array_splice")
-                    return False, None, start_idx
+
+            start_index = None
+            end_index = None
+            step_value = None
+            has_slice = False
+
+            # Special case: Check for a slice that starts with ':' or '::' directly
+            if start_idx < len(tokens) and tokens[start_idx][0] in (':', '::'):
+                has_slice = True
                 
-                splice_operations = splice_ops
-                start_idx = next_idx
+                # Handle the case where the token is '::'
+                if tokens[start_idx][0] == '::':
+                    print("Found '::' token for start of slice with step")
+                    start_idx += 1  # Skip the '::' token
+                    start_idx = skip_spaces(tokens, start_idx)
+                    
+                    # Parse step value if present
+                    if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
+                        step_value = tokens[start_idx][0]
+                        print(f"Found step value: {step_value}")
+                        start_idx += 1
+                        start_idx = skip_spaces(tokens, start_idx)
+                
+                # Handle the case where the token is ':'
+                else:
+                    start_idx += 1  # Skip the ':' token
+                    start_idx = skip_spaces(tokens, start_idx)
+                    
+                    # Parse end index if present
+                    if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
+                        end_index = tokens[start_idx][0]
+                        print(f"Found end index: {end_index}")
+                        start_idx += 1
+                        start_idx = skip_spaces(tokens, start_idx)
+                    
+                    # Check if the next token is another colon (for step)
+                    if start_idx < len(tokens) and tokens[start_idx][0] == ':':
+                        start_idx += 1
+                        start_idx = skip_spaces(tokens, start_idx)
+                        
+                        # Parse step value if present
+                        if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
+                            step_value = tokens[start_idx][0]
+                            print(f"Found step value: {step_value}")
+                            start_idx += 1
+                            start_idx = skip_spaces(tokens, start_idx)
+                    else:
+                    # Parse end index if present
+                        if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
+                            end_index = tokens[start_idx][0]
+                            print(f"Found end index: {end_index}")
+                            start_idx += 1
+                            start_idx = skip_spaces(tokens, start_idx)
 
-            tail_value = None
-            if start_idx < len(tokens):
-                if tokens[start_idx][1] == 'numlit':
-                    tail_value = tokens[start_idx][0]
-                    print(f"Found tail value: {tail_value}")
+                            # Check for second colon for step
+                            if start_idx < len(tokens) and tokens[start_idx][0] == ':':
+                                start_idx += 1
+                                start_idx = skip_spaces(tokens, start_idx)
+
+                                # Parse step value if present
+                                if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
+                                    step_value = tokens[start_idx][0]
+                                    print(f"Found step value: {step_value}")
+                                    start_idx += 1
+                                    start_idx = skip_spaces(tokens, start_idx)
+            else:
+                # Standard case: starts with an index or is empty
+                # Parse start index (could be empty)
+                if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
+                    start_index = tokens[start_idx][0]
+                    print(f"Found start index: {start_index}")
                     start_idx += 1
                     start_idx = skip_spaces(tokens, start_idx)
-                elif tokens[start_idx][0] != ']':
-                    print(f"Error: Expected number literal as tail value, but found {tokens[start_idx]}")
-                    return False, None, start_idx
 
+                # Check if it's a slice
+                if start_idx < len(tokens) and tokens[start_idx][0] == ':':
+                    has_slice = True
+                    start_idx += 1
+                    start_idx = skip_spaces(tokens, start_idx)
+
+                    # Parse end index
+                    if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
+                        end_index = tokens[start_idx][0]
+                        print(f"Found end index: {end_index}")
+                        start_idx += 1
+                        start_idx = skip_spaces(tokens, start_idx)
+
+                    # Check for second colon for step
+                    if start_idx < len(tokens) and tokens[start_idx][0] == ':':
+                        start_idx += 1
+                        start_idx = skip_spaces(tokens, start_idx)
+
+                        if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
+                            step_value = tokens[start_idx][0]
+                            print(f"Found step value: {step_value}")
+                            start_idx += 1
+                            start_idx = skip_spaces(tokens, start_idx)
+
+            # Check for closing bracket
             if start_idx >= len(tokens) or tokens[start_idx][0] != ']':
                 print(f"Error: Expected ']' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected ']' but found {tokens[start_idx][0]}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None, start_idx
-            
+
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
-            
-            # Build the array expression for the current dimension
-            array_expr = f"{identifier if dimension == 0 else ''}[{default_value if default_value else ''}"
-            
-            for splice in splice_operations:
-                array_expr += splice
 
-            if tail_value:
-                array_expr += f"{tail_value}"
-            
+            # Build the array access expression
+            array_expr = f"{identifier if dimension == 0 else ''}["
+            if has_slice:
+                array_expr += (start_index if start_index is not None else '') + ":"
+                array_expr += (end_index if end_index is not None else '')
+                if step_value is not None:
+                    array_expr += f":{step_value}"
+            else:
+                if start_index is not None:
+                    array_expr += start_index
             array_expr += "]"
 
             print(f"Constructed array expression: {array_expr}")
@@ -3806,44 +3872,47 @@ def parseSyntax(tokens, output_text):
         def express_array_splice(tokens, start_idx):
             print("<express_array_splice>")
             
-            
-            if start_idx >= len(tokens) or tokens[start_idx][0] != ':':
-                print(f"Error: Expected ':' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            # Check for first colon
+            if start_idx >= len(tokens) or tokens[start_idx][0] not in (':', '::'):
+                print(f"Error: Expected ':' or '::' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 return False, [], start_idx
             
-            
+            # Skip the first colon
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
             
-            
+            # Initialize with just the first colon
             splice_ops = [':']
             
+            # Check for double colon (step indicator)
+            if start_idx < len(tokens) and tokens[start_idx][0] == ':':
+                print("Found double colon '::' for step value")
+                # Skip the second colon
+                start_idx += 1
+                start_idx = skip_spaces(tokens, start_idx)
+                
+                # Check for step value
+                step_value = None
+                if start_idx < len(tokens) and (tokens[start_idx][1] == 'numlit' or tokens[start_idx][1] == 'Identifier'):
+                    step_value = tokens[start_idx][0]
+                    print(f"Found step value: {step_value}")
+                    start_idx += 1
+                    start_idx = skip_spaces(tokens, start_idx)
+                
+                # Add the step part to splice operations
+                splice_ops.append(f":{step_value if step_value else ''}")
+                
+                return True, splice_ops, start_idx
             
-            is_valid, tail_splices, next_idx = express.express_array_splice_tail(tokens, start_idx)
-            if not is_valid:
-                print("Failed to parse express_array_splice_tail")
-                return False, [], start_idx
-            
-            
-            splice_ops.extend(tail_splices)
-            
-            return True, splice_ops, next_idx
-
+            # If no double colon, check for end value in the next token
+            # This is handled in express_array_value, so we just return the current state
+            return True, splice_ops, start_idx
         @staticmethod
         def express_array_splice_tail(tokens, start_idx):
             print("<express_array_splice_tail>")
             
-            
-            if start_idx < len(tokens) and tokens[start_idx][0] == ':':
-                print("Found ':', parsing as another express_array_splice")
-                is_valid, splice_ops, next_idx = express.express_array_splice(tokens, start_idx)
-                if not is_valid:
-                    print("Failed to parse nested express_array_splice")
-                    return False, [], start_idx
-                
-                return True, splice_ops, next_idx
-            
-            
+            # This method is no longer needed since we handle the double colon directly in express_array_splice
+            # Keeping it for compatibility but it just returns empty
             print("No further splices")
             return True, [], start_idx
 
@@ -4009,31 +4078,9 @@ def parseSyntax(tokens, output_text):
             output_text.insert(tk.END, f"Expected global declaration, user defined or main function but found {first_token}\n")
 
 
-    if valid_line:
-            
-            
+    if valid_line:     
             print(f"ignore")
     else:
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-                        
             valid_syntax = False
             
 
