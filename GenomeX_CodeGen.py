@@ -53,69 +53,6 @@ class GenomeXCodeGenerator:
                 i += 1
                 
         return "\n".join(self.python_code)
-        
-    def process_global_declaration(self, index):
-        """Process a local variable declaration"""
-        # Skip _L token
-        index += 1
-
-        # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
-            index += 1
-
-        # Get variable type
-        if index < len(self.tokens) and self.tokens[index][1] in ["dose", "quant", "seq", "allele"]:
-            var_type = self.tokens[index][1]
-            index += 1
-
-            while index < len(self.tokens):
-                # Skip spaces
-                while index < len(self.tokens) and self.tokens[index][1] == "space":
-                    index += 1
-
-                # Check for variable name
-                if index < len(self.tokens) and self.tokens[index][1] == "Identifier":
-                    var_name = self.tokens[index][0]
-                    self.variable_types[var_name] = var_type  # Track variable type
-                    index += 1
-
-                    # Skip spaces
-                    while index < len(self.tokens) and self.tokens[index][1] == "space":
-                        index += 1
-
-                    # Check for assignment
-                    if index < len(self.tokens) and self.tokens[index][0] == "=":
-                        index += 1
-                        # Skip spaces
-                        while index < len(self.tokens) and self.tokens[index][1] == "space":
-                            index += 1
-
-                        # Get the value
-                        value, index = self.extract_value(index)
-                        self.add_line(f"{var_name} = {value}")
-                    else:
-                        # Default initialization based on type
-                        default_value = self.get_default_value(var_type)
-                        self.add_line(f"{var_name} = {default_value}")
-                
-                # Skip spaces
-                while index < len(self.tokens) and self.tokens[index][1] == "space":
-                    index += 1
-
-                # If semicolon, end of declaration
-                if index < len(self.tokens) and self.tokens[index][0] == ";":
-                    index += 1
-                    break
-
-                # If comma, move to next variable
-                elif index < len(self.tokens) and self.tokens[index][0] == ",":
-                    index += 1
-                    continue
-                else:
-                    # Unexpected token
-                    break
-
-        return index
 
     def process_function(self, index):
         """Process a function declaration"""
@@ -123,7 +60,7 @@ class GenomeXCodeGenerator:
         index += 1
         
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
             
         is_main = False
@@ -139,7 +76,7 @@ class GenomeXCodeGenerator:
             index += 1  # Skip void keyword
             
             # Skip spaces
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
                 
             # Get function name after void
@@ -152,7 +89,7 @@ class GenomeXCodeGenerator:
             index += 1
             
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
             
         # Check for opening parenthesis
@@ -174,7 +111,7 @@ class GenomeXCodeGenerator:
                     index += 1
                     
                     # Skip spaces
-                    while index < len(self.tokens) and self.tokens[index][1] == "space":
+                    while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                         index += 1
                     
                     # Get parameter name
@@ -197,7 +134,7 @@ class GenomeXCodeGenerator:
             self.current_scope = function_name
             
             # Skip spaces
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
                 
             # Check for opening brace
@@ -284,7 +221,7 @@ class GenomeXCodeGenerator:
                 index += 1
                 
                 # Skip spaces
-                while index < len(self.tokens) and self.tokens[index][1] == "space":
+                while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                     index += 1
                     
                 # Check for semicolon
@@ -299,7 +236,7 @@ class GenomeXCodeGenerator:
                 index += 1
                 
                 # Skip spaces
-                while index < len(self.tokens) and self.tokens[index][1] == "space":
+                while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                     index += 1
                     
                 # Check for semicolon
@@ -320,19 +257,15 @@ class GenomeXCodeGenerator:
         # Skip _L token
         index += 1
 
-        # Skip spaces and newline tokens (\n)
-        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
-            if self.tokens[index][0] == "\n":
-                print("Ignoring newline token '\\n'")
+        # Skip spaces and newline tokens
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
 
         # Skip 'perms' token if present
         if index < len(self.tokens) and self.tokens[index][1] == "perms":
             print("Ignoring 'perms' keyword in local declaration")
             index += 1
-            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
-                if self.tokens[index][0] == "\n":
-                    print("Ignoring newline token '\\n'")
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
 
         # Check for optional 'clust' (array)
@@ -341,9 +274,7 @@ class GenomeXCodeGenerator:
             print("Detected 'clust' keyword (array)")
             is_array = True
             index += 1
-            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
-                if self.tokens[index][0] == "\n":
-                    print("Ignoring newline token '\\n'")
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
 
         # Get variable type
@@ -353,9 +284,7 @@ class GenomeXCodeGenerator:
             index += 1
 
             while index < len(self.tokens):
-                while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
-                    if self.tokens[index][0] == "\n":
-                        print("Ignoring newline token '\\n'")
+                while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                     index += 1
 
                 # Variable name
@@ -375,16 +304,12 @@ class GenomeXCodeGenerator:
                     # Check for [size] (array declaration)
                     array_dimensions = 0
                     while current_is_array and index < len(self.tokens):
-                        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
-                            if self.tokens[index][0] == "\n":
-                                print("Ignoring newline token '\\n'")
+                        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                             index += 1
                         if index < len(self.tokens) and self.tokens[index][0] == "[":
                             array_dimensions += 1
                             index += 1
-                            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
-                                if self.tokens[index][0] == "\n":
-                                    print("Ignoring newline token '\\n'")
+                            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                                 index += 1
                             # Get size (numlit, identifier, dom, rec)
                             size_value = None
@@ -404,9 +329,7 @@ class GenomeXCodeGenerator:
                             if size_value is not None:
                                 array_sizes.append(size_value)
                             
-                            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
-                                if self.tokens[index][0] == "\n":
-                                    print("Ignoring newline token '\\n'")
+                            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                                 index += 1
                             if index < len(self.tokens) and self.tokens[index][0] == "]":
                                 index += 1
@@ -421,18 +344,14 @@ class GenomeXCodeGenerator:
                     elif array_dimensions == 1:
                         print("Detected 1D array")
 
-                    while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
-                        if self.tokens[index][0] == "\n":
-                            print("Ignoring newline token '\\n'")
+                    while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                         index += 1
 
                     # Assignment
                     if index < len(self.tokens) and self.tokens[index][0] == "=":
                         print(f"Detected assignment '=' for {var_name}")
                         index += 1
-                        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
-                            if self.tokens[index][0] == "\n":
-                                print("Ignoring newline token '\\n'")
+                        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                             index += 1
 
                         elements = []
@@ -469,7 +388,7 @@ class GenomeXCodeGenerator:
                                             index += 1
                                             if index < len(self.tokens) and self.tokens[index][0] == ",":
                                                 index += 1
-                                            while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                                            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                                                 if self.tokens[index][0] == "\n":
                                                     print("Ignoring newline token '\\n'")
                                                 index += 1
@@ -481,7 +400,7 @@ class GenomeXCodeGenerator:
 
                                         if index < len(self.tokens) and self.tokens[index][0] == ",":
                                             index += 1
-                                        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                                        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                                             if self.tokens[index][0] == "\n":
                                                 print("Ignoring newline token '\\n'")
                                             index += 1
@@ -520,7 +439,7 @@ class GenomeXCodeGenerator:
                                         index += 1
                                         if index < len(self.tokens) and self.tokens[index][0] == ",":
                                             index += 1
-                                        while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
+                                        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                                             if self.tokens[index][0] == "\n":
                                                 print("Ignoring newline token '\\n'")
                                             index += 1
@@ -593,31 +512,29 @@ class GenomeXCodeGenerator:
                             self.add_line(f"{var_name} = {default_value}")
                             print(f"Default initialized scalar {var_name} = {default_value}")
 
-                    while index < len(self.tokens) and (self.tokens[index][1] == "space" or self.tokens[index][0] == "\n"):
-                        if self.tokens[index][0] == "\n":
-                            print("Ignoring newline token '\\n'")
+                    while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                         index += 1
 
                     if index < len(self.tokens) and self.tokens[index][0] == ";":
                         print("Detected semicolon ';' end of statement")
                         index += 1
+                        # Always break after semicolon, even for single scalar declarations
                         break
                     elif index < len(self.tokens) and self.tokens[index][0] == ",":
                         print("Detected comma ',' more variables declared")
                         index += 1
                         continue
                     else:
+                        # If neither semicolon nor comma, break to avoid infinite loop
                         break
 
             return index
-
-
-        
+   
     def process_express_statement(self, index):
         index += 1  # Skip 'express'
 
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
 
         # Check for opening parenthesis
@@ -752,7 +669,7 @@ class GenomeXCodeGenerator:
         print(f"[DEBUG] Skipped 'if', now at index {index}")
 
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             print(f"[DEBUG] Skipping space at index {index}")
             index += 1
 
@@ -768,7 +685,7 @@ class GenomeXCodeGenerator:
         print(f"[DEBUG] Increased indentation to {self.indentation}")
 
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             print(f"[DEBUG] Skipping space at index {index} before brace")
             index += 1
 
@@ -817,7 +734,7 @@ class GenomeXCodeGenerator:
         print(f"[DEBUG] Skipped 'if', now at index {index}")
 
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             print(f"[DEBUG] Skipping space at index {index}")
             index += 1
 
@@ -833,7 +750,7 @@ class GenomeXCodeGenerator:
         print(f"[DEBUG] Increased indentation to {self.indentation}")
 
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             print(f"[DEBUG] Skipping space at index {index} before brace")
             index += 1
 
@@ -882,7 +799,7 @@ class GenomeXCodeGenerator:
         print(f"[DEBUG] Skipped 'if', now at index {index}")
 
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             print(f"[DEBUG] Skipping space at index {index}")
             index += 1
 
@@ -894,7 +811,7 @@ class GenomeXCodeGenerator:
         print(f"[DEBUG] Increased indentation to {self.indentation}")
 
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             print(f"[DEBUG] Skipping space at index {index} before brace")
             index += 1
 
@@ -938,7 +855,7 @@ class GenomeXCodeGenerator:
         index += 1
 
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
 
         # Extract condition
@@ -953,7 +870,7 @@ class GenomeXCodeGenerator:
         self.indentation += 1
 
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
 
         # Expect opening brace
@@ -995,7 +912,7 @@ class GenomeXCodeGenerator:
         index += 1  # Skip 'for'
         #print(f"DEBUG: After skipping 'for', index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
 
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
         
         #print(f"DEBUG: After skipping spaces, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
@@ -1004,7 +921,7 @@ class GenomeXCodeGenerator:
             index += 1
             #print(f"DEBUG: After opening parenthesis, index: {index}, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
 
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
 
             # Initialization - Handle both standard case and "type var = value" case
@@ -1017,7 +934,7 @@ class GenomeXCodeGenerator:
                 type_name = self.tokens[index][0]
                 index += 1  # Skip type name
                 
-                while index < len(self.tokens) and self.tokens[index][1] == "space":
+                while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                     index += 1
                     
                 if index < len(self.tokens) and self.tokens[index][1] == "Identifier":
@@ -1025,13 +942,14 @@ class GenomeXCodeGenerator:
                     #print(f"DEBUG: Found init_var with type: {type_name} {init_var}")
                     index += 1
 
-                    while index < len(self.tokens) and self.tokens[index][1] == "space":
+                    while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                         index += 1
 
                     if index < len(self.tokens) and self.tokens[index][0] == "=":
                         index += 1
 
-                        while index < len(self.tokens) and self.tokens[index][1] == "space":
+                        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
+
                             index += 1
 
                         # Get the numeric value
@@ -1049,13 +967,14 @@ class GenomeXCodeGenerator:
                 #print(f"DEBUG: Found init_var: {init_var}")
                 index += 1
 
-                while index < len(self.tokens) and self.tokens[index][1] == "space":
+                while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
+
                     index += 1
 
                 if index < len(self.tokens) and self.tokens[index][0] == "=":
                     index += 1
 
-                    while index < len(self.tokens) and self.tokens[index][1] == "space":
+                    while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                         index += 1
 
                     init_value, index = self.extract_value(index)
@@ -1070,7 +989,7 @@ class GenomeXCodeGenerator:
                 index += 1
 
 
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
 
             # Condition
@@ -1103,7 +1022,7 @@ class GenomeXCodeGenerator:
                 index += 1
 
 
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
 
             # Increment
@@ -1119,7 +1038,7 @@ class GenomeXCodeGenerator:
                 #print(f"DEBUG: Found increment_var: {increment_var}")
                 index += 1
 
-                while index < len(self.tokens) and self.tokens[index][1] == "space":
+                while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                     index += 1
 
                 # Check for increment operator (++, --, +=, -=)
@@ -1136,7 +1055,7 @@ class GenomeXCodeGenerator:
                         #print(f"DEBUG: Found increment_op: {increment_op}")
                         index += 1
 
-                        while index < len(self.tokens) and self.tokens[index][1] == "space":
+                        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                             index += 1
 
                         increment_value, index = self.extract_value(index)
@@ -1226,7 +1145,7 @@ class GenomeXCodeGenerator:
 
             self.indentation += 1
 
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
 
             #print(f"DEBUG: Looking for opening brace, token: {self.tokens[index] if index < len(self.tokens) else 'END'}")
@@ -1270,7 +1189,7 @@ class GenomeXCodeGenerator:
         index += 1
         
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
         
         # Extract expression until semicolon
@@ -1307,7 +1226,7 @@ class GenomeXCodeGenerator:
         # Check for array indexing for the variable being assigned to
         array_indices = []
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             print(f"[DEBUG] Skipping space at index {index}")
             index += 1
 
@@ -1317,7 +1236,7 @@ class GenomeXCodeGenerator:
             index += 1  # Move past '['
             
             # Skip spaces
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 print(f"[DEBUG] Skipping space in array index at {index}")
                 index += 1
                 
@@ -1338,7 +1257,7 @@ class GenomeXCodeGenerator:
                 break
 
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             print(f"[DEBUG] Skipping space at index {index}")
             index += 1
 
@@ -1349,7 +1268,7 @@ class GenomeXCodeGenerator:
             index += 1
 
             # Skip spaces
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 print(f"[DEBUG] Skipping space at index {index} after assignment operator")
                 index += 1
 
@@ -1361,7 +1280,7 @@ class GenomeXCodeGenerator:
                 index += 1
                 
                 # Skip spaces
-                while index < len(self.tokens) and self.tokens[index][1] == "space":
+                while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                     index += 1
                     
                 # Extract the prompt string
@@ -1370,7 +1289,7 @@ class GenomeXCodeGenerator:
                     index += 1  # Skip '('
                     
                     # Skip spaces
-                    while index < len(self.tokens) and self.tokens[index][1] == "space":
+                    while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                         index += 1
                     
                     # Get the string literal
@@ -1380,7 +1299,7 @@ class GenomeXCodeGenerator:
                         index += 1
                     
                     # Skip spaces
-                    while index < len(self.tokens) and self.tokens[index][1] == "space":
+                    while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                         index += 1
                     
                     # Skip closing parenthesis
@@ -1523,7 +1442,7 @@ class GenomeXCodeGenerator:
         index += 1  # skip 'stimuli'
 
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
 
         prompt = ""
@@ -1533,7 +1452,7 @@ class GenomeXCodeGenerator:
             index += 1  # skip '('
 
             # Skip spaces
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
 
             if index < len(self.tokens) and self.tokens[index][1] == "string literal":
@@ -1541,7 +1460,7 @@ class GenomeXCodeGenerator:
                 index += 1
 
             # Skip spaces
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
 
             if index < len(self.tokens) and self.tokens[index][0] == ")":
@@ -1632,7 +1551,7 @@ class GenomeXCodeGenerator:
         left_value, index = self.extract_value(index)
         
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
             
         # Check for operators
@@ -1641,7 +1560,7 @@ class GenomeXCodeGenerator:
             index += 1
             
             # Skip spaces
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
                 
             right_value, index = self.extract_expression(index)
@@ -1681,7 +1600,7 @@ class GenomeXCodeGenerator:
         statement_tokens = []
         
         # Skip spaces at the beginning
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
 
         # Extract tokens until we find a semicolon
@@ -1814,7 +1733,7 @@ class GenomeXCodeGenerator:
         left_value, index = self.extract_value(index)
         
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
             
         # Check for comparison operators
@@ -1823,7 +1742,7 @@ class GenomeXCodeGenerator:
             index += 1
             
             # Skip spaces
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
                 
             right_value, index = self.extract_value(index)
@@ -1851,7 +1770,7 @@ class GenomeXCodeGenerator:
         index += 1
 
         # Skip spaces
-        while index < len(self.tokens) and self.tokens[index][1] == "space":
+        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
             index += 1
 
         # Get function name
@@ -1861,7 +1780,7 @@ class GenomeXCodeGenerator:
             index += 1
 
             # Skip spaces
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
 
             has_params = False
@@ -1876,7 +1795,7 @@ class GenomeXCodeGenerator:
                 args = []
                 
                 # Skip initial spaces
-                while index < len(self.tokens) and self.tokens[index][1] == "space":
+                while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                     index += 1
                     
                 # Handle empty argument list
@@ -1891,7 +1810,7 @@ class GenomeXCodeGenerator:
                     # Process additional arguments
                     while index < len(self.tokens) and self.tokens[index][0] != ")":
                         # Skip spaces
-                        while index < len(self.tokens) and self.tokens[index][1] == "space":
+                        while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                             index += 1
                         
                         # Check for comma
@@ -1899,7 +1818,7 @@ class GenomeXCodeGenerator:
                             index += 1  # Skip comma
                             
                             # Skip spaces after comma
-                            while index < len(self.tokens) and self.tokens[index][1] == "space":
+                            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                                 index += 1
                             
                             # Extract the next argument
@@ -1915,7 +1834,7 @@ class GenomeXCodeGenerator:
                     index += 1
                     
                 # Skip spaces after closing parenthesis
-                while index < len(self.tokens) and self.tokens[index][1] == "space":
+                while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                     index += 1
 
             # Check if this is an assignment (func GCD(A, B) = G or func name = other)
@@ -1923,7 +1842,7 @@ class GenomeXCodeGenerator:
                 index += 1  # Skip over equals sign
                 
                 # Skip spaces after equals
-                while index < len(self.tokens) and self.tokens[index][1] == "space":
+                while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                     index += 1
                     
                 # Get assignment target
@@ -1950,7 +1869,7 @@ class GenomeXCodeGenerator:
                 self.add_line(f"{function_name}")
                 
             # Skip spaces after everything
-            while index < len(self.tokens) and self.tokens[index][1] == "space":
+            while index < len(self.tokens) and self.tokens[index][1] in ["space", "newline"]:
                 index += 1
                 
             # Skip semicolon if present
