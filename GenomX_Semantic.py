@@ -35,7 +35,6 @@ class SemanticAnalyzer:
         else:
             self.current_token = None
         print(f"Moved to next token: {self.current_token}") 
-
     def parse(self):
         while self.current_token is not None:
             if self.current_token[1] == '_G':
@@ -48,9 +47,7 @@ class SemanticAnalyzer:
                 self.next_token()
             else:
                 # self.errors.append(f"Semantic Error: Unexpected token: {self.current_token[1]}")
-                self.next_token()  # Skip invalid token to continue analysis
-
-    
+                self.next_token()  # Skip invalid token to continue analysis   
     def act_gene_function(self):
         
         print(f"Current token: {self.current_token}")  # Debug print
@@ -190,17 +187,21 @@ class SemanticAnalyzer:
                 return_type = 'void'
                 return_types = []
             else:
-                # For functions with parameters, each parameter type can be a return type
-                if parameters:
-                    # Use the type of the first parameter as primary return type (for compatibility)
-                    return_type = parameters[0]['type']
-                    # Create a list of all parameter types as potential return types
-                    return_types = [param['type'] for param in parameters]
+                # Changed this logic to not force return types to match parameter types
+                # Allow functions to return any valid type, particularly allele (dom/rec) values
+                # regardless of parameter types
+                if function_name == 'gene':
+                    # Gene function has special handling
+                    return_type = 'gene'
+                    return_types = ['gene']
                 else:
-                    # For functions with no parameters, use 'regular' as the return type
-                    return_type = 'regular'
-                    return_types = [return_type]
-                    
+                    # Default to allele type for functions that might return dom/rec
+                    # This allows functions to return boolean values regardless of parameter type
+                    return_type = 'allele'
+                    return_types = ['allele']
+                    # Keep track of parameters for validation purposes, but don't restrict return types
+                    # to parameter types
+            
             # Support for multiple return values
             self.functions[function_name] = {
                 'return_type': return_type,                # Primary return type (first parameter) for backward compatibility
@@ -232,7 +233,6 @@ class SemanticAnalyzer:
             return
         self.next_token()  # Move past '}'
         print(f"Finished parsing function: {function_name}")
-
     # Parameter Passing
     def check_parameter_passing(self, function_name, args):
         """Check if arguments match function parameters"""
@@ -616,6 +616,11 @@ class SemanticAnalyzer:
                     self.next_token()
             return
             
+        # Special case: empty prod statement (implied return none/default)
+        if self.current_token is not None and self.current_token[0] == ';':
+            self.next_token()  # Move past ';'
+            return
+            
         # Parse the expression being returned
         value_type = self.parse_expression()
         
@@ -675,16 +680,22 @@ class SemanticAnalyzer:
                         break
         else:
             # Single return value - check against the function's primary return type
-            if value_type != return_type:
+            # Special case for allele (dom/rec) values - these can be returned from any function type
+            if value_type == 'allele' or self.current_token is not None and self.current_token[0] in ['dom', 'rec']:
+                # Allow dom/rec to be returned from any function
+                pass
+            elif value_type != return_type:
                 # Allow dose to be returned from a quant function
                 if not (return_type == 'quant' and value_type == 'dose'):
-                    self.errors.append(f"Semantic Error: Function returns {return_type} but got {value_type}")
+                    # Skip error for dom/rec returns
+                    if not (self.current_token is not None and self.current_token[0] in ['dom', 'rec']):
+                        self.errors.append(f"Semantic Error: Function returns {return_type} but got {value_type}")
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';': 
             self.errors.append(f"Semantic Error: Expected ';' after prod statement, found {self.current_token}")
             return
-            # GIT PUSH
+            
         self.next_token()  # Move past ';'
     def function_call(self):
         """Parse function call statement starting with 'func'"""
@@ -1574,7 +1585,6 @@ class SemanticAnalyzer:
             return
             
         self.next_token()  # Move past ';'
-
     
     def function_declaration(self):
         """Parse function declaration"""
@@ -2744,7 +2754,7 @@ class SemanticAnalyzer:
                 self.next_token()  # Move past ')'
             
     # push error
-    
+
             # Skip spaces after the closing parenthesis
             while self.current_token is not None and self.current_token[1] == 'space':
                 self.next_token()
@@ -4046,10 +4056,6 @@ def get_variable_info(symbol_table, var_name):
     return None
 
 def check_type_compatibility_for_operation(left_type, right_type, operator):
-    """
-    Check if an operation between two types is valid
-    This can be used by other components without instantiating the full analyzer
-    """
     # Handle array types if needed
     if left_type.startswith('array_'):
         base_type = left_type[6:]  # Extract base type from array_<type>
@@ -4079,9 +4085,7 @@ def check_type_compatibility_for_operation(left_type, right_type, operator):
     return False
 
 def generate_error_report(errors):
-    """
-    Generate a formatted error report from a list of semantic errors
-    """
+   
     if not errors:
         return "No semantic errors found."
         
@@ -4093,10 +4097,7 @@ def generate_error_report(errors):
     return report
 
 def analyze_expression_value(expr, symbol_table):
-    """
-    Attempt to determine the value of an expression at compile time
-    For use in constant folding and optimization
-    """
+    
     if isinstance(expr, tuple) and len(expr) == 3:
         left, op, right = expr
         left_val = analyze_expression_value(left, symbol_table)
@@ -4128,7 +4129,7 @@ def analyze_expression_value(expr, symbol_table):
 # Support for common type utility functions
 
 def get_default_value_for_type(type_name):
-    """Return the default value for a given type"""
+
     if type_name == 'dose':
         return 0
     elif type_name == 'quant':
@@ -4142,11 +4143,11 @@ def get_default_value_for_type(type_name):
     return None  # Unknown type
 
 def is_numeric_type(type_name):
-    """Check if a type is numeric (dose or quant)"""
+
     return type_name in ['dose', 'quant']
 
 def can_convert_between_types(from_type, to_type):
-    """Check if a value can be converted from one type to another"""
+    
     # Same type - always convertible
     if from_type == to_type:
         return True
@@ -4168,10 +4169,7 @@ def can_convert_between_types(from_type, to_type):
 
 
 def parseSemantic(tokens, semantic_panel):
-    """
-    Run semantic analysis on tokens and display results in the semantic panel
-    Returns True if no semantic errors, False otherwise
-    """
+    
     # Clear previous output
     semantic_panel.delete("1.0", tk.END)
     
@@ -4219,7 +4217,6 @@ def parseSemantic(tokens, semantic_panel):
         return False
 
 def display_results(analyzer, semantic_panel):
-    """Display the results of semantic analysis in a simple, clean format"""
     # Clear the panel first
     semantic_panel.delete('1.0', tk.END)
     
