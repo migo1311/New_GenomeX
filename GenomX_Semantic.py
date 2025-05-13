@@ -1909,9 +1909,73 @@ class SemanticAnalyzer:
                 expression_tokens.append(self.current_token)
                 self.next_token()
             
+            # Check for mixing allele and numeric types in expressions
+            if len(expression_tokens) > 1:
+                # Check if the target variable is a numeric type
+                target_type = array_element_type if is_array_element else var_type
+                if target_type in ['dose', 'quant']:
+                    # Look for allele type in the expression
+                    has_allele_operand = False
+                    for token in expression_tokens:
+                        if token[0] in ['dom', 'rec']:
+                            has_allele_operand = True
+                            break
+                        elif token[1] == 'Identifier':
+                            token_var_name = token[0]
+                            token_var_info = None
+                            if token_var_name in self.symbol_table:
+                                token_var_info = self.symbol_table[token_var_name]
+                            elif token_var_name in self.global_symbol_table:
+                                token_var_info = self.global_symbol_table[token_var_name]
+                            
+                            if token_var_info and token_var_info['type'] == 'allele':
+                                has_allele_operand = True
+                                break
+                    
+                    if has_allele_operand:
+                        for i, token in enumerate(expression_tokens):
+                            if token[0] in ['+', '-', '*', '/', '%'] and i > 0 and i < len(expression_tokens) - 1:
+                                # We found an operator between operands, one of which is allele
+                                self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{token[0]}' with allele and numeric types. Allele type cannot be used in arithmetic operations.")
+                                break
+            
             # For compound assignments (+=, -=, etc.), check if types are compatible with the operation
             if is_compound_assignment:
                 check_type = array_element_type if is_array_element else var_type
+                
+                # Check if we're trying to do arithmetic with allele type
+                if check_type == 'allele' and compound_operator in ['+', '-', '*', '/', '%']:
+                    target_name = f"{var_name}[index]" if is_array_element else var_name
+                    self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{compound_operator}=' on allele type variable '{target_name}'")
+                    if self.current_token is not None and self.current_token[0] == ';':
+                        self.next_token()  # Move past semicolon
+                    return
+                
+                # Check for allele operands in compound assignments with numeric variables
+                if check_type in ['dose', 'quant']:
+                    has_allele_operand = False
+                    for token in expression_tokens:
+                        if token[0] in ['dom', 'rec']:
+                            has_allele_operand = True
+                            break
+                        elif token[1] == 'Identifier':
+                            token_var_name = token[0]
+                            token_var_info = None
+                            if token_var_name in self.symbol_table:
+                                token_var_info = self.symbol_table[token_var_name]
+                            elif token_var_name in self.global_symbol_table:
+                                token_var_info = self.global_symbol_table[token_var_name]
+                            
+                            if token_var_info and token_var_info['type'] == 'allele':
+                                has_allele_operand = True
+                                break
+                    
+                    if has_allele_operand:
+                        target_name = f"{var_name}[index]" if is_array_element else var_name
+                        self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{compound_operator}=' with allele and {check_type} types. Allele type cannot be used in arithmetic operations.")
+                        if self.current_token is not None and self.current_token[0] == ';':
+                            self.next_token()  # Move past semicolon
+                        return
                 
                 # Check for division by zero in /= operation
                 if compound_operator == '/' and len(expression_tokens) == 1:
@@ -2906,6 +2970,11 @@ class SemanticAnalyzer:
             elif expr_type == 'seq' and term_type == 'seq' and operator == '+':
                 # String concatenation is allowed
                 expr_type = 'seq'
+            # Check for allele with numeric type
+            elif (expr_type == 'allele' and term_type in ['dose', 'quant']) or (expr_type in ['dose', 'quant'] and term_type == 'allele'):
+                self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{operator}' with types {expr_type} and {term_type}. Allele type cannot be used in arithmetic operations.")
+                # Default to numeric type to allow parsing to continue
+                expr_type = 'dose' if expr_type in ['dose', 'allele'] and term_type in ['dose', 'allele'] else 'quant'
             else:
                 if operator == '+' and ((expr_type in ['dose', 'quant'] and term_type == 'seq') or 
                                        (expr_type == 'seq' and term_type in ['dose', 'quant'])):
@@ -2952,6 +3021,11 @@ class SemanticAnalyzer:
                         self.current_token[0] in self.symbol_table and 
                         self.symbol_table[self.current_token[0]]['value'] == 0):
                         self.errors.append(f"Semantic Error: Division by zero detected with operator '{operator}'")
+            # Check for allele with numeric type
+            elif (factor_type == 'allele' and next_factor_type in ['dose', 'quant']) or (factor_type in ['dose', 'quant'] and next_factor_type == 'allele'):
+                self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{operator}' with types {factor_type} and {next_factor_type}. Allele type cannot be used in arithmetic operations.")
+                # Default to numeric type to allow parsing to continue
+                factor_type = 'dose' if factor_type in ['dose', 'allele'] and next_factor_type in ['dose', 'allele'] else 'quant'
             else:
                 self.errors.append(f"Semantic Error: Operator '{operator}' can only be used with numeric types, not {factor_type} and {next_factor_type}")
         
@@ -3493,6 +3567,8 @@ class SemanticAnalyzer:
                 first_operand_type = 'dose' if '.' not in self.current_token[0] else 'quant'
             elif self.current_token[1] == 'string literal':
                 first_operand_type = 'seq'
+            elif self.current_token[0] in ['dom', 'rec']:
+                first_operand_type = 'allele'
                 
             # Move past the first operand
             self.next_token()
@@ -3522,14 +3598,21 @@ class SemanticAnalyzer:
                     second_operand_type = 'dose' if '.' not in self.current_token[0] else 'quant'
                 elif self.current_token[1] == 'string literal':
                     second_operand_type = 'seq'
+                elif self.current_token[0] in ['dom', 'rec']:
+                    second_operand_type = 'allele'
                 elif self.current_token[1] == 'seq':
                     # This is a seq() function call, which is allowed for conversion
                     second_operand_type = 'seq'
                 
                 # Check if types are compatible for concatenation
                 if first_operand_type and second_operand_type:
-                    if (first_operand_type in ['dose', 'quant'] and second_operand_type == 'seq') or \
-                       (first_operand_type == 'seq' and second_operand_type in ['dose', 'quant']):
+                    # Check for incompatible types with strings
+                    if ((first_operand_type == 'seq' and second_operand_type in ['allele']) or
+                        (first_operand_type in ['allele'] and second_operand_type == 'seq')):
+                        # Error: Cannot directly concatenate booleans and strings
+                        self.errors.append(f"Semantic Error: Cannot concatenate {first_operand_type} and {second_operand_type} directly. Use seq() function to convert boolean values to strings.")
+                    elif ((first_operand_type in ['dose', 'quant'] and second_operand_type == 'seq') or
+                       (first_operand_type == 'seq' and second_operand_type in ['dose', 'quant'])):
                         # Error: Cannot directly concatenate numbers and strings
                         self.errors.append(f"Semantic Error: Cannot concatenate {first_operand_type} and {second_operand_type} directly. Use seq() function to convert numeric values to strings.")
             
