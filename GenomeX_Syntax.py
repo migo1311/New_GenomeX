@@ -1198,9 +1198,20 @@ def parseSyntax(tokens, output_text):
                 return False, None
 
             if new_idx == start_idx:  # No tokens were consumed, meaning empty body
-                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Empty if statement body is not allowed\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                print(f"DEBUG SYNTAX: Empty if statement body at index {start_idx}")
+                try:
+                    # Try to get line information
+                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                except Exception as e:
+                    # If line information can't be found, use fallback values
+                    print(f"Error finding line information: {e}")
+                    line_number = get_line_number(tokens, start_idx)
+                    line_text = "line with empty if block"
+                
+                # Always insert error messages to ensure they're displayed in the GUI
+                output_text.insert(tk.END, "❌ Error: ", "error")
+                output_text.insert(tk.END, f"Empty if statement body is not allowed at line {line_number}\n", "output")
+                output_text.insert(tk.END, f"You must include at least one statement inside the if block\n", "output")
                 return False, None
  
             start_idx = new_idx
@@ -1276,9 +1287,20 @@ def parseSyntax(tokens, output_text):
                         return False, None
                     
                     if new_idx == start_idx:  # No tokens were consumed, meaning empty body
-                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Empty if statement body is not allowed\n")
-                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                        print(f"DEBUG SYNTAX: Empty elif statement body at index {start_idx}")
+                        try:
+                            # Try to get line information
+                            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                        except Exception as e:
+                            # If line information can't be found, use fallback values
+                            print(f"Error finding line information: {e}")
+                            line_number = get_line_number(tokens, start_idx)
+                            line_text = "line with empty elif block"
+                        
+                        # Always insert error messages to ensure they're displayed in the GUI
+                        output_text.insert(tk.END, "❌ Error: ", "error")
+                        output_text.insert(tk.END, f"Empty elif statement body is not allowed at line {line_number}\n", "output")
+                        output_text.insert(tk.END, f"You must include at least one statement inside the elif block\n", "output")
                         return False, None
 
                     start_idx = new_idx
@@ -1330,9 +1352,20 @@ def parseSyntax(tokens, output_text):
                     
 
                     if new_idx == start_idx:  # No tokens were consumed, meaning empty body
-                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Empty if statement body is not allowed\n")
-                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                        print(f"DEBUG SYNTAX: Empty else statement body at index {start_idx}")
+                        try:
+                            # Try to get line information
+                            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                        except Exception as e:
+                            # If line information can't be found, use fallback values
+                            print(f"Error finding line information: {e}")
+                            line_number = get_line_number(tokens, start_idx)
+                            line_text = "line with empty else block"
+                        
+                        # Always insert error messages to ensure they're displayed in the GUI
+                        output_text.insert(tk.END, "❌ Error: ", "error")
+                        output_text.insert(tk.END, f"Empty else statement body is not allowed at line {line_number}\n", "output")
+                        output_text.insert(tk.END, f"You must include at least one statement inside the else block\n", "output")
                         return False, None
 
                     start_idx = new_idx
@@ -1629,7 +1662,7 @@ def parseSyntax(tokens, output_text):
             
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
-            
+            new_idx = start_idx
             
             is_valid, new_idx = statements.assignment_value(tokens, start_idx)
             if not is_valid:
@@ -2085,6 +2118,20 @@ def parseSyntax(tokens, output_text):
         def assignment_value(tokens, start_idx):
             start_idx = skip_spaces(tokens, start_idx)
 
+            # Check for negation operator at the beginning
+            has_negation = False
+            if start_idx < len(tokens) and tokens[start_idx][0] == '!':
+                print(f"Found negation operator '!' in assignment value at index {start_idx}")
+                has_negation = True
+                start_idx += 1  
+                start_idx = skip_spaces(tokens, start_idx)
+                
+                # After negation, check for conditional expression
+                if start_idx < len(tokens) and tokens[start_idx][0] == '(':
+                    is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
+                    if is_valid:
+                        print(f"Successfully parsed negated conditional expression")
+                        return True, new_idx
             
             if is_token(tokens, start_idx, literals) or is_token(tokens, start_idx, 'Identifier'):
                 
@@ -2114,6 +2161,12 @@ def parseSyntax(tokens, output_text):
                 start_idx = new_idx
                 return True, start_idx
             
+            # Try parsing as a conditional expression (like 5 > 3)
+            if not has_negation:  # If we already tried with negation, don't try again
+                is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
+                if is_valid:
+                    print("Successfully parsed conditional expression")
+                    return True, new_idx
             
             return False, None
   
