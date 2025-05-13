@@ -1416,18 +1416,11 @@ class GenomeXCodeGenerator:
                             value += token
                             print(f"[DEBUG] Ended array access: '{token}'")
                         elif token_type == "numlit" and token.startswith("^"):
-                            # Handle negative numbers using caret (^) for both integers and floats
-                            try:
-                                # Check if it's a valid number by attempting to convert to float
-                                float(token[1:])
-                                # Normalize and negate
-                                negative_value = f"-{self._normalize_number(token[1:])}"
-                                value += negative_value
-                                print(f"[DEBUG] Converted caret number '{token}' to '{negative_value}'")
-                            except ValueError:
-                                # If not a valid number format, keep as is
-                                value += token
-                                print(f"[DEBUG] Kept original token (not a valid number): '{token}'")
+                            # Handle negative numbers using caret (^)
+                            # Convert ^number to -number
+                            negative_value = f"-{self._normalize_number(token[1:])}"
+                            value += negative_value
+                            print(f"[DEBUG] Converted caret number '{token}' to '{negative_value}'")
                         elif token_type == "numlit":
                             # Normalize number (remove leading zeros)
                             normalized_value = self._normalize_number(token)
@@ -1528,15 +1521,8 @@ class GenomeXCodeGenerator:
         if token_type == "numlit":
             # Handle negative numbers using caret (^)
             if token.startswith("^"):
-                # Check if it's a valid number (integer or float)
-                try:
-                    # Remove the caret and try to convert to float to validate
-                    float(token[1:])
-                    # If successful, replace caret with minus sign
-                    value = f"-{self._normalize_number(token[1:])}"
-                except ValueError:
-                    # If not a valid number, keep as is
-                    value = token
+                # Convert ^number to -number 
+                value = f"-{self._normalize_number(token[1:])}"
             else:
                 # Normalize the number (remove leading/trailing zeros)
                 value = self._normalize_number(token)
@@ -1742,6 +1728,11 @@ class GenomeXCodeGenerator:
                     condition_parts.append("True")
                 elif token == "rec":
                     condition_parts.append("False")
+                # Handle caret notation (^number) for negative numbers
+                elif token_type == "numlit" and token.startswith("^"):
+                    # Convert ^number to -number
+                    negative_value = "-" + token[1:]
+                    condition_parts.append(negative_value)
                 elif token_type == "numlit":
                     # Normalize numeric literals
                     normalized_value = self._normalize_number(token)
@@ -1976,6 +1967,18 @@ def parseCodeGen(tokens, codegen_panel):
                 return len(string)
                 
             def _write(self, string):
+                # Convert negative numbers to caret notation (e.g., -123 to ^123)
+                # Use regex to find negative numbers and replace them
+                # Handle integers first
+                string = re.sub(r'(^|\s|[^a-zA-Z0-9.])-(\d+)', r'\1^\2', string)
+                # Handle decimals (-123.45 to ^123.45)
+                string = re.sub(r'(^|\s|[^a-zA-Z0-9.])-(\d+\.\d+)', r'\1^\2', string)
+                
+                # Convert boolean values to GenomeX syntax
+                # Replace "True" with "dom" and "False" with "rec"
+                string = re.sub(r'(^|\s)True(\s|$|\.|\,|\;|\:)', r'\1dom\2', string)
+                string = re.sub(r'(^|\s)False(\s|$|\.|\,|\;|\:)', r'\1rec\2', string)
+                
                 self.text_widget.insert(tk.END, string, "output")
                 self.text_widget.see(tk.END)
                 parent_window.update()  # Force update immediately
@@ -2087,7 +2090,21 @@ def parseCodeGen(tokens, codegen_panel):
             
             def finish_input():
                 input_frame.destroy()
-                codegen_panel.insert(tk.END, f"{input_result[0]}\n", "cmd")
+                # Convert negative numbers to caret notation in the display
+                display_value = input_result[0]
+                if isinstance(display_value, str) and display_value.startswith('-'):
+                    # Remove the minus sign and check if the rest is a valid number (integer or decimal)
+                    num_part = display_value[1:]
+                    if num_part.isdigit() or (num_part.count('.') == 1 and num_part.replace('.', '', 1).isdigit()):
+                        display_value = '^' + num_part
+                
+                # Convert True/False to dom/rec
+                if display_value == "True":
+                    display_value = "dom"
+                elif display_value == "False":
+                    display_value = "rec"
+                
+                codegen_panel.insert(tk.END, f"{display_value}\n", "cmd")
                 codegen_panel.see(tk.END)
                 parent_window.update()
             

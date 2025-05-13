@@ -3294,33 +3294,79 @@ def parseSyntax(tokens, output_text):
             start_idx = skip_spaces(tokens, start_idx)
             print(f"After skipping spaces, start_idx: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
-            # Try conditional block first
-            cond_start_tokens = {'(', 'Identifier', 'numlit', '!'}
-            if start_idx < len(tokens) and (
-                tokens[start_idx][0] in cond_start_tokens or tokens[start_idx][1] in cond_start_tokens
-            ):
-                print("Trying conditional_block from express_value...")
-                is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
-                if is_valid:
-                    print("Parsed conditional block in express_value.")
-                    return True, new_idx
+            if start_idx < len(tokens) and tokens[start_idx][1] == 'Identifier':
+                identifier = tokens[start_idx][0]
+                print(f"Found identifier: {identifier}")
+                
+                # Use lookahead to determine what kind of expression we're parsing
+                lookahead_idx = skip_spaces(tokens, start_idx + 1)
+                
+                # Case 1: Array reference (identifier followed by '[')
+                if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == '[':
+                    print("Found '[', parsing as express_value_id_tail")
+                    is_valid, id_tail_value, next_idx = express.express_value_id_tail(tokens, start_idx + 1, identifier)
+                    if not is_valid:
+                        print("Failed to parse express_value_id_tail")
+                        print("Syntax Error: Expected valid array index")
+                        return False, start_idx
+                    
+                    values.append(id_tail_value)
+                    start_idx = next_idx
+                
+                # Case 2: Part of arithmetic (followed by arithmetic operators)
+                elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] in {'+', '-', '*', '/', '%', '='}:
+                    print("Identifier followed by arithmetic operator, parsing as arithmetic_sequence")
+                    is_valid, new_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
+                    if is_valid:
+                        print("Parsed arithmetic sequence in express_value.")
+                        return True, new_idx
+                    else:
+                        print("Failed to parse as arithmetic, falling back to simple identifier")
+                        values.append(identifier)
+                        start_idx = lookahead_idx
+                
+                # Case 3: Part of conditional expression
+                elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] in {'==', '!=', '<', '>', '<=', '>=', '&&', '||'}:
+                    print("Identifier followed by conditional operator, parsing as conditional_block")
+                    is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
+                    if is_valid:
+                        print("Parsed conditional block in express_value.")
+                        return True, new_idx
+                    else:
+                        print("Failed to parse as conditional, falling back to simple identifier")
+                        values.append(identifier)
+                        start_idx = lookahead_idx
+                
+                # Case 4: Simple identifier
                 else:
-                    print("Not a valid conditional block, will try arithmetic/other.")
-
-            # Try arithmetic sequence
-            if start_idx < len(tokens) and (
-                tokens[start_idx][1] == 'numlit' or tokens[start_idx][1] == 'Identifier' or tokens[start_idx][0] == '(' or tokens[start_idx][0] in {'+', '-', '*', '/', '%'}
+                    values.append(identifier)
+                    start_idx = lookahead_idx
+            
+            # Only try parsing conditional/arithmetic if we haven't already handled the token
+            elif start_idx < len(tokens) and (
+                tokens[start_idx][0] in {'(', '!', '+', '-'} or 
+                tokens[start_idx][1] == 'numlit'
             ):
+                # Try conditional block first
+                cond_start_tokens = {'(', '!', 'numlit'}
+                if tokens[start_idx][0] in cond_start_tokens or tokens[start_idx][1] in cond_start_tokens:
+                    print("Trying conditional_block from express_value...")
+                    is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
+                    if is_valid:
+                        print("Parsed conditional block in express_value.")
+                        return True, new_idx
+                    
+                # Try arithmetic sequence if conditional didn't succeed
                 print("Trying arithmetic_sequence from express_value...")
                 is_valid, new_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
                 if is_valid:
                     print("Parsed arithmetic sequence in express_value.")
                     return True, new_idx
                 else:
-                    print("Not a valid arithmetic sequence, will try literal/seq/concat.")
-
+                    print("Not a valid arithmetic/conditional, will try literal/seq/concat.")
+            
             # Existing logic for seq, identifier, numlit, string literal, etc.
-            if start_idx < len(tokens) and is_token(tokens, start_idx, 'seq'):
+            elif start_idx < len(tokens) and is_token(tokens, start_idx, 'seq'):
                 print("Found 'seq' keyword, parsing as seq_type_cast")
                 is_valid, cast_value, next_idx = express.seq_type_cast(tokens, start_idx)
                 if is_valid and cast_value:  
@@ -3341,22 +3387,11 @@ def parseSyntax(tokens, output_text):
                 else:
                     print("Failed to parse seq_type_cast")
                     print("Syntax Error: Expected valid sequence type")
-            elif start_idx < len(tokens) and tokens[start_idx][1] == 'Identifier':
-                identifier = tokens[start_idx][0]
-                print(f"Found identifier: {identifier}")
-                start_idx += 1
-                start_idx = skip_spaces(tokens, start_idx)
-                if start_idx < len(tokens) and tokens[start_idx][0] == '[':
-                    print("Found '[', parsing as express_value_id_tail")
-                    is_valid, id_tail_value, next_idx = express.express_value_id_tail(tokens, start_idx, identifier)
-                    if not is_valid:
-                        print("Failed to parse express_value_id_tail")
-                        print("Syntax Error: Expected valid array index")
-                        return False, start_idx
-                    values.append(id_tail_value)
-                    start_idx = next_idx
-                else:
-                    values.append(identifier)
+
+
+            
+
+
             elif start_idx < len(tokens) and is_token(tokens, start_idx, 'numlit'):
                 lookahead_idx = skip_spaces(tokens, start_idx + 1)
                 if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == "+":  

@@ -35,7 +35,6 @@ class SemanticAnalyzer:
         else:
             self.current_token = None
         print(f"Moved to next token: {self.current_token}") 
-
     def parse(self):
         while self.current_token is not None:
             if self.current_token[1] == '_G':
@@ -48,9 +47,7 @@ class SemanticAnalyzer:
                 self.next_token()
             else:
                 # self.errors.append(f"Semantic Error: Unexpected token: {self.current_token[1]}")
-                self.next_token()  # Skip invalid token to continue analysis
-
-    
+                self.next_token()  # Skip invalid token to continue analysis   
     def act_gene_function(self):
         
         print(f"Current token: {self.current_token}")  # Debug print
@@ -190,17 +187,21 @@ class SemanticAnalyzer:
                 return_type = 'void'
                 return_types = []
             else:
-                # For functions with parameters, each parameter type can be a return type
-                if parameters:
-                    # Use the type of the first parameter as primary return type (for compatibility)
-                    return_type = parameters[0]['type']
-                    # Create a list of all parameter types as potential return types
-                    return_types = [param['type'] for param in parameters]
+                # Changed this logic to not force return types to match parameter types
+                # Allow functions to return any valid type, particularly allele (dom/rec) values
+                # regardless of parameter types
+                if function_name == 'gene':
+                    # Gene function has special handling
+                    return_type = 'gene'
+                    return_types = ['gene']
                 else:
-                    # For functions with no parameters, use 'regular' as the return type
-                    return_type = 'regular'
-                    return_types = [return_type]
-                    
+                    # Default to allele type for functions that might return dom/rec
+                    # This allows functions to return boolean values regardless of parameter type
+                    return_type = 'allele'
+                    return_types = ['allele']
+                    # Keep track of parameters for validation purposes, but don't restrict return types
+                    # to parameter types
+            
             # Support for multiple return values
             self.functions[function_name] = {
                 'return_type': return_type,                # Primary return type (first parameter) for backward compatibility
@@ -232,7 +233,6 @@ class SemanticAnalyzer:
             return
         self.next_token()  # Move past '}'
         print(f"Finished parsing function: {function_name}")
-
     # Parameter Passing
     def check_parameter_passing(self, function_name, args):
         """Check if arguments match function parameters"""
@@ -616,6 +616,11 @@ class SemanticAnalyzer:
                     self.next_token()
             return
             
+        # Special case: empty prod statement (implied return none/default)
+        if self.current_token is not None and self.current_token[0] == ';':
+            self.next_token()  # Move past ';'
+            return
+            
         # Parse the expression being returned
         value_type = self.parse_expression()
         
@@ -675,16 +680,22 @@ class SemanticAnalyzer:
                         break
         else:
             # Single return value - check against the function's primary return type
-            if value_type != return_type:
+            # Special case for allele (dom/rec) values - these can be returned from any function type
+            if value_type == 'allele' or self.current_token is not None and self.current_token[0] in ['dom', 'rec']:
+                # Allow dom/rec to be returned from any function
+                pass
+            elif value_type != return_type:
                 # Allow dose to be returned from a quant function
                 if not (return_type == 'quant' and value_type == 'dose'):
-                    self.errors.append(f"Semantic Error: Function returns {return_type} but got {value_type}")
+                    # Skip error for dom/rec returns
+                    if not (self.current_token is not None and self.current_token[0] in ['dom', 'rec']):
+                        self.errors.append(f"Semantic Error: Function returns {return_type} but got {value_type}")
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';': 
             self.errors.append(f"Semantic Error: Expected ';' after prod statement, found {self.current_token}")
             return
-            # GIT PUSH
+            
         self.next_token()  # Move past ';'
     def function_call(self):
         """Parse function call statement starting with 'func'"""
@@ -1228,7 +1239,8 @@ class SemanticAnalyzer:
                     
                     # Check if row size matches second dimension
                     if len(row_elements) != array_size2:
-                        self.errors.append(f"Semantic Error: Number of elements in row {row_count+1} ({len(row_elements)}) does not match second dimension size ({array_size2})")
+                        self.errors.append(f"Semantic Error: Incomplete initialization - row {row_count+1} has {len(row_elements)} elements but should have {array_size2}")
+                        return  # Return early to stop processing after incomplete initialization
                     
                     all_elements.append(row_elements)
                     row_count += 1
@@ -1245,7 +1257,8 @@ class SemanticAnalyzer:
                 
                 # Check if number of rows matches first dimension
                 if row_count != array_size1:
-                    self.errors.append(f"Semantic Error: Number of rows ({row_count}) does not match first dimension size ({array_size1})")
+                    self.errors.append(f"Semantic Error: Incomplete initialization - array has {row_count} rows but should have {array_size1}")
+                    return  # Return early to stop processing after incomplete initialization
                 
                 # Update symbol table with 2D array elements
                 self.symbol_table[array_name]['value'] = all_elements
@@ -1306,8 +1319,8 @@ class SemanticAnalyzer:
                 
                 # Check if number of elements matches array size
                 if len(elements) != array_size1:
-                    self.errors.append(f"Semantic Error: Number of elements ({len(elements)}) does not match array size ({array_size1})")
-                    return
+                    self.errors.append(f"Semantic Error: Incomplete initialization - array has {len(elements)} elements but should have {array_size1}")
+                    return  # Return early to stop processing after incomplete initialization
                 
                 # Update symbol table with elements
                 self.symbol_table[array_name]['value'] = elements
@@ -1574,7 +1587,6 @@ class SemanticAnalyzer:
             return
             
         self.next_token()  # Move past ';'
-
     
     def function_declaration(self):
         """Parse function declaration"""
@@ -1899,9 +1911,73 @@ class SemanticAnalyzer:
                 expression_tokens.append(self.current_token)
                 self.next_token()
             
+            # Check for mixing allele and numeric types in expressions
+            if len(expression_tokens) > 1:
+                # Check if the target variable is a numeric type
+                target_type = array_element_type if is_array_element else var_type
+                if target_type in ['dose', 'quant']:
+                    # Look for allele type in the expression
+                    has_allele_operand = False
+                    for token in expression_tokens:
+                        if token[0] in ['dom', 'rec']:
+                            has_allele_operand = True
+                            break
+                        elif token[1] == 'Identifier':
+                            token_var_name = token[0]
+                            token_var_info = None
+                            if token_var_name in self.symbol_table:
+                                token_var_info = self.symbol_table[token_var_name]
+                            elif token_var_name in self.global_symbol_table:
+                                token_var_info = self.global_symbol_table[token_var_name]
+                            
+                            if token_var_info and token_var_info['type'] == 'allele':
+                                has_allele_operand = True
+                                break
+                    
+                    if has_allele_operand:
+                        for i, token in enumerate(expression_tokens):
+                            if token[0] in ['+', '-', '*', '/', '%'] and i > 0 and i < len(expression_tokens) - 1:
+                                # We found an operator between operands, one of which is allele
+                                self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{token[0]}' with allele and numeric types. Allele type cannot be used in arithmetic operations.")
+                                break
+            
             # For compound assignments (+=, -=, etc.), check if types are compatible with the operation
             if is_compound_assignment:
                 check_type = array_element_type if is_array_element else var_type
+                
+                # Check if we're trying to do arithmetic with allele type
+                if check_type == 'allele' and compound_operator in ['+', '-', '*', '/', '%']:
+                    target_name = f"{var_name}[index]" if is_array_element else var_name
+                    self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{compound_operator}=' on allele type variable '{target_name}'")
+                    if self.current_token is not None and self.current_token[0] == ';':
+                        self.next_token()  # Move past semicolon
+                    return
+                
+                # Check for allele operands in compound assignments with numeric variables
+                if check_type in ['dose', 'quant']:
+                    has_allele_operand = False
+                    for token in expression_tokens:
+                        if token[0] in ['dom', 'rec']:
+                            has_allele_operand = True
+                            break
+                        elif token[1] == 'Identifier':
+                            token_var_name = token[0]
+                            token_var_info = None
+                            if token_var_name in self.symbol_table:
+                                token_var_info = self.symbol_table[token_var_name]
+                            elif token_var_name in self.global_symbol_table:
+                                token_var_info = self.global_symbol_table[token_var_name]
+                            
+                            if token_var_info and token_var_info['type'] == 'allele':
+                                has_allele_operand = True
+                                break
+                    
+                    if has_allele_operand:
+                        target_name = f"{var_name}[index]" if is_array_element else var_name
+                        self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{compound_operator}=' with allele and {check_type} types. Allele type cannot be used in arithmetic operations.")
+                        if self.current_token is not None and self.current_token[0] == ';':
+                            self.next_token()  # Move past semicolon
+                        return
                 
                 # Check for division by zero in /= operation
                 if compound_operator == '/' and len(expression_tokens) == 1:
@@ -2744,7 +2820,7 @@ class SemanticAnalyzer:
                 self.next_token()  # Move past ')'
             
     # push error
-    
+
             # Skip spaces after the closing parenthesis
             while self.current_token is not None and self.current_token[1] == 'space':
                 self.next_token()
@@ -2896,6 +2972,11 @@ class SemanticAnalyzer:
             elif expr_type == 'seq' and term_type == 'seq' and operator == '+':
                 # String concatenation is allowed
                 expr_type = 'seq'
+            # Check for allele with numeric type
+            elif (expr_type == 'allele' and term_type in ['dose', 'quant']) or (expr_type in ['dose', 'quant'] and term_type == 'allele'):
+                self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{operator}' with types {expr_type} and {term_type}. Allele type cannot be used in arithmetic operations.")
+                # Default to numeric type to allow parsing to continue
+                expr_type = 'dose' if expr_type in ['dose', 'allele'] and term_type in ['dose', 'allele'] else 'quant'
             else:
                 if operator == '+' and ((expr_type in ['dose', 'quant'] and term_type == 'seq') or 
                                        (expr_type == 'seq' and term_type in ['dose', 'quant'])):
@@ -2942,6 +3023,11 @@ class SemanticAnalyzer:
                         self.current_token[0] in self.symbol_table and 
                         self.symbol_table[self.current_token[0]]['value'] == 0):
                         self.errors.append(f"Semantic Error: Division by zero detected with operator '{operator}'")
+            # Check for allele with numeric type
+            elif (factor_type == 'allele' and next_factor_type in ['dose', 'quant']) or (factor_type in ['dose', 'quant'] and next_factor_type == 'allele'):
+                self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{operator}' with types {factor_type} and {next_factor_type}. Allele type cannot be used in arithmetic operations.")
+                # Default to numeric type to allow parsing to continue
+                factor_type = 'dose' if factor_type in ['dose', 'allele'] and next_factor_type in ['dose', 'allele'] else 'quant'
             else:
                 self.errors.append(f"Semantic Error: Operator '{operator}' can only be used with numeric types, not {factor_type} and {next_factor_type}")
         
@@ -3483,6 +3569,8 @@ class SemanticAnalyzer:
                 first_operand_type = 'dose' if '.' not in self.current_token[0] else 'quant'
             elif self.current_token[1] == 'string literal':
                 first_operand_type = 'seq'
+            elif self.current_token[0] in ['dom', 'rec']:
+                first_operand_type = 'allele'
                 
             # Move past the first operand
             self.next_token()
@@ -3512,14 +3600,21 @@ class SemanticAnalyzer:
                     second_operand_type = 'dose' if '.' not in self.current_token[0] else 'quant'
                 elif self.current_token[1] == 'string literal':
                     second_operand_type = 'seq'
+                elif self.current_token[0] in ['dom', 'rec']:
+                    second_operand_type = 'allele'
                 elif self.current_token[1] == 'seq':
                     # This is a seq() function call, which is allowed for conversion
                     second_operand_type = 'seq'
                 
                 # Check if types are compatible for concatenation
                 if first_operand_type and second_operand_type:
-                    if (first_operand_type in ['dose', 'quant'] and second_operand_type == 'seq') or \
-                       (first_operand_type == 'seq' and second_operand_type in ['dose', 'quant']):
+                    # Check for incompatible types with strings
+                    if ((first_operand_type == 'seq' and second_operand_type in ['allele']) or
+                        (first_operand_type in ['allele'] and second_operand_type == 'seq')):
+                        # Error: Cannot directly concatenate booleans and strings
+                        self.errors.append(f"Semantic Error: Cannot concatenate {first_operand_type} and {second_operand_type} directly. Use seq() function to convert boolean values to strings.")
+                    elif ((first_operand_type in ['dose', 'quant'] and second_operand_type == 'seq') or
+                       (first_operand_type == 'seq' and second_operand_type in ['dose', 'quant'])):
                         # Error: Cannot directly concatenate numbers and strings
                         self.errors.append(f"Semantic Error: Cannot concatenate {first_operand_type} and {second_operand_type} directly. Use seq() function to convert numeric values to strings.")
             
@@ -4046,10 +4141,6 @@ def get_variable_info(symbol_table, var_name):
     return None
 
 def check_type_compatibility_for_operation(left_type, right_type, operator):
-    """
-    Check if an operation between two types is valid
-    This can be used by other components without instantiating the full analyzer
-    """
     # Handle array types if needed
     if left_type.startswith('array_'):
         base_type = left_type[6:]  # Extract base type from array_<type>
@@ -4079,9 +4170,7 @@ def check_type_compatibility_for_operation(left_type, right_type, operator):
     return False
 
 def generate_error_report(errors):
-    """
-    Generate a formatted error report from a list of semantic errors
-    """
+   
     if not errors:
         return "No semantic errors found."
         
@@ -4093,10 +4182,7 @@ def generate_error_report(errors):
     return report
 
 def analyze_expression_value(expr, symbol_table):
-    """
-    Attempt to determine the value of an expression at compile time
-    For use in constant folding and optimization
-    """
+    
     if isinstance(expr, tuple) and len(expr) == 3:
         left, op, right = expr
         left_val = analyze_expression_value(left, symbol_table)
@@ -4128,7 +4214,7 @@ def analyze_expression_value(expr, symbol_table):
 # Support for common type utility functions
 
 def get_default_value_for_type(type_name):
-    """Return the default value for a given type"""
+
     if type_name == 'dose':
         return 0
     elif type_name == 'quant':
@@ -4142,11 +4228,11 @@ def get_default_value_for_type(type_name):
     return None  # Unknown type
 
 def is_numeric_type(type_name):
-    """Check if a type is numeric (dose or quant)"""
+
     return type_name in ['dose', 'quant']
 
 def can_convert_between_types(from_type, to_type):
-    """Check if a value can be converted from one type to another"""
+    
     # Same type - always convertible
     if from_type == to_type:
         return True
@@ -4168,10 +4254,7 @@ def can_convert_between_types(from_type, to_type):
 
 
 def parseSemantic(tokens, semantic_panel):
-    """
-    Run semantic analysis on tokens and display results in the semantic panel
-    Returns True if no semantic errors, False otherwise
-    """
+    
     # Clear previous output
     semantic_panel.delete("1.0", tk.END)
     
@@ -4219,7 +4302,6 @@ def parseSemantic(tokens, semantic_panel):
         return False
 
 def display_results(analyzer, semantic_panel):
-    """Display the results of semantic analysis in a simple, clean format"""
     # Clear the panel first
     semantic_panel.delete('1.0', tk.END)
     
