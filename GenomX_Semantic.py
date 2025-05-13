@@ -1239,7 +1239,8 @@ class SemanticAnalyzer:
                     
                     # Check if row size matches second dimension
                     if len(row_elements) != array_size2:
-                        self.errors.append(f"Semantic Error: Number of elements in row {row_count+1} ({len(row_elements)}) does not match second dimension size ({array_size2})")
+                        self.errors.append(f"Semantic Error: Incomplete initialization - row {row_count+1} has {len(row_elements)} elements but should have {array_size2}")
+                        return  # Return early to stop processing after incomplete initialization
                     
                     all_elements.append(row_elements)
                     row_count += 1
@@ -1256,7 +1257,8 @@ class SemanticAnalyzer:
                 
                 # Check if number of rows matches first dimension
                 if row_count != array_size1:
-                    self.errors.append(f"Semantic Error: Number of rows ({row_count}) does not match first dimension size ({array_size1})")
+                    self.errors.append(f"Semantic Error: Incomplete initialization - array has {row_count} rows but should have {array_size1}")
+                    return  # Return early to stop processing after incomplete initialization
                 
                 # Update symbol table with 2D array elements
                 self.symbol_table[array_name]['value'] = all_elements
@@ -1317,8 +1319,8 @@ class SemanticAnalyzer:
                 
                 # Check if number of elements matches array size
                 if len(elements) != array_size1:
-                    self.errors.append(f"Semantic Error: Number of elements ({len(elements)}) does not match array size ({array_size1})")
-                    return
+                    self.errors.append(f"Semantic Error: Incomplete initialization - array has {len(elements)} elements but should have {array_size1}")
+                    return  # Return early to stop processing after incomplete initialization
                 
                 # Update symbol table with elements
                 self.symbol_table[array_name]['value'] = elements
