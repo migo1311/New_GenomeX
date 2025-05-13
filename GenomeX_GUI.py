@@ -312,21 +312,21 @@ def run_analysis():
     # Run Lexer and get tokens
     tokens, found_error = GenomeX_Lexer.parseLexer(input_text)
 
+    # Display tokens in the lexical tokenization table regardless of errors
+    for idx, (lexeme, token) in enumerate(tokens):
+        tree.insert("", "end", values=(idx + 1, lexeme, token))
+        
     if found_error:
-        display_with_color(lexical_panel, "Input is invalid.\n", "error")
-        # For errors, switch to lexical tab to show the error message
-        GenomeX_Lexer.lexical_panel = lexical_panel  
+        # Display error message but still show valid tokens
+        display_with_color(lexical_panel, "⚠️ Lexical Analysis: ", "warning")
+        display_with_color(lexical_panel, "Errors found\n", "output")
+        # Switch to lexical tab to show the error message
         notebook.select(0)
         
     elif not tokens:
         display_with_color(lexical_panel, "No tokens found.\n", "warning")
-        GenomeX_Lexer.lexical_panel = lexical_panel  
         notebook.select(0)
     else:
-        # Display valid tokens in the lexical tokenization table
-        for idx, (lexeme, token) in enumerate(tokens):
-            tree.insert("", "end", values=(idx + 1, lexeme, token))
-        
         # Show that lexical analysis passed successfully
         display_with_color(lexical_panel, "✅ Lexical Analysis: ", "success")
         display_with_color(lexical_panel, "All tokens processed successfully\n", "output")
