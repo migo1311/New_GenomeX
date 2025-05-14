@@ -103,7 +103,7 @@ def parseLexer(input_stream):
     delim_splice = {'\n', '^', ' ', '(', ',', ')', '!'} 
     close_parenthesis_delim =  {')', ' ', '\n', '{', '}', '^', '+', '-', '/', '*', '%', '#', ';', ':'}
     open_braces_delim = {' ', '\\', "{"} 
-    close_braces_delim = {' ', '\n', '#', "{", ",", ";"}
+    close_braces_delim = {' ', '\n', '#', "{", ",", ";", '}'}
     open_bracket_delim = value
     close_bracket_delim = {' ', '=', '[', ',', ';'}
     delim_num = { '*', '/', '%', '<', '>', '=', ' ', '#', ')', '}', '&', '|', ";", "]", ",", ':'}
@@ -203,9 +203,9 @@ def parseLexer(input_stream):
                 if lookahead_char is None or lookahead_char == "\n":
                     state = 1000
                 elif lookahead_char is None:
-                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
                     state = 1000
-                    lexeme = ""
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+
             elif token == 'c':
                 state = 16
                 lexeme = token  
@@ -4393,6 +4393,8 @@ def parseLexer(input_stream):
                 elif token == '#':
                     tokens.append((token, token))
                 elif token == ';':
+                    tokens.append((token, token))
+                elif token == '}':
                     tokens.append((token, token))
                 state = 0  # Reset state for the next token
             else:
