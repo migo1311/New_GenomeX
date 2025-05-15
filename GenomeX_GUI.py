@@ -277,11 +277,11 @@ def display_with_color(panel, text, tag="output"):
 original_display_error = GenomeX_Lexer.display_lexical_error
 original_display_pass = GenomeX_Lexer.display_lexical_pass
 
-def custom_display_lexical_error(error_msg):
-    if hasattr(GenomeX_Lexer, 'lexical_panel'):
-        GenomeX_Lexer.lexical_panel.insert(tk.END, "❌ Error: ", "error")
-        GenomeX_Lexer.lexical_panel.insert(tk.END, f"{error_msg}\n", "output")
-    return original_display_error(error_msg)
+# def custom_display_lexical_error(error_msg):
+#     if hasattr(GenomeX_Lexer, 'lexical_panel'):
+#         GenomeX_Lexer.lexical_panel.insert(tk.END, "❌ Error: ", "error")
+#         GenomeX_Lexer.lexical_panel.insert(tk.END, f"{error_msg}\n", "output")
+#     return original_display_error(error_msg)
 
 def custom_display_lexical_pass(pass_msg):
     if hasattr(GenomeX_Lexer, 'lexical_panel'):
@@ -289,7 +289,7 @@ def custom_display_lexical_pass(pass_msg):
         GenomeX_Lexer.lexical_panel.insert(tk.END, f"{pass_msg}\n", "output")
     return original_display_pass(pass_msg)
 
-GenomeX_Lexer.display_lexical_error = custom_display_lexical_error
+# GenomeX_Lexer.display_lexical_error = custom_display_lexical_error
 GenomeX_Lexer.display_lexical_pass = custom_display_lexical_pass
 
 # Function to execute lexer and syntax analyzer and display results

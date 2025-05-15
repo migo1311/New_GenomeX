@@ -564,9 +564,14 @@ class GenomeXCodeGenerator:
                     elif self.variable_types[token] == "allele":
                         allele_variables.append(token)
                 
-                # Normalize numeric literals
+                # Handle numeric literals with special handling for caret notation
                 if token_type == "numlit":
-                    token = self._normalize_number(token)
+                    if token.startswith("^"):
+                        # Convert ^number to -number
+                        token = f"-{self._normalize_number(token[1:])}"
+                    else:
+                        # Normalize the number (remove leading/trailing zeros)
+                        token = self._normalize_number(token)
                 # Handle dom/rec translation
                 elif token == "dom":
                     token = "True"

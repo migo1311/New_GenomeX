@@ -731,7 +731,6 @@ def parseLexer(input_stream):
                     state = 1000
             else:
                 # This is where the fix is needed - always add token to lexeme before going to error state
-                lexeme += token
                 state = 1000  # Go to error state but keep the full lexeme
 
         #ACT
