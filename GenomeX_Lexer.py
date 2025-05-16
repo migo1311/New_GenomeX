@@ -24,6 +24,23 @@ def display_lexical_pass(message):
         print(message)  # Fallback if GUI isn't available
         pass
 
+def handle_state_error(state_number, lexeme, line_number):
+    """
+    Handle lexical errors in a generic way.
+    
+    Parameters:
+        state_number (int): The state number where the error occurred
+        lexeme (str): The current lexeme being processed
+        line_number (int): The current line number
+        
+    Returns:
+        tuple: (found_error, state, lexeme) - updated values after error handling
+    """
+    print(f"WRONG IN STATE {state_number}")
+    display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+    # Reset state to initial state and clear lexeme
+    return True, 0, ""
+
 def is_end_of_lexeme(token):
     # End-of-lexeme characters (e.g., space, newline, punctuation)
     return token in {' ', '\n'}
@@ -186,8 +203,13 @@ def parseLexer(input_stream):
                     state = 0
                 else:
                     print("ERROR IN STATE 460")
-                    state = 1000  # Reset state to recover
-
+                    found_error = True
+                    display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                    # Reset state to initial state to process the current token as a new lexeme
+                    state = 1000
+                    # Push the current token back for reprocessing
+                    lexeme = ""
+                    state = 0
             elif token == '_':
                 state = 1
                 lexeme = token  
@@ -197,24 +219,23 @@ def parseLexer(input_stream):
                     display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
                     state = 1000
                     lexeme = ""
+                    
             elif token == 'a':
                 state = 6
                 lexeme = token  
                 if lookahead_char is None or lookahead_char == "\n":
                     state = 1000
-                elif lookahead_char is None:
-                    state = 1000
-                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    found_error = True
+
 
             elif token == 'c':
                 state = 16
                 lexeme = token  
                 if lookahead_char is None or lookahead_char == "\n":
                     state = 1000
-                elif lookahead_char is None:
-                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
-                    state = 1000
-                    lexeme = ""
+                    found_error = True
+
+                
             elif token == 'd':
                 state = 28
                 lexeme = token  
@@ -648,36 +669,36 @@ def parseLexer(input_stream):
                 lexeme = token 
             
             #NUMLIT
-            elif token == "^":  # Only accept ^ if we're already processing a number
-                lexeme = token
-                if lookahead_char in allval:  # Must be followed by a number
-                    state = 242
-                else:
-                    print("ERROR: ^ must be followed by a number")
-                    state = 1000
-
-            elif token in allval:  # First check for numeric values
-                lexeme = token 
-                if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":
-                    print("Passed state 228")
-                    state = 228
-                    tokens.append((lexeme, "numlit"))
-                    lexeme = ""
-                elif lookahead_char in allval:  # Allow numbers to follow
-                    state = 242
-                elif lookahead_char == "+":
+            elif token in allval or token == "^":  # Check for numeric values or negation symbol
+                if token == "^":
+                    lexeme = token  # Save the negation symbol
+                    if lookahead_char in allval:  # Must be followed by a number
+                        state = 242
+                    else:
+                        print("ERROR: ^ must be followed by a number")
+                        state = 1000
+                else:  # It's a numeric value
+                    lexeme = token 
+                    if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":
+                        print("Passed state 228")
+                        state = 228
                         tokens.append((lexeme, "numlit"))
                         lexeme = ""
-                        state = 0
-                elif lookahead_char == "-":
-                        tokens.append((lexeme, "numlit"))
-                        lexeme = ""
-                        state = 0
-                elif lookahead_char == '.':
-                    state = 229
-                else:
-                    print("ERROR IN STATE 228")
-                    state = 1000  # Reset state to recover
+                    elif lookahead_char in allval:  # Allow numbers to follow
+                        state = 242
+                    elif lookahead_char == "+":
+                            tokens.append((lexeme, "numlit"))
+                            lexeme = ""
+                            state = 0
+                    elif lookahead_char == "-":
+                            tokens.append((lexeme, "numlit"))
+                            lexeme = ""
+                            state = 0
+                    elif lookahead_char == '.':
+                        state = 229
+                    else:
+                        print("ERROR IN STATE 228")
+                        state = 1000  # Reset state to recover
 
             # SINGLE LINE COMMENT
             elif token == '#':
@@ -692,7 +713,8 @@ def parseLexer(input_stream):
         elif state == 1:
             print("Passed state 1")
             lexeme += token
-    
+            
+            #_G
             if token == 'G':
                 if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
                     print("Passed state 2")
@@ -700,9 +722,20 @@ def parseLexer(input_stream):
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
 
-                else:
-                    print("ERROR IN STATE 1: Invalid sequence before 'G'")
-                    state = 1000  # Reset state to recover
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
 
             #L
             elif token == 'L':
@@ -710,14 +743,29 @@ def parseLexer(input_stream):
                     state = 4
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 1: Invalid sequence before 'G'")
-                    state = 1000  # Reset state to recover
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
 
             else:
                 print("ERROR IN STATE 1: Unexpected character")
-                state = 1000  # Reset state to recover
-
+                found_error = True
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+                state = 0
         elif state == 6:
             if token == 'c':
                 lexeme += token
@@ -730,8 +778,13 @@ def parseLexer(input_stream):
                 if lookahead_char is None or lookahead_char == "\n":
                     state = 1000
             else:
-                # This is where the fix is needed - always add token to lexeme before going to error state
-                state = 1000  # Go to error state but keep the full lexeme
+                # Don't add the current token to the lexeme if it's not a valid continuation
+                # Report the error for the current lexeme
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
 
         #ACT
         elif state == 7:
@@ -741,10 +794,19 @@ def parseLexer(input_stream):
                     state = 8
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR: 'act' must be followed by a delimiter")
-                    state = 1000  # Error state
-                    # Don't reset lexeme, keep it to report the error
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
             else:
                 print("WRONG IN STATE 7")
                 state = 1000  # Reset state to recover
@@ -788,10 +850,19 @@ def parseLexer(input_stream):
                     state = 14
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR")
-                    state = 1000  # Reset state to recover
-                    lexeme += token
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
 
             else:
                 print("WRONG IN STATE 13")
@@ -800,15 +871,22 @@ def parseLexer(input_stream):
 
         elif state == 16:
             lexeme += token
-            if lookahead_char is None or lookahead_char == "\n":
+            if lookahead_char is None or lookahead_char == "\n" or lookahead_char == " ":
+                found_error = True
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
                 state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+                state = 0
             elif token == 'l':
                 state = 17
             elif token == 'o':
                 state = 22
             else:
-                print("WRONG IN STATE 16")
-                state = 1000  # Reset state to recover
+                # Use our error handling function to process the error and get updated values
+                found_error, state, lexeme = handle_state_error(16, lexeme, line_number)
+                
 
         elif state == 17:
             lexeme += token
@@ -817,8 +895,13 @@ def parseLexer(input_stream):
             elif token == 'u':
                 state = 18
             else:
-                print("WRONG IN STATE 17")
-                state = 1000  # Reset state to recover
+                # Use our error handling function to process the error and get updated values
+                found_error, state, lexeme = handle_state_error(17, lexeme, line_number)
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+                state = 0
 
         elif state == 18:
             lexeme += token
@@ -828,8 +911,12 @@ def parseLexer(input_stream):
                 state = 19
             else:
                 print("WRONG IN STATE 18")
-                state = 1000  # Reset state to recover
-
+                found_error = True
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
         #CLUST
         elif state == 19:
             lexeme += token
@@ -838,14 +925,29 @@ def parseLexer(input_stream):
                     state = 20
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR")
-                    state = 1000  # Reset state to recover
-                    lexeme += token
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
 
             else:
                 print("WRONG IN STATE 19")
-                state = 1000  # Reset state to recover
+                found_error = True
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
 
         elif state == 22:
             lexeme += token
@@ -885,10 +987,19 @@ def parseLexer(input_stream):
                     state = 26
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 26")
-                    state = 1000  # Reset state to recover
-           
+                elif lookahead_char not in delim_end:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
 
             else:
                 print("WRONG IN STATE 25")
@@ -914,7 +1025,11 @@ def parseLexer(input_stream):
                     state = 1000  # Reset state to recover
             else:
                 print("print IN STATE 28")
-                state = 1000  # Reset state to recover
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
      
 
         elif state == 29:
@@ -965,10 +1080,19 @@ def parseLexer(input_stream):
                     state = 34
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 34")
-                    state = 1000  # Reset state to recover
-                    lexeme += token
+                elif lookahead_char not in delim_end:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
 
             else:
                 print("WRONG IN STATE 33")
@@ -982,9 +1106,19 @@ def parseLexer(input_stream):
                     state = 39
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 39")
-                    state = 1000  # Reset state to recover
+                elif lookahead_char not in delim_end:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
 
             else:
                 print("WRONG IN STATE 38")
@@ -1013,9 +1147,19 @@ def parseLexer(input_stream):
                     state = 42
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("WRONG IN STATE 42")
-                    state = 1000  # Reset state to recover
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
 
             else:
                 print("WRONG IN STATE 41")
@@ -1032,8 +1176,11 @@ def parseLexer(input_stream):
                 if lookahead_char is None or lookahead_char == "\n":
                     state = 1000                
             else:
-                print("ERROR IN STATE 43")
-                state = 1000  # Reset state to recover
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
 
         elif state == 44:
             lexeme += token
@@ -1058,9 +1205,19 @@ def parseLexer(input_stream):
                     state = 46
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 46")
-                    state = 1000  # Reset state to recover
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
                 
             else:
                 print("WRONG IN STATE 45")
@@ -1074,10 +1231,19 @@ def parseLexer(input_stream):
                     state = 49
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 49")
-                    state = 1000  # Reset state to recover
-                    lexeme += token
+                elif lookahead_char not in delim_2:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
 
             else:
                 print("WRONG IN STATE 48")
@@ -1132,9 +1298,19 @@ def parseLexer(input_stream):
                     state = 56
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 56")
-                    state = 1000  # Reset state to recover
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
             else:
                 print("WRONG IN STATE 55")
                 state = 1000  # Reset state to recover
@@ -1151,7 +1327,11 @@ def parseLexer(input_stream):
                     state = 1000    
             else:
                 print("WRONG IN STATE 58")
-                state = 1000  # Reset state to recover
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
 
         elif state == 450:
             lexeme += token
@@ -1187,9 +1367,19 @@ def parseLexer(input_stream):
                     state = 452
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 452")
-                    state = 1000  # Reset state to recover
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
             else:
                 print("WRONG IN STATE 451")
                 state = 1000  # Reset state to recover
@@ -1202,10 +1392,19 @@ def parseLexer(input_stream):
                     state = 60
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 60")
-                    state = 1000  # Reset state to recover
-                    lexeme += token
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
             else:
                 print("WRONG IN STATE 59")
                 state = 1000  # Reset state to recover
@@ -1218,7 +1417,11 @@ def parseLexer(input_stream):
                     state = 1000    
             else:
                 print("WRONG IN STATE 62")
-                state = 1000  # Reset state to recover
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
 
         elif state == 63:
             lexeme += token
@@ -1238,10 +1441,22 @@ def parseLexer(input_stream):
                     state = 65
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
                 else:
                     print("ERROR: 'gene' must be followed by a delimiter")
                     state = 1000  # Error state
-                    # Keep the lexeme for error reporting
             else:
                 print("WRONG IN STATE 64")
                 state = 1000  # Reset state to recover
@@ -1254,10 +1469,19 @@ def parseLexer(input_stream):
                     state = 68
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 68")
-                    state = 1000  # Reset state to recover
-                    lexeme += token
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
             else:
                 print("WRONG IN STATE 67")
                 state = 1000  # Reset state to recover
@@ -1305,10 +1529,19 @@ def parseLexer(input_stream):
                     state = 74
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 74")
-                    state = 1000  # Reset state to recover
-                    lexeme += token
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
             else:
                 print("WRONG IN STATE 73")
                 state = 1000  # Reset state to recover
@@ -1322,7 +1555,8 @@ def parseLexer(input_stream):
             else:
                 print("WRONG IN STATE 76")
                 state = 1000  # Reset state to recover
-
+        
+        #prod
         elif state == 77:
             lexeme += token
             if token == 'd':
@@ -1330,9 +1564,19 @@ def parseLexer(input_stream):
                     state = 78
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 78")
-                    state = 1000  # Reset state to recover
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
             else:
                 print("WRONG IN STATE 77")
                 state = 1000  # Reset state to recover
@@ -1375,9 +1619,19 @@ def parseLexer(input_stream):
                     state = 85
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 85")
-                    state = 1000  # Reset state to recover
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
 
             else:
                 print("WRONG IN STATE 84")
@@ -1401,9 +1655,19 @@ def parseLexer(input_stream):
                     state = 89
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 89")
-                    state = 1000  # Reset state to recover
+                elif lookahead_char not in delim_end:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
             else:
                 print("WRONG IN STATE 88")
                 state = 1000  # Reset state to recover
@@ -1418,7 +1682,12 @@ def parseLexer(input_stream):
                 state = 95
             else:
                 print("WRONG IN STATE 91")
-                state = 1000  # Reset state to recover
+                # Report the error for the current lexeme
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
 
         #SEQ
         elif state == 92:
@@ -1428,9 +1697,19 @@ def parseLexer(input_stream):
                     state = 93
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 93")
-                    state = 1000  # Reset state to recover
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
             else:
                 print("WRONG IN STATE 92")
                 state = 1000  # Reset state to recover
@@ -1483,9 +1762,19 @@ def parseLexer(input_stream):
                     state = 100
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 93")
-                    state = 1000  # Reset state to recover
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
             else:
                 print("WRONG IN STATE 99")
                 state = 1000  # Error state
@@ -1518,9 +1807,19 @@ def parseLexer(input_stream):
                     state = 105
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
-                else:
-                    print("ERROR IN STATE 93")
-                    state = 1000  # Reset state to recover
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
             else:
                 print("WRONG IN STATE 104")
                 state = 1000  # Error state
@@ -1533,7 +1832,11 @@ def parseLexer(input_stream):
                     state = 1000    
             else:
                 print("WRONG IN STATE 107")
-                state = 1000  # Error state
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
 
         elif state == 108:
             lexeme += token
@@ -1563,9 +1866,3761 @@ def parseLexer(input_stream):
                     state = 111
                     tokens.append((lexeme, lexeme))
                     lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+import tkinter as tk
+from tkinter import scrolledtext
+from tkinter import ttk
+
+lexical_panel = None  # Define lexical_panel as a global variable
+
+def display_lexical_error(message):
+    global lexical_panel  # Use the global lexical_panel
+    try:
+        lexical_panel.insert(tk.END, message + '\n', 'error')  # Insert error in GUI
+        lexical_panel.yview(tk.END)  # Auto-scroll to latest error
+        lexical_panel.tag_config('error', foreground='red')  # Highlight in red
+    except NameError:
+        print(message)  # Fallback if GUI isn't available
+        pass
+
+def display_lexical_pass(message):
+    global lexical_panel  # Use the global lexical_panel
+    try:
+        lexical_panel.insert(tk.END, message + '\n', 'pass')  # Insert error in GUI
+        lexical_panel.yview(tk.END)  # Auto-scroll to latest error
+        lexical_panel.tag_config('pass', foreground='green')  # Highlight in red
+    except NameError:
+        print(message)  # Fallback if GUI isn't available
+        pass
+
+def handle_state_error(state_number, lexeme, line_number):
+    """
+    Handle lexical errors in a generic way.
+    
+    Parameters:
+        state_number (int): The state number where the error occurred
+        lexeme (str): The current lexeme being processed
+        line_number (int): The current line number
+        
+    Returns:
+        tuple: (found_error, state, lexeme) - updated values after error handling
+    """
+    print(f"WRONG IN STATE {state_number}")
+    display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+    # Reset state to initial state and clear lexeme
+    return True, 0, ""
+
+def is_end_of_lexeme(token):
+    # End-of-lexeme characters (e.g., space, newline, punctuation)
+    return token in {' ', '\n'}
+
+def parseLexer(input_stream):
+    print("Lexer Executed")
+    """    
+    Parameters:
+        input_stream (str): The input code to parse.
+    
+    Returns:
+        list: A list of tuples containing lexeme and token type.
+    """
+    tokens = []
+    state = 0
+    lexeme = ""
+    char_iter = iter(input_stream)
+    line_number = 1 
+    found_error = False
+    ascii = {" ", '!', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', 
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', 
+            '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 
+            'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_', 
+            '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 
+            'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', '/"'}
+
+    ascii2 = {" ", '!', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', 
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', 
+            '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 
+            'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_', 
+            '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 
+            'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', '"'}
+    
+    upchar = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 
+              'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 
+              'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'}
+
+    lowchar = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 
+            'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 
+            'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'}
+
+    allchar = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 
+               'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 
+               'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 
+               'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 
+               'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' }
+
+    value = {'1','2','3','4','5','6','7','8','9'}
+
+    allval = {'1','2','3','4','5','6','7','8','9','0'}
+
+    valchar = {'1', '2', '3' ,'4', '5', '6' ,'7' ,'8' ,'9' ,'0',
+               'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 
+               'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 
+               'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 
+               'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 
+               'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' }
+    
+    underscore = {'_'}
+
+    #DELIMITERS
+    delim_arith = {'(', ' ', '^', } 
+    delim_equal = {' ', '{', '(', '"'}
+    delim_gen = {' ', ';' } 
+    delim_end = {' ', ';', '=', ',', ')'}
+    delim_1 = {' ', '('} 
+    delim_2 = {' ', '{'} 
+    delim_add = {'"', ' ', '^', '(', } 
+    delim_string = {' ', '\n', ',', '}', ')', '+', '\t', ';'} 
+    delim_update = {' ', ';', ')'}
+    delim_id = {' ', '=', '<', '>', ';', '!', '[', '(', '&', '|', '*', ',', ')', '/', ':', ']'}
+    delim_logic = {' ', '(', '^'} | allval | upchar
+    delim_comp = {' ', '(', '^'} 
+    period_delim = {' ', '(', '^'} | allval | upchar
+    terminator_delim = {'\n', ' ', '\t'}
+    open_parenthesis_delim = {'\n', '^', ' ', '(', ',', ')', '!'} 
+    delim_splice = {'\n', '^', ' ', '(', ',', ')', '!'} 
+    close_parenthesis_delim =  {')', ' ', '\n', '{', '}', '^', '+', '-', '/', '*', '%', '#', ';', ':'}
+    open_braces_delim = {' ', '\\', "{"} 
+    close_braces_delim = {' ', '\n', '#', "{", ",", ";", '}'}
+    open_bracket_delim = value
+    close_bracket_delim = {' ', '=', '[', ',', ';'}
+    delim_num = { '*', '/', '%', '<', '>', '=', ' ', '#', ')', '}', '&', '|', ";", "]", ",", ':'}
+    delim_comment = {' ', '\n', ';', '}'}
+    lookahead_char = None
+    token = None
+
+    while True:
+        # print(state)
+        if lookahead_char is not None:
+            # print(f"token before {token}")
+            token = lookahead_char  # Use cached lookahead character
+            lookahead_char = None  # Clear the cache
+            # print(f"token after {token}")
+        else:
+            try:
+                # print(f"token before {token}")
+                token = next(char_iter)
+                # print(f"token after {token}")
+            except StopIteration:
+                # Handle end of stream if in error state
+                if state == 1000 and lexeme:
+                    display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                break  # End of input stream
+
+        if token =='\n' and state < 424:
+            if state == 1000 and lexeme:  # If in error state and lexeme exists
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                lexeme = ""  # Reset lexeme to avoid appending invalid values
+                state = 0  # Reset state to recover
+
+            if token == '\n':
+                tokens.append(("\\n", "newline"))
+                line_number += 1
+            lexeme = ""  # Reset lexeme after delimiter processing
+            state = 0  # Reset state for next token
+            continue  # Skip further processing for delimiters
+
+        try:
+            # print(f"lookahead_char before {lookahead_char}")
+            lookahead_char = next(char_iter)  # Peek the next character
+            # print(f"lookahead_char after {lookahead_char}")
+        except StopIteration:
+            lookahead_char = None  # No more characters to proce
+    
+        if state == 0:
+            print("Passed state 0")
+            if token == " ":
+                tokens.append((" ", "space"))
+                lexeme = ""  # Reset lexeme after delimiter processing
+                state = 0  # Reset state for next token
+            elif token == "\t":
+                tokens.append(("\\t", "tab"))
+                lexeme = ""  # Reset lexeme after delimiter processing
+                state = 0  # Reset state for next token
+            #TEMP SOLUTION
+            elif token == ",":
+                tokens.append((token, token))
+                lexeme = ""  # Reset lexeme after delimiter processing
+                state = 0  # Reset state for next token
+            #TEMP SOLUTION2
+            elif token == "[":
+                tokens.append((token, token))
+                lexeme = ""  # Reset lexeme after delimiter processing
+                state = 0  # Reset state for next token
+
+            #:
+            elif token == ':':
+                state = 460
+                lexeme = token 
+                if lookahead_char in delim_splice or lookahead_char is None or lookahead_char == "\n":
+                    state = 461
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == ':':
+                    state = 462
+                elif lookahead_char in allchar or allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
                 else:
-                    print("ERROR IN STATE 111")
+                    print("ERROR IN STATE 460")
+                    found_error = True
+                    display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                    # Reset state to initial state to process the current token as a new lexeme
+                    state = 1000
+                    # Push the current token back for reprocessing
+                    lexeme = ""
+                    state = 0
+            elif token == '_':
+                state = 1
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+                    
+            elif token == 'a':
+                state = 6
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                    found_error = True
+
+
+            elif token == 'c':
+                state = 16
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                    found_error = True
+
+                
+            elif token == 'd':
+                state = 28
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'e':
+                state = 43
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'f':
+                state = 58
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+
+            elif token == 'g':
+                state = 62
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'i':
+                state = 67
+                lexeme = token 
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'p':
+                state = 70
+                lexeme = token 
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'q':
+                state = 81
+                lexeme = token 
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'r':
+                state = 87
+                lexeme = token
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 's':
+                state = 91
+                lexeme = token 
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'v':
+                state = 102
+                lexeme = token 
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'w':
+                state = 107
+                lexeme = token 
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+
+            elif token == '+':
+                state = 113
+                lexeme = token 
+                if lookahead_char in delim_add or lookahead_char is None or lookahead_char == "\n":
+                    state = 114
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '+':
+                    state = 115
+                elif lookahead_char == '=':
+                    state = 117
+                elif lookahead_char in allchar or allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                else:
+                    print("ERROR IN STATE 113")
                     state = 1000  # Reset state to recover
+
+            #-
+            elif token == '-':
+                state = 119
+                lexeme = token 
+                if lookahead_char in delim_arith or lookahead_char is None or lookahead_char == "\n":
+                    state = 120
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char in allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in lowchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in upchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char == '-':
+                    state = 121
+                elif lookahead_char == '=':
+                    state = 123
+                else:
+                    print("ERROR IN STATE 119")
+                    state = 1000  # Reset state to recover
+            
+            #*
+            elif token == '*':
+                state = 125
+                lexeme = token 
+                if lookahead_char in delim_arith or lookahead_char is None or lookahead_char == "\n":
+                    state = 126
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '*':
+                    state = 1125
+                elif lookahead_char == '=':
+                    state = 127
+                else:
+                    state = 1000  # Reset state to recover
+
+            elif token == '/':
+                state = 129
+                lexeme = token 
+                if lookahead_char in delim_arith or lookahead_char is None or lookahead_char == "\n":
+                    state = 130
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '/':
+                    state = 1129
+                elif lookahead_char == '=':
+                    state = 131
+                elif lookahead_char == '*':
+                    state = 425
+                else:
+                    state = 1000  # Reset state to recover
+
+            elif token == '%':
+                state = 133
+                lexeme = token 
+                if lookahead_char in delim_arith or lookahead_char is None or lookahead_char == "\n":
+                    state = 134
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '=':
+                    state = 135
+                else:
+                    print("ERROR IN STATE 133")
+                    state = 1000  # Reset state to recover
+            elif token == '&':
+                state = 137
+                lexeme = token  
+
+            elif token == '|':
+                state = 140
+                lexeme = token  
+
+            #=
+            elif token == '=':
+                state = 143
+                lexeme = token 
+                if lookahead_char in delim_equal or lookahead_char is None or lookahead_char == "\n":
+                    state = 144
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '=':
+                    state = 145
+                elif lookahead_char in allval or lookahead_char in allchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                else:
+                    print("ERROR IN STATE 143")
+                    state = 1000  # Reset state to recover
+
+            #>
+            elif token == '>':
+                state = 147
+                lexeme = token 
+                if lookahead_char in delim_comp or lookahead_char is None or lookahead_char == "\n":
+                    state = 148
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '=':
+                    state = 149
+                else:
+                    print("ERROR IN STATE 147")
+                    state = 1000  # Reset state to recover
+
+            #<
+            elif token == '<':
+                state = 151
+                lexeme = token 
+                if lookahead_char in delim_comp or lookahead_char is None or lookahead_char == "\n":
+                    state = 152
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '=':
+                    state = 153
+                else:
+                    print("ERROR IN STATE 151")
+                    state = 1000  # Reset state to recover
+
+            #!
+            elif token == '!':
+                state = 155
+                lexeme = token 
+                if lookahead_char in delim_comp or lookahead_char is None or lookahead_char == "\n":
+                    state = 156
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char in allval or lookahead_char in allchar  :
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char == '=':
+                    state = 157
+                else:
+                    print("ERROR IN STATE 155")
+                    state = 1000  # Reset state to recover
+
+
+            #.
+            # elif token == '.':
+            #     state = 159
+            #     lexeme = token 
+            #     if lookahead_char in period_delim or lookahead_char is None or lookahead_char == "\n":
+            #         state = 160
+            #         tokens.append((lexeme, lexeme))
+            #         lexeme = ""
+
+            #     else:
+            #         print("ERROR IN STATE 159")
+            #         state = 1000  # Reset state to recover
+
+            #;
+
+            elif token == ';':
+                state = 165
+                lexeme = token 
+                if lookahead_char in terminator_delim or lookahead_char is None or lookahead_char == "\n":
+                    state = 166
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char in lowchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                else:
+                    print("ERROR IN STATE 165")
+                    state = 1000  # Reset state to recover
+
+            #(
+            elif token == '(':
+                print("Passed state 167")
+                state = 167
+                lexeme = token 
+                if lookahead_char in open_parenthesis_delim or lookahead_char is None:
+                    print("Passed state 168")
+                    state = 168
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char in allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in lowchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in upchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                else:
+                    print("ERROR IN STATE 167")
+                    state = 1000  # Reset state to recover
+
+            #)
+            elif token == ')':
+                state = 169
+                lexeme = token 
+                if lookahead_char in close_parenthesis_delim or lookahead_char is None or lookahead_char == "\n":
+                    state = 170
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+
+                else:
+                    print("ERROR IN STATE 169")
+                    state = 1000  # Reset state to recover
+
+            #{
+            elif token == '{':
+                state = 171
+                lexeme = token 
+                if lookahead_char in open_braces_delim or lookahead_char is None or lookahead_char == "\n":
+                    state = 172
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char in allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in lowchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in upchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char == '"':
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                else:
+                    print("ERROR IN STATE 171")
+                    state = 1000  # Reset state to recover
+            #}
+            elif token == '}':
+                state = 173
+                lexeme = token 
+                if lookahead_char in close_braces_delim or lookahead_char is None or lookahead_char == "\n":
+                    state = 174
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+
+                else:
+                    print("ERROR IN STATE 173")
+                    state = 1000  # Reset state to recover
+
+            #[
+            # elif token == '[':
+            #     state = 175
+            #     lexeme = token 
+            #     if lookahead_char in open_bracket_delim or lookahead_char is None or lookahead_char == "\n":
+            #         state = 176
+            #         tokens.append((lexeme, lexeme))
+            #         lexeme = ""
+
+            #     else:
+            #         print("ERROR IN STATE 175")
+            #         state = 1000  # Reset state to recover
+
+            #]
+            elif token == ']':
+                state = 177
+                lexeme = token 
+                if lookahead_char in close_bracket_delim or lookahead_char is None or lookahead_char == "\n":
+                    state = 178
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+
+                else:
+                    print("ERROR IN STATE 177")
+                    state = 1000  # Reset state to recover
+    
+
+            #IDENTIFIER (2)
+            elif token in upchar:
+                state = 179
+                lexeme = token 
+                if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
+                    state = 180
+                    tokens.append((lexeme, "Identifier"))
+                    lexeme = ""
+                elif lookahead_char in valchar or lookahead_char in underscore:
+                    state = 181
+                elif lookahead_char == "+":
+                    # Specifically handle + operator after an identifier
+                    tokens.append((lexeme, "Identifier"))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char == "-":
+                    # Specifically handle - operator after an identifier
+                    tokens.append((lexeme, "Identifier"))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in "*/=%<>!&|":  # Add other operators here
+                    # Handle all other operators similarly
+                    tokens.append((lexeme, "Identifier"))
+                    lexeme = ""
+                    state = 0
+                else:
+                    state = 1000  # Reset state to recover
+
+            elif token == '"':
+                state = 219
+                lexeme = token 
+            
+            #NUMLIT
+            elif token in allval or token == "^":  # Check for numeric values or negation symbol
+                if token == "^":
+                    lexeme = token  # Save the negation symbol
+                    if lookahead_char in allval:  # Must be followed by a number
+                        state = 242
+                    else:
+                        print("ERROR: ^ must be followed by a number")
+                        state = 1000
+                else:  # It's a numeric value
+                    lexeme = token 
+                    if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":
+                        print("Passed state 228")
+                        state = 228
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                    elif lookahead_char in allval:  # Allow numbers to follow
+                        state = 242
+                    elif lookahead_char == "+":
+                            tokens.append((lexeme, "numlit"))
+                            lexeme = ""
+                            state = 0
+                    elif lookahead_char == "-":
+                            tokens.append((lexeme, "numlit"))
+                            lexeme = ""
+                            state = 0
+                    elif lookahead_char == '.':
+                        state = 229
+                    else:
+                        print("ERROR IN STATE 228")
+                        state = 1000  # Reset state to recover
+
+            # SINGLE LINE COMMENT
+            elif token == '#':
+                print("Passed state 422")
+                lexeme = token
+                state = 422
+
+            else:
+                lexeme = token
+                state = 1000  # Reset state to recover
+        
+        elif state == 1:
+            print("Passed state 1")
+            lexeme += token
+            
+            #_G
+            if token == 'G':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    print("Passed state 2")
+                    state = 2
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+
+            #L
+            elif token == 'L':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 4
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("ERROR IN STATE 1: Unexpected character")
+                found_error = True
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+                state = 0
+        elif state == 6:
+            if token == 'c':
+                lexeme += token
+                state = 7
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+            elif token == 'l':
+                lexeme += token
+                state = 10
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+            else:
+                # Don't add the current token to the lexeme if it's not a valid continuation
+                # Report the error for the current lexeme
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        #ACT
+        elif state == 7:
+            lexeme += token
+            if token == 't':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 8
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 7")
+                state = 1000  # Reset state to recover
+
+
+        elif state == 10:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 'l':
+                state = 11
+            else:
+                print("WRONG IN STATE 10")
+                state = 1000  # Reset state to recover
+
+        elif state == 11:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 'e':
+                state = 12
+            else:
+                print("WRONG IN STATE 11")
+                state = 1000  # Reset state to recover
+
+        elif state == 12:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 'l':
+                state = 13
+            else:
+                print("WRONG IN STATE 12")
+                state = 1000  # Reset state to recover
+
+        #ALLELE
+        elif state == 13:
+            lexeme += token
+            if token == 'e':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 14
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 13")
+                state = 1000  # Reset state to recover
+
+
+        elif state == 16:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n" or lookahead_char == " ":
+                found_error = True
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+                state = 0
+            elif token == 'l':
+                state = 17
+            elif token == 'o':
+                state = 22
+            else:
+                # Use our error handling function to process the error and get updated values
+                found_error, state, lexeme = handle_state_error(16, lexeme, line_number)
+                
+
+        elif state == 17:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 'u':
+                state = 18
+            else:
+                # Use our error handling function to process the error and get updated values
+                found_error, state, lexeme = handle_state_error(17, lexeme, line_number)
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+                state = 0
+
+        elif state == 18:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 's':
+                state = 19
+            else:
+                print("WRONG IN STATE 18")
+                found_error = True
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+        #CLUST
+        elif state == 19:
+            lexeme += token
+            if token == 't':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 20
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+
+            else:
+                print("WRONG IN STATE 19")
+                found_error = True
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        elif state == 22:
+            lexeme += token
+            if token == 'n':
+                state = 23
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 22")
+                state = 1000  # Reset state to recover
+
+        elif state == 23:
+            lexeme += token
+            if token == 't':
+                state = 24
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 23")
+                state = 1000  # Reset state to recover
+
+        elif state == 24:
+            lexeme += token
+            if token == 'i':
+                state = 25
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 24")
+                state = 1000  # Reset state to recover
+
+        #CONTIG
+        elif state == 25:
+            lexeme += token
+            if token == 'g':
+                if lookahead_char in delim_end or lookahead_char is None or lookahead_char == "\n":
+                    state = 26
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_end:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 25")
+                state = 1000  # Reset state to recover
+       
+        elif state == 28:
+            print("Passed state 28")
+            lexeme += token
+                 
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 'e':
+                state = 29
+            elif token == 'o':
+                print("Passed state 36")
+                state = 36
+                if lookahead_char == 'm':  # Lookahead check for 'm'
+                    state = 38
+                elif lookahead_char == 's':
+                    state = 40
+                else:
+                    print("WRONG IN STATE 36")
+                    state = 1000  # Reset state to recover
+            else:
+                print("print IN STATE 28")
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+     
+
+        elif state == 29:
+            lexeme += token
+            if token == 's':
+                state = 30
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 29")
+                state = 1000  # Reset state to recover
+
+        elif state == 30:
+            lexeme += token
+            if token == 't':
+                state = 31
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 30")
+                state = 1000  # Reset state to recover
+
+        elif state == 31:
+            lexeme += token
+            if token == 'r':
+                state = 32
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 31")
+                state = 1000  # Reset state to recover
+
+        elif state == 32:
+            lexeme += token
+            if token == 'o':
+                state = 33
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 32")
+                state = 1000  # Reset state to recover
+
+        #DESTROY
+        elif state == 33:
+            lexeme += token
+            if token == 'y':
+                if lookahead_char in delim_end or lookahead_char is None or lookahead_char == "\n":
+                    state = 34
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_end:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 33")
+                state = 1000  # Reset state to recover
+
+        #DOM
+        elif state == 38:
+            lexeme += token
+            if token == 'm':
+                if lookahead_char in delim_end or lookahead_char is None or lookahead_char == "\n":
+                    state = 39
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_end:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 38")
+                state = 1000  # Reset state to recover
+
+        elif state == 40:
+            print("Passed state 40")
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 's':
+                state = 41
+            elif lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            else:
+                print("WRONG IN STATE 40")
+                state = 1000  # Reset state to recover
+                
+        #DOSE
+        elif state == 41:
+            print("Passed state 41")
+            lexeme += token
+            if token == 'e':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    print("Passed state 42")
+                    state = 42
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 41")
+                state = 1000  # Reset state to recover
+
+        elif state == 43:
+            lexeme += token
+            if token == 'l':
+                state = 44
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+            elif token == 'x':
+                state = 51
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000                
+            else:
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        elif state == 44:
+            lexeme += token
+            if token == 'i':
+                state = 45
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            elif token == 's':
+                state = 48
+                if lookahead_char is None or lookahead_char == "\n":
+                    found_error = True   
+            else:
+                print("WRONG IN STATE 29")
+                state = 1000  # Reset state to recover
+
+
+        #ELIF
+        elif state == 45:
+            lexeme += token
+            if token == 'f':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 46
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+                
+            else:
+                print("WRONG IN STATE 45")
+                state = 1000  # Reset state to recover
+
+        #ELSE
+        elif state == 48:
+            lexeme += token
+            if token == 'e':
+                if lookahead_char in delim_2 or lookahead_char is None or lookahead_char == "\n":
+                    state = 49
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_2:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 48")
+                state = 1000  
+                lexeme += token
+
+        elif state == 51:
+            lexeme += token
+            if token == 'p':
+                state = 52
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 51")
+                state = 1000  # Reset state to recover
+
+        elif state == 52:
+            lexeme += token
+            if token == 'r':
+                state = 53
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 52")
+                state = 1000  # Reset state to recover
+
+        elif state == 53:
+            lexeme += token
+            if token == 'e':
+                state = 54
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 53")
+                state = 1000  # Reset state to recover
+
+        elif state == 54:
+            lexeme += token
+            if token == 's':
+                state = 55
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 54")
+                state = 1000  # Reset state to recover
+
+        #express
+        elif state == 55:
+            lexeme += token
+            if token == 's':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 56
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 55")
+                state = 1000  # Reset state to recover
+
+        elif state == 58:
+            lexeme += token
+            if token == 'o':
+                state = 59
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            elif token == 'u':
+                state = 450
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 58")
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        elif state == 450:
+            lexeme += token
+            if token == 'n':
+                state = 451
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 451")
+                state = 1000  # Reset state to recover
+
+        #::
+        elif state == 462:
+            lexeme += token
+            if lookahead_char in delim_splice or lookahead_char is None or lookahead_char == "\n":
+                state = 463
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+            elif lookahead_char in allchar or lookahead_char in allval:
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+
+            else:
+                print("WRONG IN STATE 462")
+                state = 1000  # Error state
+                
+        #FUNC
+        elif state == 451:
+            lexeme += token
+            if token == 'c':
+                if (lookahead_char is None or lookahead_char == "\n" or lookahead_char in delim_1 ):
+                    state = 452
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 451")
+                state = 1000  # Reset state to recover
+
+        #FOR
+        elif state == 59:
+            lexeme += token
+            if token == 'r':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 60
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 59")
+                state = 1000  # Reset state to recover
+
+        elif state == 62:
+            lexeme += token
+            if token == 'e':
+                state = 63
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 62")
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        elif state == 63:
+            lexeme += token
+            if token == 'n':
+                state = 64
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 62")
+                state = 1000  # Reset state to recover
+
+        #GENE
+        elif state == 64:
+            lexeme += token
+            if token == 'e':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 65
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+                else:
+                    print("ERROR: 'gene' must be followed by a delimiter")
+                    state = 1000  # Error state
+            else:
+                print("WRONG IN STATE 64")
+                state = 1000  # Reset state to recover
+
+        #IF
+        elif state == 67:
+            lexeme += token
+            if token == 'f':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 68
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 67")
+                state = 1000  # Reset state to recover
+
+
+        elif state == 70:
+            lexeme += token
+            if token == 'e':
+                state = 71
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            elif token == 'r':
+                state = 76
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("ERROR IN STATE 70")
+                state = 1000  # Reset state to recover
+
+        elif state == 71:
+            lexeme += token
+            if token == 'r':
+                state = 72
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 71")
+                state = 1000  # Reset state to recover
+
+        elif state == 72:
+            lexeme += token
+            if token == 'm':
+                state = 73
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 72")
+                state = 1000  # Reset state to recover
+
+        #PERMS
+        elif state == 73:
+            lexeme += token
+            if token == 's':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 74
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 73")
+                state = 1000  # Reset state to recover
+
+        elif state == 76:
+            lexeme += token
+            if token == 'o':
+                state = 77
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 76")
+                state = 1000  # Reset state to recover
+        
+        #prod
+        elif state == 77:
+            lexeme += token
+            if token == 'd':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 78
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 77")
+                state = 1000  # Reset state to recover
+
+        elif state == 81:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000  
+            elif token == 'u':
+                state = 82
+            else:
+                print("WRONG IN STATE 81")
+                state = 1000  # Reset state to recover
+
+        elif state == 82:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000    
+            elif token == 'a':
+                state = 83
+            else:
+                print("WRONG IN STATE 82")
+                state = 1000  # Reset state to recover
+
+        elif state == 83:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000            
+            elif token == 'n':
+                state = 84
+            else:
+                print("WRONG IN STATE 83")
+                state = 1000  # Reset state to recover
+
+        #QUANT
+        elif state == 84:
+            lexeme += token
+            if token == 't':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 85
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 84")
+                state = 1000  # Reset state to recover
+
+        elif state == 87:
+            lexeme += token
+            if token == 'e':
+                state = 88
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 87")
+                state = 1000  # Reset state to recover
+
+        #REC
+        elif state == 88:
+            lexeme += token
+            if token == 'c':
+                if lookahead_char in delim_end or lookahead_char is None or lookahead_char == "\n":
+                    state = 89
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_end:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 88")
+                state = 1000  # Reset state to recover
+
+        elif state == 91:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 'e':
+                state = 92
+            elif token == 't':
+                state = 95
+            else:
+                print("WRONG IN STATE 91")
+                # Report the error for the current lexeme
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        #SEQ
+        elif state == 92:
+            lexeme += token
+            if token == 'q':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 93
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 92")
+                state = 1000  # Reset state to recover
+
+        elif state == 95:
+            lexeme += token
+            if token == 'i':
+                state = 96
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 95")
+                state = 1000  # Reset state to recover
+
+        elif state == 96:
+            lexeme += token
+            if token == 'm':
+                state = 97  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 96")
+                state = 1000  # Error state
+
+        elif state == 97:
+            lexeme += token
+            if token == 'u':
+                state = 98  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 97")
+                state = 1000  # Error state
+
+        elif state == 98:
+            lexeme += token
+            if token == 'l':
+                state = 99  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 98")
+                state = 1000  # Error state
+
+        #STIMULI
+        elif state == 99:
+            lexeme += token
+            if token == 'i':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 100
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 99")
+                state = 1000  # Error state
+    
+        elif state == 102:
+            lexeme += token
+            if token == 'o':
+                state = 103  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 102")
+                state = 1000  # Error state
+
+        elif state == 103:
+            lexeme += token
+            if token == 'i':
+                state = 104  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 103")
+                state = 1000  # Error state
+
+        #VOID
+        elif state == 104:
+            lexeme += token
+            if token == 'd':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 105
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 104")
+                state = 1000  # Error state
+
+        elif state == 107:
+            lexeme += token
+            if token == 'h':
+                state = 108  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 107")
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        elif state == 108:
+            lexeme += token
+            if token == 'i':
+                state = 109  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 108")
+                state = 1000  # Error state
+
+        elif state == 109:
+            lexeme += token
+            if token == 'l':
+                state = 110  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 109")
+                state = 1000  # Error state
+
+        #WHILE
+        elif state == 110:
+            lexeme += token
+            if token == 'e':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 111
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+import tkinter as tk
+from tkinter import scrolledtext
+from tkinter import ttk
+
+lexical_panel = None  # Define lexical_panel as a global variable
+
+def display_lexical_error(message):
+    global lexical_panel  # Use the global lexical_panel
+    try:
+        lexical_panel.insert(tk.END, message + '\n', 'error')  # Insert error in GUI
+        lexical_panel.yview(tk.END)  # Auto-scroll to latest error
+        lexical_panel.tag_config('error', foreground='red')  # Highlight in red
+    except NameError:
+        print(message)  # Fallback if GUI isn't available
+        pass
+
+def display_lexical_pass(message):
+    global lexical_panel  # Use the global lexical_panel
+    try:
+        lexical_panel.insert(tk.END, message + '\n', 'pass')  # Insert error in GUI
+        lexical_panel.yview(tk.END)  # Auto-scroll to latest error
+        lexical_panel.tag_config('pass', foreground='green')  # Highlight in red
+    except NameError:
+        print(message)  # Fallback if GUI isn't available
+        pass
+
+def handle_state_error(state_number, lexeme, line_number):
+    """
+    Handle lexical errors in a generic way.
+    
+    Parameters:
+        state_number (int): The state number where the error occurred
+        lexeme (str): The current lexeme being processed
+        line_number (int): The current line number
+        
+    Returns:
+        tuple: (found_error, state, lexeme) - updated values after error handling
+    """
+    print(f"WRONG IN STATE {state_number}")
+    display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+    # Reset state to initial state and clear lexeme
+    return True, 0, ""
+
+def is_end_of_lexeme(token):
+    # End-of-lexeme characters (e.g., space, newline, punctuation)
+    return token in {' ', '\n'}
+
+def parseLexer(input_stream):
+    print("Lexer Executed")
+    """    
+    Parameters:
+        input_stream (str): The input code to parse.
+    
+    Returns:
+        list: A list of tuples containing lexeme and token type.
+    """
+    tokens = []
+    state = 0
+    lexeme = ""
+    char_iter = iter(input_stream)
+    line_number = 1 
+    found_error = False
+    ascii = {" ", '!', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', 
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', 
+            '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 
+            'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_', 
+            '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 
+            'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', '/"'}
+
+    ascii2 = {" ", '!', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', 
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', 
+            '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 
+            'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_', 
+            '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 
+            'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', '"'}
+    
+    upchar = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 
+              'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 
+              'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'}
+
+    lowchar = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 
+            'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 
+            'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'}
+
+    allchar = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 
+               'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 
+               'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 
+               'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 
+               'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' }
+
+    value = {'1','2','3','4','5','6','7','8','9'}
+
+    allval = {'1','2','3','4','5','6','7','8','9','0'}
+
+    valchar = {'1', '2', '3' ,'4', '5', '6' ,'7' ,'8' ,'9' ,'0',
+               'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 
+               'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 
+               'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 
+               'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 
+               'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' }
+    
+    underscore = {'_'}
+
+    #DELIMITERS
+    delim_arith = {'(', ' ', '^', } 
+    delim_equal = {' ', '{', '(', '"'}
+    delim_gen = {' ', ';' } 
+    delim_end = {' ', ';', '=', ',', ')'}
+    delim_1 = {' ', '('} 
+    delim_2 = {' ', '{'} 
+    delim_add = {'"', ' ', '^', '(', } 
+    delim_string = {' ', '\n', ',', '}', ')', '+', '\t', ';'} 
+    delim_update = {' ', ';', ')'}
+    delim_id = {' ', '=', '<', '>', ';', '!', '[', '(', '&', '|', '*', ',', ')', '/', ':', ']'}
+    delim_logic = {' ', '(', '^'} | allval | upchar
+    delim_comp = {' ', '(', '^'} 
+    period_delim = {' ', '(', '^'} | allval | upchar
+    terminator_delim = {'\n', ' ', '\t'}
+    open_parenthesis_delim = {'\n', '^', ' ', '(', ',', ')', '!'} 
+    delim_splice = {'\n', '^', ' ', '(', ',', ')', '!'} 
+    close_parenthesis_delim =  {')', ' ', '\n', '{', '}', '^', '+', '-', '/', '*', '%', '#', ';', ':'}
+    open_braces_delim = {' ', '\\', "{"} 
+    close_braces_delim = {' ', '\n', '#', "{", ",", ";", '}'}
+    open_bracket_delim = value
+    close_bracket_delim = {' ', '=', '[', ',', ';'}
+    delim_num = { '*', '/', '%', '<', '>', '=', ' ', '#', ')', '}', '&', '|', ";", "]", ",", ':'}
+    delim_comment = {' ', '\n', ';', '}'}
+    lookahead_char = None
+    token = None
+
+    while True:
+        # print(state)
+        if lookahead_char is not None:
+            # print(f"token before {token}")
+            token = lookahead_char  # Use cached lookahead character
+            lookahead_char = None  # Clear the cache
+            # print(f"token after {token}")
+        else:
+            try:
+                # print(f"token before {token}")
+                token = next(char_iter)
+                # print(f"token after {token}")
+            except StopIteration:
+                # Handle end of stream if in error state
+                if state == 1000 and lexeme:
+                    display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                break  # End of input stream
+
+        if token =='\n' and state < 424:
+            if state == 1000 and lexeme:  # If in error state and lexeme exists
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                lexeme = ""  # Reset lexeme to avoid appending invalid values
+                state = 0  # Reset state to recover
+
+            if token == '\n':
+                tokens.append(("\\n", "newline"))
+                line_number += 1
+            lexeme = ""  # Reset lexeme after delimiter processing
+            state = 0  # Reset state for next token
+            continue  # Skip further processing for delimiters
+
+        try:
+            # print(f"lookahead_char before {lookahead_char}")
+            lookahead_char = next(char_iter)  # Peek the next character
+            # print(f"lookahead_char after {lookahead_char}")
+        except StopIteration:
+            lookahead_char = None  # No more characters to proce
+    
+        if state == 0:
+            print("Passed state 0")
+            if token == " ":
+                tokens.append((" ", "space"))
+                lexeme = ""  # Reset lexeme after delimiter processing
+                state = 0  # Reset state for next token
+            elif token == "\t":
+                tokens.append(("\\t", "tab"))
+                lexeme = ""  # Reset lexeme after delimiter processing
+                state = 0  # Reset state for next token
+            #TEMP SOLUTION
+            elif token == ",":
+                tokens.append((token, token))
+                lexeme = ""  # Reset lexeme after delimiter processing
+                state = 0  # Reset state for next token
+            #TEMP SOLUTION2
+            elif token == "[":
+                tokens.append((token, token))
+                lexeme = ""  # Reset lexeme after delimiter processing
+                state = 0  # Reset state for next token
+
+            #:
+            elif token == ':':
+                state = 460
+                lexeme = token 
+                if lookahead_char in delim_splice or lookahead_char is None or lookahead_char == "\n":
+                    state = 461
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == ':':
+                    state = 462
+                elif lookahead_char in allchar or allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                else:
+                    print("ERROR IN STATE 460")
+                    found_error = True
+                    display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                    # Reset state to initial state to process the current token as a new lexeme
+                    state = 1000
+                    # Push the current token back for reprocessing
+                    lexeme = ""
+                    state = 0
+            elif token == '_':
+                state = 1
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+                    
+            elif token == 'a':
+                state = 6
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                    found_error = True
+
+
+            elif token == 'c':
+                state = 16
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                    found_error = True
+
+                
+            elif token == 'd':
+                state = 28
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'e':
+                state = 43
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'f':
+                state = 58
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+
+            elif token == 'g':
+                state = 62
+                lexeme = token  
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'i':
+                state = 67
+                lexeme = token 
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'p':
+                state = 70
+                lexeme = token 
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'q':
+                state = 81
+                lexeme = token 
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'r':
+                state = 87
+                lexeme = token
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 's':
+                state = 91
+                lexeme = token 
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'v':
+                state = 102
+                lexeme = token 
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+            elif token == 'w':
+                state = 107
+                lexeme = token 
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+                elif lookahead_char is None:
+                    display_lexical_error(f"Invalid lexeme: '{lexeme.strip()}' on line {line_number}")
+                    state = 1000
+                    lexeme = ""
+
+            elif token == '+':
+                state = 113
+                lexeme = token 
+                if lookahead_char in delim_add or lookahead_char is None or lookahead_char == "\n":
+                    state = 114
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '+':
+                    state = 115
+                elif lookahead_char == '=':
+                    state = 117
+                elif lookahead_char in allchar or allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                else:
+                    print("ERROR IN STATE 113")
+                    state = 1000  # Reset state to recover
+
+            #-
+            elif token == '-':
+                state = 119
+                lexeme = token 
+                if lookahead_char in delim_arith or lookahead_char is None or lookahead_char == "\n":
+                    state = 120
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char in allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in lowchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in upchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char == '-':
+                    state = 121
+                elif lookahead_char == '=':
+                    state = 123
+                else:
+                    print("ERROR IN STATE 119")
+                    state = 1000  # Reset state to recover
+            
+            #*
+            elif token == '*':
+                state = 125
+                lexeme = token 
+                if lookahead_char in delim_arith or lookahead_char is None or lookahead_char == "\n":
+                    state = 126
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '*':
+                    state = 1125
+                elif lookahead_char == '=':
+                    state = 127
+                else:
+                    state = 1000  # Reset state to recover
+
+            elif token == '/':
+                state = 129
+                lexeme = token 
+                if lookahead_char in delim_arith or lookahead_char is None or lookahead_char == "\n":
+                    state = 130
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '/':
+                    state = 1129
+                elif lookahead_char == '=':
+                    state = 131
+                elif lookahead_char == '*':
+                    state = 425
+                else:
+                    state = 1000  # Reset state to recover
+
+            elif token == '%':
+                state = 133
+                lexeme = token 
+                if lookahead_char in delim_arith or lookahead_char is None or lookahead_char == "\n":
+                    state = 134
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '=':
+                    state = 135
+                else:
+                    print("ERROR IN STATE 133")
+                    state = 1000  # Reset state to recover
+            elif token == '&':
+                state = 137
+                lexeme = token  
+
+            elif token == '|':
+                state = 140
+                lexeme = token  
+
+            #=
+            elif token == '=':
+                state = 143
+                lexeme = token 
+                if lookahead_char in delim_equal or lookahead_char is None or lookahead_char == "\n":
+                    state = 144
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '=':
+                    state = 145
+                elif lookahead_char in allval or lookahead_char in allchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                else:
+                    print("ERROR IN STATE 143")
+                    state = 1000  # Reset state to recover
+
+            #>
+            elif token == '>':
+                state = 147
+                lexeme = token 
+                if lookahead_char in delim_comp or lookahead_char is None or lookahead_char == "\n":
+                    state = 148
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '=':
+                    state = 149
+                else:
+                    print("ERROR IN STATE 147")
+                    state = 1000  # Reset state to recover
+
+            #<
+            elif token == '<':
+                state = 151
+                lexeme = token 
+                if lookahead_char in delim_comp or lookahead_char is None or lookahead_char == "\n":
+                    state = 152
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char == '=':
+                    state = 153
+                else:
+                    print("ERROR IN STATE 151")
+                    state = 1000  # Reset state to recover
+
+            #!
+            elif token == '!':
+                state = 155
+                lexeme = token 
+                if lookahead_char in delim_comp or lookahead_char is None or lookahead_char == "\n":
+                    state = 156
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char in allval or lookahead_char in allchar  :
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char == '=':
+                    state = 157
+                else:
+                    print("ERROR IN STATE 155")
+                    state = 1000  # Reset state to recover
+
+
+            #.
+            # elif token == '.':
+            #     state = 159
+            #     lexeme = token 
+            #     if lookahead_char in period_delim or lookahead_char is None or lookahead_char == "\n":
+            #         state = 160
+            #         tokens.append((lexeme, lexeme))
+            #         lexeme = ""
+
+            #     else:
+            #         print("ERROR IN STATE 159")
+            #         state = 1000  # Reset state to recover
+
+            #;
+
+            elif token == ';':
+                state = 165
+                lexeme = token 
+                if lookahead_char in terminator_delim or lookahead_char is None or lookahead_char == "\n":
+                    state = 166
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char in lowchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                else:
+                    print("ERROR IN STATE 165")
+                    state = 1000  # Reset state to recover
+
+            #(
+            elif token == '(':
+                print("Passed state 167")
+                state = 167
+                lexeme = token 
+                if lookahead_char in open_parenthesis_delim or lookahead_char is None:
+                    print("Passed state 168")
+                    state = 168
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char in allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in lowchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in upchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                else:
+                    print("ERROR IN STATE 167")
+                    state = 1000  # Reset state to recover
+
+            #)
+            elif token == ')':
+                state = 169
+                lexeme = token 
+                if lookahead_char in close_parenthesis_delim or lookahead_char is None or lookahead_char == "\n":
+                    state = 170
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+
+                else:
+                    print("ERROR IN STATE 169")
+                    state = 1000  # Reset state to recover
+
+            #{
+            elif token == '{':
+                state = 171
+                lexeme = token 
+                if lookahead_char in open_braces_delim or lookahead_char is None or lookahead_char == "\n":
+                    state = 172
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char in allval:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in lowchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in upchar:
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char == '"':
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                    state = 0
+                else:
+                    print("ERROR IN STATE 171")
+                    state = 1000  # Reset state to recover
+            #}
+            elif token == '}':
+                state = 173
+                lexeme = token 
+                if lookahead_char in close_braces_delim or lookahead_char is None or lookahead_char == "\n":
+                    state = 174
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+
+                else:
+                    print("ERROR IN STATE 173")
+                    state = 1000  # Reset state to recover
+
+            #[
+            # elif token == '[':
+            #     state = 175
+            #     lexeme = token 
+            #     if lookahead_char in open_bracket_delim or lookahead_char is None or lookahead_char == "\n":
+            #         state = 176
+            #         tokens.append((lexeme, lexeme))
+            #         lexeme = ""
+
+            #     else:
+            #         print("ERROR IN STATE 175")
+            #         state = 1000  # Reset state to recover
+
+            #]
+            elif token == ']':
+                state = 177
+                lexeme = token 
+                if lookahead_char in close_bracket_delim or lookahead_char is None or lookahead_char == "\n":
+                    state = 178
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+
+                else:
+                    print("ERROR IN STATE 177")
+                    state = 1000  # Reset state to recover
+    
+
+            #IDENTIFIER (2)
+            elif token in upchar:
+                state = 179
+                lexeme = token 
+                if lookahead_char in delim_id or lookahead_char is None or lookahead_char == "\n":
+                    state = 180
+                    tokens.append((lexeme, "Identifier"))
+                    lexeme = ""
+                elif lookahead_char in valchar or lookahead_char in underscore:
+                    state = 181
+                elif lookahead_char == "+":
+                    # Specifically handle + operator after an identifier
+                    tokens.append((lexeme, "Identifier"))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char == "-":
+                    # Specifically handle - operator after an identifier
+                    tokens.append((lexeme, "Identifier"))
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char in "*/=%<>!&|":  # Add other operators here
+                    # Handle all other operators similarly
+                    tokens.append((lexeme, "Identifier"))
+                    lexeme = ""
+                    state = 0
+                else:
+                    state = 1000  # Reset state to recover
+
+            elif token == '"':
+                state = 219
+                lexeme = token 
+            
+            #NUMLIT
+            elif token in allval or token == "^":  # Check for numeric values or negation symbol
+                if token == "^":
+                    lexeme = token  # Save the negation symbol
+                    if lookahead_char in allval:  # Must be followed by a number
+                        state = 242
+                    else:
+                        print("ERROR: ^ must be followed by a number")
+                        state = 1000
+                else:  # It's a numeric value
+                    lexeme = token 
+                    if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":
+                        print("Passed state 228")
+                        state = 228
+                        tokens.append((lexeme, "numlit"))
+                        lexeme = ""
+                    elif lookahead_char in allval:  # Allow numbers to follow
+                        state = 242
+                    elif lookahead_char == "+":
+                            tokens.append((lexeme, "numlit"))
+                            lexeme = ""
+                            state = 0
+                    elif lookahead_char == "-":
+                            tokens.append((lexeme, "numlit"))
+                            lexeme = ""
+                            state = 0
+                    elif lookahead_char == '.':
+                        state = 229
+                    else:
+                        print("ERROR IN STATE 228")
+                        state = 1000  # Reset state to recover
+
+            # SINGLE LINE COMMENT
+            elif token == '#':
+                print("Passed state 422")
+                lexeme = token
+                state = 422
+
+            else:
+                lexeme = token
+                state = 1000  # Reset state to recover
+        
+        elif state == 1:
+            print("Passed state 1")
+            lexeme += token
+            
+            #_G
+            if token == 'G':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    print("Passed state 2")
+                    state = 2
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+
+            #L
+            elif token == 'L':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 4
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("ERROR IN STATE 1: Unexpected character")
+                found_error = True
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+                state = 0
+        elif state == 6:
+            if token == 'c':
+                lexeme += token
+                state = 7
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+            elif token == 'l':
+                lexeme += token
+                state = 10
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+            else:
+                # Don't add the current token to the lexeme if it's not a valid continuation
+                # Report the error for the current lexeme
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        #ACT
+        elif state == 7:
+            lexeme += token
+            if token == 't':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 8
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 7")
+                state = 1000  # Reset state to recover
+
+
+        elif state == 10:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 'l':
+                state = 11
+            else:
+                print("WRONG IN STATE 10")
+                state = 1000  # Reset state to recover
+
+        elif state == 11:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 'e':
+                state = 12
+            else:
+                print("WRONG IN STATE 11")
+                state = 1000  # Reset state to recover
+
+        elif state == 12:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 'l':
+                state = 13
+            else:
+                print("WRONG IN STATE 12")
+                state = 1000  # Reset state to recover
+
+        #ALLELE
+        elif state == 13:
+            lexeme += token
+            if token == 'e':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 14
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 13")
+                state = 1000  # Reset state to recover
+
+
+        elif state == 16:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n" or lookahead_char == " ":
+                found_error = True
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+                state = 0
+            elif token == 'l':
+                state = 17
+            elif token == 'o':
+                state = 22
+            else:
+                # Use our error handling function to process the error and get updated values
+                found_error, state, lexeme = handle_state_error(16, lexeme, line_number)
+                
+
+        elif state == 17:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 'u':
+                state = 18
+            else:
+                # Use our error handling function to process the error and get updated values
+                found_error, state, lexeme = handle_state_error(17, lexeme, line_number)
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+                state = 0
+
+        elif state == 18:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 's':
+                state = 19
+            else:
+                print("WRONG IN STATE 18")
+                found_error = True
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+        #CLUST
+        elif state == 19:
+            lexeme += token
+            if token == 't':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 20
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+
+            else:
+                print("WRONG IN STATE 19")
+                found_error = True
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        elif state == 22:
+            lexeme += token
+            if token == 'n':
+                state = 23
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 22")
+                state = 1000  # Reset state to recover
+
+        elif state == 23:
+            lexeme += token
+            if token == 't':
+                state = 24
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 23")
+                state = 1000  # Reset state to recover
+
+        elif state == 24:
+            lexeme += token
+            if token == 'i':
+                state = 25
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 24")
+                state = 1000  # Reset state to recover
+
+        #CONTIG
+        elif state == 25:
+            lexeme += token
+            if token == 'g':
+                if lookahead_char in delim_end or lookahead_char is None or lookahead_char == "\n":
+                    state = 26
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_end:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 25")
+                state = 1000  # Reset state to recover
+       
+        elif state == 28:
+            print("Passed state 28")
+            lexeme += token
+                 
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 'e':
+                state = 29
+            elif token == 'o':
+                print("Passed state 36")
+                state = 36
+                if lookahead_char == 'm':  # Lookahead check for 'm'
+                    state = 38
+                elif lookahead_char == 's':
+                    state = 40
+                else:
+                    print("WRONG IN STATE 36")
+                    state = 1000  # Reset state to recover
+            else:
+                print("print IN STATE 28")
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+     
+
+        elif state == 29:
+            lexeme += token
+            if token == 's':
+                state = 30
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 29")
+                state = 1000  # Reset state to recover
+
+        elif state == 30:
+            lexeme += token
+            if token == 't':
+                state = 31
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 30")
+                state = 1000  # Reset state to recover
+
+        elif state == 31:
+            lexeme += token
+            if token == 'r':
+                state = 32
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 31")
+                state = 1000  # Reset state to recover
+
+        elif state == 32:
+            lexeme += token
+            if token == 'o':
+                state = 33
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 32")
+                state = 1000  # Reset state to recover
+
+        #DESTROY
+        elif state == 33:
+            lexeme += token
+            if token == 'y':
+                if lookahead_char in delim_end or lookahead_char is None or lookahead_char == "\n":
+                    state = 34
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_end:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 33")
+                state = 1000  # Reset state to recover
+
+        #DOM
+        elif state == 38:
+            lexeme += token
+            if token == 'm':
+                if lookahead_char in delim_end or lookahead_char is None or lookahead_char == "\n":
+                    state = 39
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_end:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 38")
+                state = 1000  # Reset state to recover
+
+        elif state == 40:
+            print("Passed state 40")
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 's':
+                state = 41
+            elif lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            else:
+                print("WRONG IN STATE 40")
+                state = 1000  # Reset state to recover
+                
+        #DOSE
+        elif state == 41:
+            print("Passed state 41")
+            lexeme += token
+            if token == 'e':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    print("Passed state 42")
+                    state = 42
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 41")
+                state = 1000  # Reset state to recover
+
+        elif state == 43:
+            lexeme += token
+            if token == 'l':
+                state = 44
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000
+            elif token == 'x':
+                state = 51
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000                
+            else:
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        elif state == 44:
+            lexeme += token
+            if token == 'i':
+                state = 45
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            elif token == 's':
+                state = 48
+                if lookahead_char is None or lookahead_char == "\n":
+                    found_error = True   
+            else:
+                print("WRONG IN STATE 29")
+                state = 1000  # Reset state to recover
+
+
+        #ELIF
+        elif state == 45:
+            lexeme += token
+            if token == 'f':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 46
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+                
+            else:
+                print("WRONG IN STATE 45")
+                state = 1000  # Reset state to recover
+
+        #ELSE
+        elif state == 48:
+            lexeme += token
+            if token == 'e':
+                if lookahead_char in delim_2 or lookahead_char is None or lookahead_char == "\n":
+                    state = 49
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_2:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 48")
+                state = 1000  
+                lexeme += token
+
+        elif state == 51:
+            lexeme += token
+            if token == 'p':
+                state = 52
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 51")
+                state = 1000  # Reset state to recover
+
+        elif state == 52:
+            lexeme += token
+            if token == 'r':
+                state = 53
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 52")
+                state = 1000  # Reset state to recover
+
+        elif state == 53:
+            lexeme += token
+            if token == 'e':
+                state = 54
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 53")
+                state = 1000  # Reset state to recover
+
+        elif state == 54:
+            lexeme += token
+            if token == 's':
+                state = 55
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 54")
+                state = 1000  # Reset state to recover
+
+        #express
+        elif state == 55:
+            lexeme += token
+            if token == 's':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 56
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 55")
+                state = 1000  # Reset state to recover
+
+        elif state == 58:
+            lexeme += token
+            if token == 'o':
+                state = 59
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            elif token == 'u':
+                state = 450
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 58")
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        elif state == 450:
+            lexeme += token
+            if token == 'n':
+                state = 451
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 451")
+                state = 1000  # Reset state to recover
+
+        #::
+        elif state == 462:
+            lexeme += token
+            if lookahead_char in delim_splice or lookahead_char is None or lookahead_char == "\n":
+                state = 463
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+            elif lookahead_char in allchar or lookahead_char in allval:
+                tokens.append((lexeme, lexeme))
+                lexeme = ""
+                state = 0
+
+            else:
+                print("WRONG IN STATE 462")
+                state = 1000  # Error state
+                
+        #FUNC
+        elif state == 451:
+            lexeme += token
+            if token == 'c':
+                if (lookahead_char is None or lookahead_char == "\n" or lookahead_char in delim_1 ):
+                    state = 452
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 451")
+                state = 1000  # Reset state to recover
+
+        #FOR
+        elif state == 59:
+            lexeme += token
+            if token == 'r':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 60
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 59")
+                state = 1000  # Reset state to recover
+
+        elif state == 62:
+            lexeme += token
+            if token == 'e':
+                state = 63
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 62")
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        elif state == 63:
+            lexeme += token
+            if token == 'n':
+                state = 64
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 62")
+                state = 1000  # Reset state to recover
+
+        #GENE
+        elif state == 64:
+            lexeme += token
+            if token == 'e':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 65
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+                else:
+                    print("ERROR: 'gene' must be followed by a delimiter")
+                    state = 1000  # Error state
+            else:
+                print("WRONG IN STATE 64")
+                state = 1000  # Reset state to recover
+
+        #IF
+        elif state == 67:
+            lexeme += token
+            if token == 'f':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 68
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 67")
+                state = 1000  # Reset state to recover
+
+
+        elif state == 70:
+            lexeme += token
+            if token == 'e':
+                state = 71
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            elif token == 'r':
+                state = 76
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("ERROR IN STATE 70")
+                state = 1000  # Reset state to recover
+
+        elif state == 71:
+            lexeme += token
+            if token == 'r':
+                state = 72
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 71")
+                state = 1000  # Reset state to recover
+
+        elif state == 72:
+            lexeme += token
+            if token == 'm':
+                state = 73
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 72")
+                state = 1000  # Reset state to recover
+
+        #PERMS
+        elif state == 73:
+            lexeme += token
+            if token == 's':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 74
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 73")
+                state = 1000  # Reset state to recover
+
+        elif state == 76:
+            lexeme += token
+            if token == 'o':
+                state = 77
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 76")
+                state = 1000  # Reset state to recover
+        
+        #prod
+        elif state == 77:
+            lexeme += token
+            if token == 'd':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 78
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 77")
+                state = 1000  # Reset state to recover
+
+        elif state == 81:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000  
+            elif token == 'u':
+                state = 82
+            else:
+                print("WRONG IN STATE 81")
+                state = 1000  # Reset state to recover
+
+        elif state == 82:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000    
+            elif token == 'a':
+                state = 83
+            else:
+                print("WRONG IN STATE 82")
+                state = 1000  # Reset state to recover
+
+        elif state == 83:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000            
+            elif token == 'n':
+                state = 84
+            else:
+                print("WRONG IN STATE 83")
+                state = 1000  # Reset state to recover
+
+        #QUANT
+        elif state == 84:
+            lexeme += token
+            if token == 't':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 85
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+
+            else:
+                print("WRONG IN STATE 84")
+                state = 1000  # Reset state to recover
+
+        elif state == 87:
+            lexeme += token
+            if token == 'e':
+                state = 88
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 87")
+                state = 1000  # Reset state to recover
+
+        #REC
+        elif state == 88:
+            lexeme += token
+            if token == 'c':
+                if lookahead_char in delim_end or lookahead_char is None or lookahead_char == "\n":
+                    state = 89
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_end:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 88")
+                state = 1000  # Reset state to recover
+
+        elif state == 91:
+            lexeme += token
+            if lookahead_char is None or lookahead_char == "\n":
+                state = 1000
+            elif token == 'e':
+                state = 92
+            elif token == 't':
+                state = 95
+            else:
+                print("WRONG IN STATE 91")
+                # Report the error for the current lexeme
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        #SEQ
+        elif state == 92:
+            lexeme += token
+            if token == 'q':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 93
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 92")
+                state = 1000  # Reset state to recover
+
+        elif state == 95:
+            lexeme += token
+            if token == 'i':
+                state = 96
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 95")
+                state = 1000  # Reset state to recover
+
+        elif state == 96:
+            lexeme += token
+            if token == 'm':
+                state = 97  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 96")
+                state = 1000  # Error state
+
+        elif state == 97:
+            lexeme += token
+            if token == 'u':
+                state = 98  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 97")
+                state = 1000  # Error state
+
+        elif state == 98:
+            lexeme += token
+            if token == 'l':
+                state = 99  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 98")
+                state = 1000  # Error state
+
+        #STIMULI
+        elif state == 99:
+            lexeme += token
+            if token == 'i':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 100
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 99")
+                state = 1000  # Error state
+    
+        elif state == 102:
+            lexeme += token
+            if token == 'o':
+                state = 103  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 102")
+                state = 1000  # Error state
+
+        elif state == 103:
+            lexeme += token
+            if token == 'i':
+                state = 104  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 103")
+                state = 1000  # Error state
+
+        #VOID
+        elif state == 104:
+            lexeme += token
+            if token == 'd':
+                if lookahead_char in delim_gen or lookahead_char is None or lookahead_char == "\n":
+                    state = 105
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_gen:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
+            else:
+                print("WRONG IN STATE 104")
+                state = 1000  # Error state
+
+        elif state == 107:
+            lexeme += token
+            if token == 'h':
+                state = 108  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 107")
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                # Reset state to initial state to process the current token as a new lexeme
+                state = 1000
+                # Push the current token back for reprocessing
+                lexeme = ""
+
+        elif state == 108:
+            lexeme += token
+            if token == 'i':
+                state = 109  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 108")
+                state = 1000  # Error state
+
+        elif state == 109:
+            lexeme += token
+            if token == 'l':
+                state = 110  # Transition to the next state
+                if lookahead_char is None or lookahead_char == "\n":
+                    state = 1000    
+            else:
+                print("WRONG IN STATE 109")
+                state = 1000  # Error state
+
+        #WHILE
+        elif state == 110:
+            lexeme += token
+            if token == 'e':
+                if lookahead_char in delim_1 or lookahead_char is None or lookahead_char == "\n":
+                    state = 111
+                    tokens.append((lexeme, lexeme))
+                    lexeme = ""
+                elif lookahead_char not in delim_1:  # Any non-delimiter character makes this invalid
+                    # Create the invalid lexeme with the first invalid character
+                    invalid_lexeme = lexeme + lookahead_char
+                    
+                    # Report the error for the invalid lexeme
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    
+                    lookahead_char = None
+                    
+                    # Reset lexeme and state to process the rest of the input
+                    lexeme = ""
+                    state = 0  # Reset to initial state to continue parsing
             else:
                 print("WRONG IN STATE 110")
                 state = 1000  # Error state
@@ -2694,7 +6749,11 @@ def parseLexer(input_stream):
             print("Passed state 259")
             lexeme += token
             if token  == ".":
-                state = 260
+                if lookahead_char in allval:     
+                    state = 260
+                else:
+                    print(f"ERROR IN STATE {state}: Unexpected character {lookahead_char}")
+                    state = 1000  # Error state
             else:
                 print(f"ERROR IN STATE 259: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
@@ -2817,7 +6876,11 @@ def parseLexer(input_stream):
             print("Passed state 274")
             lexeme += token
             if token  == ".":
-                state = 275
+                if lookahead_char in allval:     
+                    state = 275
+                else:
+                    print(f"ERROR IN STATE {state}: Unexpected character {lookahead_char}")
+                    state = 1000  # Error state
             else:
                 print(f"ERROR IN STATE 274: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
@@ -2940,7 +7003,11 @@ def parseLexer(input_stream):
             print("Passed state 289")
             lexeme += token
             if token  == ".":
-                state = 290
+                if lookahead_char in allval:     
+                    state = 290
+                else:
+                    print(f"ERROR IN STATE {state}: Unexpected character {lookahead_char}")
+                    state = 1000  # Error state
             else:
                 print(f"ERROR IN STATE 289: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
@@ -3063,7 +7130,11 @@ def parseLexer(input_stream):
             print("Passed state 304")
             lexeme += token
             if token  == ".":
-                state = 305
+                if lookahead_char in allval:     
+                    state = 305
+                else:
+                    print(f"ERROR IN STATE {state}: Unexpected character {lookahead_char}")
+                    state = 1000  # Error state
             else:
                 print(f"ERROR IN STATE 304: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
@@ -3186,7 +7257,11 @@ def parseLexer(input_stream):
             print("Passed state 319")
             lexeme += token
             if token  == ".":
-                state = 320
+                if lookahead_char in allval:     
+                    state = 320
+                else:
+                    print(f"ERROR IN STATE {state}: Unexpected character {lookahead_char}")
+                    state = 1000  # Error state
             else:
                 print(f"ERROR IN STATE 319: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
@@ -3309,7 +7384,11 @@ def parseLexer(input_stream):
             print("Passed state 334")
             lexeme += token
             if token  == ".":
-                state = 335
+                if lookahead_char in allval:     
+                    state = 335
+                else:
+                    print(f"ERROR IN STATE {state}: Unexpected character {lookahead_char}")
+                    state = 1000  # Error state
             else:
                 print(f"ERROR IN STATE 334: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
@@ -3432,7 +7511,11 @@ def parseLexer(input_stream):
             print("Passed state 349")
             lexeme += token
             if token  == ".":
-                state = 350
+                if lookahead_char in allval:     
+                    state = 350
+                else:
+                    print(f"ERROR IN STATE {state}: Unexpected character {lookahead_char}")
+                    state = 1000  # Error state
             else:
                 print(f"ERROR IN STATE 349: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
@@ -3555,7 +7638,11 @@ def parseLexer(input_stream):
             print("Passed state 364")
             lexeme += token
             if token  == ".":
-                state = 365
+                if lookahead_char in allval:     
+                    state = 365
+                else:
+                    print(f"ERROR IN STATE {state}: Unexpected character {lookahead_char}")
+                    state = 1000  # Error state
             else:
                 print(f"ERROR IN STATE 364: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
@@ -3678,7 +7765,11 @@ def parseLexer(input_stream):
             print("Passed state 379")
             lexeme += token
             if token  == ".":
-                state = 380
+                if lookahead_char in allval:     
+                    state = 380
+                else:
+                    print(f"ERROR IN STATE {state}: Unexpected character {lookahead_char}")
+                    state = 1000  # Error state
             else:
                 print(f"ERROR IN STATE 379: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
@@ -3801,7 +7892,11 @@ def parseLexer(input_stream):
             print("Passed state 364")
             lexeme += token
             if token  == ".":
-                state = 395
+                if lookahead_char in allval:     
+                    state = 395
+                else:
+                    print(f"ERROR IN STATE {state}: Unexpected character {lookahead_char}")
+                    state = 1000  # Error state
             else:
                 print(f"ERROR IN STATE 364: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
@@ -3923,7 +8018,11 @@ def parseLexer(input_stream):
             print("Passed state 364")
             lexeme += token
             if token  == ".":
-                state = 410
+                if lookahead_char in allval:     
+                    state = 410
+                else:
+                    print(f"ERROR IN STATE {state}: Unexpected character {lookahead_char}")
+                    state = 1000  # Error state
             else:
                 print(f"ERROR IN STATE 364: Unexpected character {lookahead_char}")
                 state = 1000  # Error state
@@ -4093,6 +8192,7 @@ def parseLexer(input_stream):
                 print("WRONG IN DELIM_GEN")
                 state = 1000  # Reset state to recover
 
+
         #DELIM_END
         elif state in {26, 34, 39, 42 ,89}:
             if token in delim_end:
@@ -4144,7 +8244,7 @@ def parseLexer(input_stream):
                 state = 0  # Reset state for the next token
             else:
                 print("WRONG IN DELIM_SPLICE")
-                state = 1000  # Reset state to recover
+                state = 1000  # Reset state to recover  # Append token to lexeme to process it in the next cycle
 
         #DELIM_2 DELIMITERS
         elif state in {49}:
