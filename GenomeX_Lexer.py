@@ -228,7 +228,6 @@ def parseLexer(input_stream):
                     state = 0
 
 
-
             elif token == 'c':
                 state = 16
                 lexeme = token  
@@ -237,7 +236,13 @@ def parseLexer(input_stream):
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
                     lexeme = ""
                     state = 0
-
+                elif lookahead_char not in ["l", "o"]:
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
+                    lexeme = ""
+                    state = 0
                 
             elif token == 'd':
                 state = 28
@@ -245,6 +250,13 @@ def parseLexer(input_stream):
                 if lookahead_char is None or lookahead_char == "\n":
                     found_error = True
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char not in ["e", "o", "s"]:
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
                     lexeme = ""
                     state = 0
 
@@ -256,12 +268,27 @@ def parseLexer(input_stream):
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
                     lexeme = ""
                     state = 0
+                elif lookahead_char not in ["x", "l"]:
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
+                    lexeme = ""
+                    state = 0
+
             elif token == 'f':
                 state = 58
                 lexeme = token  
                 if lookahead_char is None or lookahead_char == "\n":
                     found_error = True
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char not in ["o", "u"]:
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
                     lexeme = ""
                     state = 0
 
@@ -273,12 +300,26 @@ def parseLexer(input_stream):
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
                     lexeme = ""
                     state = 0
+                elif lookahead_char not in ["e"]:
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
+                    lexeme = ""
+                    state = 0
             elif token == 'i':
                 state = 67
                 lexeme = token 
                 if lookahead_char is None or lookahead_char == "\n":
                     found_error = True
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char not in ["f"]:
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
                     lexeme = ""
                     state = 0
             elif token == 'p':
@@ -289,12 +330,26 @@ def parseLexer(input_stream):
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
                     lexeme = ""
                     state = 0
+                elif lookahead_char not in ["e", "r"]:
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
+                    lexeme = ""
+                    state = 0
             elif token == 'q':
                 state = 81
                 lexeme = token 
                 if lookahead_char is None or lookahead_char == "\n":
                     found_error = True
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char not in ["u"]:
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
                     lexeme = ""
                     state = 0
             elif token == 'r':
@@ -305,6 +360,13 @@ def parseLexer(input_stream):
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
                     lexeme = ""
                     state = 0
+                elif lookahead_char not in ["e"]:
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
+                    lexeme = ""
+                    state = 0
             elif token == 's':
                 state = 91
                 lexeme = token 
@@ -313,6 +375,14 @@ def parseLexer(input_stream):
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
                     lexeme = ""
                     state = 0
+                elif lookahead_char not in ["e", "t"]:
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
+                    lexeme = ""
+                    state = 0
+
             elif token == 'v':
                 state = 102
                 lexeme = token 
@@ -321,12 +391,27 @@ def parseLexer(input_stream):
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
                     lexeme = ""
                     state = 0
+                elif lookahead_char not in ["o"]:
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
+                    lexeme = ""
+                    state = 0
+        
             elif token == 'w':
                 state = 107
                 lexeme = token 
                 if lookahead_char is None or lookahead_char == "\n":
                     found_error = True
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                    lexeme = ""
+                    state = 0
+                elif lookahead_char not in ["h"]:
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
                     lexeme = ""
                     state = 0
 
