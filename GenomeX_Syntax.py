@@ -25,6 +25,8 @@ def parseSyntax(tokens, output_text):
         for i in range(index):
             if tokens[i][1] == "newline":
                 line_number += 1
+            # We don't count newlines inside multiline comments anymore
+            # because the lexer appears to insert separate newline tokens
         
         return line_number
 
@@ -444,7 +446,8 @@ def parseSyntax(tokens, output_text):
                             is_valid, new_idx = parser_func(tokens, start_idx)
                             print(f"[global_handling] G_type {G_type} is_valid={is_valid}, new_idx={new_idx}")
                             if not is_valid:
-                                print(f"[global_handling] Invalid {G_type} statement at idx {start_idx}")
+                                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                                print(f"[global_handling] Invalid {G_type} statement at idx {start_idx} line {line_number}")
                                 program.user_defined_function_error = True  # Set error flag
                                 return False, None
                             start_idx = new_idx
@@ -472,7 +475,7 @@ def parseSyntax(tokens, output_text):
                 if not (start_idx < len(tokens) and tokens[start_idx][1] == "Identifier"):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                     print(f"Error: Expected function name (Identifier) at index {start_idx}")
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: KOSB Expected function name (Identifier) or gene at index {start_idx} but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}\n")
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected function name (Identifier) or gene at index {start_idx} but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}\n")
                     output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                     program.user_defined_function_error = True  
                     return False, None
@@ -1100,27 +1103,36 @@ def parseSyntax(tokens, output_text):
 
             start_idx += 1  
             start_idx = skip_spaces(tokens, start_idx)
-
             
+            # Check if this is an empty if statement body
+            # Empty bodies have a pattern of open brace, possible spaces/newlines, then close brace
+            empty_body_check = start_idx
+            empty_body_check = skip_spaces(tokens, empty_body_check)
+            
+            if empty_body_check < len(tokens) and tokens[empty_body_check][0] == '}':
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                # Output the error message
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Empty if statement body is not allowed\n")
+                output_text.insert(tk.END, f"Line {line_number}: If statements must contain at least one statement\n")
+                print(f"EMPTY IF STATEMENT DETECTED at line {line_number}")
+                return False, None
+            
+            # Check for invalid if statement body statements BEFORE parsing the body
+            check_idx = start_idx
+            check_idx = skip_spaces(tokens, check_idx)
+            
+            # Check for specific invalid tokens that should not be directly inside an if body
+            invalid_direct_tokens = ['elif', 'else']
+            if check_idx < len(tokens) and any(tokens[check_idx][0] == token for token in invalid_direct_tokens):
+                invalid_token = tokens[check_idx][0]
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, check_idx, display_lines, get_line_number)
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid statement but found {invalid_token}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                return False, None
+            
+            # If it's not empty, proceed with normal parsing
             is_valid, new_idx = program.body_statements(tokens, start_idx)
             if not is_valid:
-                return False, None
-
-            if new_idx == start_idx:  # No tokens were consumed, meaning empty body
-                print(f"DEBUG SYNTAX: Empty if statement body at index {start_idx}")
-                try:
-                    # Try to get line information
-                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                except Exception as e:
-                    # If line information can't be found, use fallback values
-                    print(f"Error finding line information: {e}")
-                    line_number = get_line_number(tokens, start_idx)
-                    line_text = "line with empty if block"
-                
-                # Always insert error messages to ensure they're displayed in the GUI
-                output_text.insert(tk.END, "❌ Error: ", "error")
-                output_text.insert(tk.END, f"Empty if statement body is not allowed at line {line_number}\n", "output")
-                output_text.insert(tk.END, f"You must include at least one statement inside the if block\n", "output")
                 return False, None
  
             start_idx = new_idx
@@ -1190,26 +1202,37 @@ def parseSyntax(tokens, output_text):
                     
                     start_idx += 1  
                     start_idx = skip_spaces(tokens, start_idx)
-
-                    is_valid, new_idx = program.body_statements(tokens, start_idx)
-                    if not is_valid:
+                    
+                    # Check if this is an empty elif statement body
+                    # Empty bodies have a pattern of open brace, possible spaces/newlines, then close brace
+                    empty_body_check = start_idx
+                    empty_body_check = skip_spaces(tokens, empty_body_check)
+                    
+                    if empty_body_check < len(tokens) and tokens[empty_body_check][0] == '}':
+                        # We found an empty elif statement body!
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                        # Output the error message
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Empty elif statement body is not allowed\n")
+                        output_text.insert(tk.END, f"Line {line_number}: Elif statements must contain at least one statement\n")
+                        print(f"EMPTY ELIF STATEMENT DETECTED at line {line_number}")
                         return False, None
                     
-                    if new_idx == start_idx:  # No tokens were consumed, meaning empty body
-                        print(f"DEBUG SYNTAX: Empty elif statement body at index {start_idx}")
-                        try:
-                            # Try to get line information
-                            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        except Exception as e:
-                            # If line information can't be found, use fallback values
-                            print(f"Error finding line information: {e}")
-                            line_number = get_line_number(tokens, start_idx)
-                            line_text = "line with empty elif block"
-                        
-                        # Always insert error messages to ensure they're displayed in the GUI
-                        output_text.insert(tk.END, "❌ Error: ", "error")
-                        output_text.insert(tk.END, f"Empty elif statement body is not allowed at line {line_number}\n", "output")
-                        output_text.insert(tk.END, f"You must include at least one statement inside the elif block\n", "output")
+                    # Check for invalid elif statement body statements BEFORE parsing the body
+                    check_idx = start_idx
+                    check_idx = skip_spaces(tokens, check_idx)
+                    
+                    # Check for specific invalid tokens that should not be directly inside an elif body
+                    invalid_direct_tokens = ['elif', 'else']
+                    if check_idx < len(tokens) and any(tokens[check_idx][0] == token for token in invalid_direct_tokens):
+                        invalid_token = tokens[check_idx][0]
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, check_idx, display_lines, get_line_number)
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid statement but found {invalid_token}\n")
+                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                        return False, None
+                    
+                    # If it's not empty, proceed with normal parsing
+                    is_valid, new_idx = program.body_statements(tokens, start_idx)
+                    if not is_valid:
                         return False, None
 
                     start_idx = new_idx
@@ -1254,27 +1277,37 @@ def parseSyntax(tokens, output_text):
                     
                     start_idx += 1  
                     start_idx = skip_spaces(tokens, start_idx)
-
-                    is_valid, new_idx = program.body_statements(tokens, start_idx)
-                    if not is_valid:
+                    
+                    # Check if this is an empty else statement body
+                    # Empty bodies have a pattern of open brace, possible spaces/newlines, then close brace
+                    empty_body_check = start_idx
+                    empty_body_check = skip_spaces(tokens, empty_body_check)
+                    
+                    if empty_body_check < len(tokens) and tokens[empty_body_check][0] == '}':
+                        # We found an empty else statement body!
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                        # Output the error message
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Empty else statement body is not allowed\n")
+                        output_text.insert(tk.END, f"Line {line_number}: Else statements must contain at least one statement\n")
+                        print(f"EMPTY ELSE STATEMENT DETECTED at line {line_number}")
                         return False, None
                     
-
-                    if new_idx == start_idx:  # No tokens were consumed, meaning empty body
-                        print(f"DEBUG SYNTAX: Empty else statement body at index {start_idx}")
-                        try:
-                            # Try to get line information
-                            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        except Exception as e:
-                            # If line information can't be found, use fallback values
-                            print(f"Error finding line information: {e}")
-                            line_number = get_line_number(tokens, start_idx)
-                            line_text = "line with empty else block"
-                        
-                        # Always insert error messages to ensure they're displayed in the GUI
-                        output_text.insert(tk.END, "❌ Error: ", "error")
-                        output_text.insert(tk.END, f"Empty else statement body is not allowed at line {line_number}\n", "output")
-                        output_text.insert(tk.END, f"You must include at least one statement inside the else block\n", "output")
+                    # Check for invalid else statement body statements BEFORE parsing the body
+                    check_idx = start_idx
+                    check_idx = skip_spaces(tokens, check_idx)
+                    
+                    # Check for specific invalid tokens that should not be directly inside an else body
+                    invalid_direct_tokens = ['elif', 'else']
+                    if check_idx < len(tokens) and any(tokens[check_idx][0] == token for token in invalid_direct_tokens):
+                        invalid_token = tokens[check_idx][0]
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, check_idx, display_lines, get_line_number)
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid statement but found {invalid_token}\n")
+                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                        return False, None
+                    
+                    # If it's not empty, proceed with normal parsing
+                    is_valid, new_idx = program.body_statements(tokens, start_idx)
+                    if not is_valid:
                         return False, None
 
                     start_idx = new_idx
@@ -1408,6 +1441,11 @@ def parseSyntax(tokens, output_text):
             - VAR %= <expression>;
             - VAR[index] %= <expression>;
             """
+            print(f"DEBUG SYNTAX: Starting stimuli_statement at index {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            
+            # Try to locate the current line in the source for better debugging
+            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+            print(f"DEBUG SYNTAX: FOUND CURRENT MATCH: {{'tokens': {line_tokens}, 'line_number': {line_number}}}")
         
             start_idx = skip_spaces(tokens, start_idx)
             
@@ -1474,14 +1512,19 @@ def parseSyntax(tokens, output_text):
             start_idx = skip_spaces(tokens, start_idx)
 
             
-            if not any(is_token(tokens, start_idx, op) for op in assignment_op):
-
+            # First, explicitly check if the current token is '=' 
+            if start_idx < len(tokens) and tokens[start_idx][0] == '=':
+                print(f"DEBUG SYNTAX: Found equals sign at index {start_idx}")
+                # We continue - found a valid equals sign
+            # Then check the standard way
+            elif not any(is_token(tokens, start_idx, op) for op in assignment_op):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an assignment operator but found  {tokens[start_idx][0]}\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an assignment operator but found {tokens[start_idx][0]}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             
             
+            # Proceed with the correct assignment operator token
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
             
@@ -1491,9 +1534,28 @@ def parseSyntax(tokens, output_text):
                 start_idx = skip_spaces(tokens, start_idx)
                 return statements.parse_stimuli_call(tokens, start_idx)
             else:
-                
+                print(f"DEBUG SYNTAX: Proceeding to assignment_statement with start_idx = {start_idx}")
                 start_idx = skip_spaces(tokens, start_idx)
-                return statements.assignment_statement(tokens, start_idx - 2)
+                result = statements.assignment_value(tokens, start_idx)
+                if not result[0]:
+                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Invalid assignment value\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    return False, None
+                
+                # Assignment is valid, move past the semicolon 
+                new_idx = result[1]
+                start_idx = skip_spaces(tokens, new_idx)
+                
+                # Check for semicolon
+                if not is_token(tokens, start_idx, ';'):
+                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected semicolon\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    return False, None
+                    
+                # Move past semicolon and return success
+                return True, start_idx + 1
 
         @staticmethod
         def parse_stimuli_call(tokens, start_idx):
@@ -1559,12 +1621,17 @@ def parseSyntax(tokens, output_text):
             
             
             if not any(is_token(tokens, start_idx, op) for op in assignment_op):
-                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                # Check if the token itself is an equals sign (for no space case)
+                if start_idx < len(tokens) and tokens[start_idx][0] == '=':
+                    # Handle the case with no spaces - we found the equals sign token
+                    pass  # Continue processing normally
+                else:
+                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an assignment operator but found {found_token}\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                return False, start_idx
+                    found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
+                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an assignment operator but found {found_token}\n")
+                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                    return False, start_idx
 
             
             start_idx += 1
@@ -1623,12 +1690,17 @@ def parseSyntax(tokens, output_text):
                     start_idx = skip_spaces(tokens, start_idx)
 
                 if not any(is_token(tokens, start_idx, op) for op in assignment_op):
-                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                    # Check if the token itself is an equals sign (for no space case)
+                    if start_idx < len(tokens) and tokens[start_idx][0] == '=':
+                        # Handle the case with no spaces - we found the equals sign token
+                        pass  # Continue processing normally
+                    else:
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                    found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an assignment operator but found {found_token}\n")
-                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                    return False, start_idx
+                        found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an assignment operator but found {found_token}\n")
+                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                        return False, start_idx
                 
                 start_idx += 1  
                 start_idx = skip_spaces(tokens, start_idx)
@@ -1694,13 +1766,26 @@ def parseSyntax(tokens, output_text):
                             
         @staticmethod
         def for_loop_statement(tokens, start_idx):
-            
-
-
             print(f"DEBUG SYNTAX: Starting for_loop_statement at index {start_idx}")
-            print(f"DEBUG SYNTAX: Current tokens: {tokens[start_idx:start_idx+5] if start_idx < len(tokens) else 'end of tokens'}")
-
+            print(f"DEBUG SYNTAX: Current tokens: {tokens[start_idx:start_idx+5]}")
             
+            # Immediately add an empty for loop check
+            # Look for the pattern: '{' followed by spaces/newlines then '}'
+            for i in range(start_idx, len(tokens)):
+                if tokens[i][0] == '{':
+                    brace_index = i
+                    next_index = i + 1
+                    while next_index < len(tokens) and tokens[next_index][1] in ['space', 'newline', 'tab']:
+                        next_index += 1
+                    if next_index < len(tokens) and tokens[next_index][0] == '}':
+                        # Empty for loop found!
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                        output_text.insert(tk.END, f" Syntax Error at line {line_number}: Empty for loop body is not allowed\n")
+                        return False, None
+                    break
+
+            # ... rest of the code
+
             start_idx = skip_spaces(tokens, start_idx)
 
             
@@ -1923,15 +2008,38 @@ def parseSyntax(tokens, output_text):
             start_idx += 1  
             start_idx = skip_spaces(tokens, start_idx)
 
+            # Check if this is an empty for loop body
+            # Empty bodies have a pattern of open brace, possible spaces/newlines, then close brace
+            empty_body_check = start_idx
+            empty_body_check = skip_spaces(tokens, empty_body_check)
             
+            if empty_body_check < len(tokens) and tokens[empty_body_check][0] == '}':
+                # We found an empty for loop body!
+                line_number = get_line_number(tokens, empty_body_check)
+                # Output the error message
+                output_text.insert(tk.END, f"⚠️ Syntax Error at line {line_number}: Empty for loop body is not allowed\n")
+                output_text.insert(tk.END, f"Line {line_number}: For loops must contain at least one statement\n")
+                print(f"EMPTY FOR LOOP DETECTED at line {line_number}")
+                return False, None
+            
+            # Check for invalid for loop body statements BEFORE parsing the body
+            check_idx = start_idx
+            check_idx = skip_spaces(tokens, check_idx)
+            
+            # Check for specific invalid tokens that should not be directly inside a for loop body
+            invalid_direct_tokens = ['elif', 'else']
+            if check_idx < len(tokens) and any(tokens[check_idx][0] == token for token in invalid_direct_tokens):
+                invalid_token = tokens[check_idx][0]
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, check_idx, display_lines, get_line_number)
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid statement but found {invalid_token}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                
+
+                return False, None
+            
+            # If it's not empty, proceed with normal parsing
             is_valid, new_idx = program.body_statements(tokens, start_idx)
             if not is_valid:
-                return False, None
-                        
-            if new_idx == start_idx:  # No tokens were consumed, meaning empty body
-                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Empty if statement body is not allowed\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
 
             start_idx = new_idx    
@@ -1952,74 +2060,83 @@ def parseSyntax(tokens, output_text):
             print("inside prod_statement")
             
             start_idx = skip_spaces(tokens, start_idx)
-            if not is_token(tokens, start_idx, ';'):
-                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected ';' or a prod value but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                return False, None
             
-            
+            # First check if we have a prod value
             is_valid, new_idx = statements.prod_value(tokens, start_idx)
             if not is_valid:
-                print(f"Error: Invalid arithmetic expression at index {start_idx}")
                 return False, None
-
             
+            # Update the index to after the prod value
             start_idx = new_idx
             start_idx = skip_spaces(tokens, start_idx)
-
             
+            # Now check for the required semicolon
             if not is_token(tokens, start_idx, ';'):
-                print(f"Valid prod statement (ends with ';') at index {start_idx}")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected ';' or a prod value but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected ';' after prod value but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
-
-            print(f"Error: Expected literal at prod statement, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected ';' or a prod value but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
-            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-            return False, None
+            
+            # Return success and the index after the semicolon
+            return True, start_idx + 1
 
         @staticmethod
         def prod_value(tokens, start_idx):
             
             start_idx = skip_spaces(tokens, start_idx)
             
-            
+            # Empty prod value
             if start_idx >= len(tokens) or is_token(tokens, start_idx, ';'):
                 print("Empty prod value")
                 return True, start_idx
             
+            # Check if we have an arithmetic operation starting
+            if start_idx + 1 < len(tokens):
+                next_idx = skip_spaces(tokens, start_idx + 1)
+                if next_idx < len(tokens) and any(is_token(tokens, next_idx, op) for op in math_operator):
+                    # This is an arithmetic expression
+                    is_valid, new_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
+                    if not is_valid:
+                        # Get the operator that failed
+                        op = tokens[next_idx][0] if next_idx < len(tokens) else 'EOF'
+                        # line_number, line_tokens, line_text, line_index = find_matching_line(tokens, next_idx, display_lines, get_line_number)
+                        # output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected arithmetic value after '{op}'\n")
+                        # output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                        return False, None
+                    print(f"ARITH PROD - Successfully parsed arithmetic sequence, new index: {new_idx}")
+                    return True, new_idx
             
+            # Simple literals check
             if is_token(tokens, start_idx, literals) or is_token(tokens, start_idx, ''):
                 print(f"Simple literal or identifier at index {start_idx}")
                 return True, start_idx + 1  
             
-            
+            # Try general arithmetic sequence
             is_valid, new_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
             if is_valid:
                 print(f"ARITH PROD - Successfully parsed arithmetic sequence, new index: {new_idx}")
                 return True, new_idx
             
-            
+            # Valid identifiers, dom/rec
             valid_tokens = ['Identifier', 'dom', 'rec']
             
-            
+            # Literals again (double check)
             if is_token(tokens, start_idx, literals):
                 print(f"Simple literal at index {start_idx}")
                 return True, start_idx + 1  
             
-            
+            # Try valid tokens
             for token in valid_tokens:
                 if is_token(tokens, start_idx, token):
                     print(f"{token} token at index {start_idx}")
                     return True, start_idx + 1  
             
-            
+            # If we get here, the token is invalid
             print(f"Invalid token at index {start_idx}: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            # Add specific error message for invalid prod value
+            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected prod value or semicolon but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}\n")
+            output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
             return False, start_idx
 
         @staticmethod
@@ -2118,13 +2235,39 @@ def parseSyntax(tokens, output_text):
 
             start_idx += 1  
             start_idx = skip_spaces(tokens, start_idx)
-
             
+            # Check if this is an empty while statement body
+            # Empty bodies have a pattern of open brace, possible spaces/newlines, then close brace
+            empty_body_check = start_idx
+            empty_body_check = skip_spaces(tokens, empty_body_check)
+            
+            if empty_body_check < len(tokens) and tokens[empty_body_check][0] == '}':
+                # We found an empty while loop body!
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                # Output the error message
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Empty while statement body is not allowed\n")
+                output_text.insert(tk.END, f"Line {line_number}: While loops must contain at least one statement\n")
+                print(f"EMPTY WHILE LOOP DETECTED at line {line_number}")
+                return False, None
+            
+            # Check for invalid while statement body statements BEFORE parsing the body
+            check_idx = start_idx
+            check_idx = skip_spaces(tokens, check_idx)
+            
+            # Check for specific invalid tokens that should not be directly inside a while body
+            invalid_direct_tokens = ['elif', 'else']
+            if check_idx < len(tokens) and any(tokens[check_idx][0] == token for token in invalid_direct_tokens):
+                invalid_token = tokens[check_idx][0]
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, check_idx, display_lines, get_line_number)
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid statement but found {invalid_token}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                return False, None
+            
+            # If it's not empty, proceed with normal parsing
             is_valid, new_idx = program.body_statements(tokens, start_idx)
             if not is_valid:
                 return False, None
                         
-
             start_idx = new_idx
             
             
@@ -3167,7 +3310,9 @@ def parseSyntax(tokens, output_text):
             
             is_valid, new_idx = arithmetic.arithmetic_sequence_tail(tokens, start_idx)
             if not is_valid:
-                print(f"ERROR: Expected valid arithmetic sequence tail at index {start_idx}")
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid arithmetic value but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, start_idx
             
             return True, new_idx
@@ -4187,12 +4332,15 @@ def parseSyntax(tokens, output_text):
                 print("[ERROR] Expected 'act' after comments/whitespace but none found")
                 return False, "Error: Expected 'act' after comments/whitespace but none found"
         
-        elif first_token not in ["_G", "comment", "multiline", "tab", "space"]:
-            print(f"[ERROR] Invalid starting token: '{first_token}'")
-            return False, f"Error: Line must start with 'act', '_G', or comments/whitespace followed by valid tokens. Found '{first_token}'."
+
 
     if valid_syntax:
         output_text.delete('1.0', tk.END)
+        # Check if a main function was found in the code
+        if not program.main_function_seen:
+            output_text.insert(tk.END, "Syntax Error: No main function (gene) found in the program. A valid GenomeX program must have a main function.\n")
+            print("\nSyntax Error: No main function found!")
+            return True
         output_text.insert(tk.END, "You May Push!\n")
         print("\nAll statements are valid!")
     else:
