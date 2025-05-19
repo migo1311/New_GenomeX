@@ -5494,7 +5494,9 @@ def parseLexer(input_stream):
                         state = 0
             elif lookahead_char == '.':  
                     state = 409
-
+            elif lookahead_char in allval and lexeme.startswith('^'):
+                # Allow an extra digit for negative numbers that start with ^
+                state = 414
             else:
                 print(f"ERROR IN STATE 392: Unexpected character {lookahead_char}")
                 invalid_lexeme = lexeme + lookahead_char
