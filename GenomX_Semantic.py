@@ -35,6 +35,18 @@ class SemanticAnalyzer:
         else:
             self.current_token = None
         print(f"Moved to next token: {self.current_token}") 
+
+    def get_current_line_number(self):
+        """
+        Calculate the current line number based on token position
+        Returns: The line number (1-based)
+        """
+        line_number = 1
+        for i in range(self.token_index - 1):
+            if self.tokens[i][1] == "newline":
+                line_number += 1
+        return line_number
+        
     def parse(self):
         while self.current_token is not None:
             if self.current_token[1] == '_G':
@@ -2548,7 +2560,9 @@ class SemanticAnalyzer:
                 
             # Check for redeclaration in current scope only
             if var_name in self.symbol_table:
-                self.errors.append(f"Semantic Error: Variable '{var_name}' already declared in current scope")
+                # Get the current token index to find line number
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error at line {line_number}: Variable '{var_name}' already declared in current scope")
                 
             self.next_token()  # Move past identifier
 
@@ -3408,70 +3422,6 @@ class SemanticAnalyzer:
             
         self.next_token()  # Move past '}'
 
-    def do_while_statement(self):
-        """Parse do-while statement and check semantic validity"""
-        self.next_token()  # Move past 'do'
-        
-        # Skip spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()
-        
-        # Check for opening brace
-        if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after 'do', found {self.current_token}")
-            return
-            
-        self.next_token()  # Move past '{'
-        
-        # Parse do-while body
-        self.parse_body_statements()
-        
-        # Check for closing brace
-        if self.current_token is None or self.current_token[0] != '}':
-            self.errors.append(f"Semantic Error: Expected '}}' after do block, found {self.current_token}")
-            return
-            
-        self.next_token()  # Move past '}'
-        
-        # Skip spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()
-        
-        # Check for 'while'
-        if self.current_token is None or self.current_token[1] != 'while':
-            self.errors.append(f"Semantic Error: Expected 'while' after do block, found {self.current_token}")
-            return
-            
-        self.next_token()  # Move past 'while'
-        
-        # Skip spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()
-        
-        # Check for opening parenthesis
-        if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'while', found {self.current_token}")
-            return
-            
-        self.next_token()  # Move past '('
-        
-        # Parse condition
-        self.parse_condition()
-        
-        # Check for closing parenthesis
-        if self.current_token is None or self.current_token[0] != ')':
-            self.errors.append(f"Semantic Error: Expected ')' after do-while condition, found {self.current_token}")
-            return
-            
-        self.next_token()  # Move past ')'
-        
-        # Check for semicolon
-        if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after do-while statement, found {self.current_token}")
-            return
-            
-        self.next_token()  # Move past ';'
-
     def express_statement(self):
         """Parse express statement (print statement) that can handle multiple values"""
         self.next_token()  # Move past 'express'
@@ -4252,11 +4202,102 @@ def can_convert_between_types(from_type, to_type):
     
     return False
 
-
 def parseSemantic(tokens, semantic_panel):
     
     # Clear previous output
     semantic_panel.delete("1.0", tk.END)
+    
+    # Helper functions for line handling
+    def get_line_number(tokens, index):
+        """
+        Determine the line number for a token at the given index by counting newlines.
+        
+        Args:
+            tokens: The list of tokens
+            index: The index of the token to find the line number for
+        
+        Returns:
+            The line number (1-based)
+        """
+        if index < 0 or index >= len(tokens):
+            return -1  
+        
+        line_number = 1
+        for i in range(index):
+            if tokens[i][1] == "newline":
+                line_number += 1
+            # We don't count newlines inside multiline comments anymore
+            # because the lexer appears to insert separate newline tokens
+        
+        return line_number
+
+    def find_matching_line(tokens, start_idx, display_lines, get_line_number):
+        # Handle the EOF case (when start_idx is at or past the end of tokens)
+        if start_idx >= len(tokens):
+            print("DEBUG SEMANTIC: AT EOF")
+            
+            # Try to find the last non-empty line in the file
+            if display_lines:
+                # Sort by line number and find the last non-empty line
+                sorted_lines = sorted(display_lines, key=lambda line: line["line_number"])
+                last_line = sorted_lines[-1]  # Default to absolute last line
+                
+                # Try to find the line with actual code, not just whitespace
+                for line in reversed(sorted_lines):
+                    non_space_tokens = [t for t in line["tokens"] if t[1] != "space"]
+                    if non_space_tokens:
+                        last_line = line
+                        break
+                        
+                line_number = last_line["line_number"]
+                line_tokens = last_line["tokens"]
+                # Include the line's text in the error message to help users find where the error is
+                line_text = "End of file after: " + ' '.join([t[0] for t in line_tokens if t[1] != "space"])
+                line_index = start_idx
+                return (line_number, line_tokens, line_text, line_index)
+            else:
+                # If no lines in display_lines, use default
+                return (0, [], "End of tokens", start_idx)
+        
+        # Normal case - we have a valid token
+        current_token = (start_idx, tokens[start_idx])
+        print(f"DEBUG SEMANTIC: CURRENT TOKEN: {current_token}")
+        
+        # Find matching line by looking for the exact token at exact index
+        matching_line = None
+        for line in display_lines:
+            if current_token[1] in [t for t in line["tokens"]]:
+                if "start_idx" in line:
+                    # If the line already tracks its starting index in the global tokens list
+                    start_of_line = line["start_idx"]
+                    end_of_line = start_of_line + len(line["tokens"])
+                    if start_of_line <= current_token[0] < end_of_line:
+                        matching_line = line
+                        print(f"DEBUG SEMANTIC: FOUND CURRENT MATCH: {matching_line}")
+                        break
+                else:
+                    # Alternative approach for lines without start_idx
+                    for i in range(len(tokens) - len(line["tokens"]) + 1):
+                        if all(tokens[i+j] == line["tokens"][j] for j in range(len(line["tokens"]))):
+                            if i <= current_token[0] < i + len(line["tokens"]):
+                                matching_line = line
+                                print(f"DEBUG SEMANTIC: FOUND CURRENT MATCH: {matching_line}")
+                                break
+                    if matching_line:
+                        break
+
+        if matching_line:
+            line_number = matching_line["line_number"]
+            line_tokens = matching_line["tokens"]
+            line_index = current_token[0]  # Use the exact index
+            line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])
+        else:
+            line_number = get_line_number(tokens, start_idx)
+            line_tokens = []
+            line_text = ""
+            line_index = start_idx
+        
+        return (line_number, line_tokens, line_text, line_index)
     
     # Create a semantic analyzer instance
     analyzer = SemanticAnalyzer(tokens)

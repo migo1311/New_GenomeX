@@ -428,7 +428,6 @@ def apply_dark_mode():
     btn_clear.color = "#c62828"
     btn_clear.hover_color = "#f44336"
     btn_clear.itemconfig(btn_clear.rect, fill="#c62828")
-
 def apply_light_mode():
     root.configure(bg="#ffffff")
     style.configure("TFrame", background="#ffffff")

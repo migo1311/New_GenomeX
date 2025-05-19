@@ -290,7 +290,7 @@ class GenomeXCodeGenerator:
                 # Variable name
                 if index < len(self.tokens) and self.tokens[index][1] == "Identifier":
                     var_name = self.tokens[index][0]
-                    # Handle True/False identifier renaming
+                    # Handle True/False identifier renaming TTrue/FFalse
                     if var_name in ["True", "False"]:
                         var_name = f"T{var_name}" if var_name == "True" else f"F{var_name}"
                     print(f"Detected variable name: {var_name}")
@@ -321,10 +321,10 @@ class GenomeXCodeGenerator:
                                     size_value = self.tokens[index][0]
                                 print(f"Detected array size token: {size_value}")
                                 index += 1
-                            elif index < len(self.tokens) and self.tokens[index][0] in ("dom", "rec"):
-                                size_value = "True" if self.tokens[index][0] == "dom" else "False"
-                                print(f"Detected array size token (boolean): {size_value}")
-                                index += 1
+                            # elif index < len(self.tokens) and self.tokens[index][0] in ("dom", "rec"):
+                            #     size_value = "True" if self.tokens[index][0] == "dom" else "False"
+                            #     print(f"Detected array size token (boolean): {size_value}")
+                            #     index += 1
                             
                             if size_value is not None:
                                 array_sizes.append(size_value)
