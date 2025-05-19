@@ -5576,6 +5576,8 @@ def parseLexer(input_stream):
                 lexeme = ""  # Reset lexeme for next token
             elif lookahead_char in allval:
                 state = 416
+            elif lookahead_char == '.':
+                state = 429  # Add a transition to handle decimal point
             else:
                 print(f"ERROR IN STATE 399: Unexpected character {lookahead_char}")
                 invalid_lexeme = lexeme + lookahead_char
@@ -5722,6 +5724,147 @@ def parseLexer(input_stream):
                 lookahead_char = None
                 lexeme = ""
                 state = 0  # Reset to initial state to continue parsing        
+
+        elif state == 429:
+            print("Passed state 429")
+            lexeme += token
+            if token == ".":
+                if lookahead_char in allval:     
+                    state = 430  # Go to first decimal digit state
+                else:
+                    print(f"ERROR IN STATE 429: Unexpected character {lookahead_char}")
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
+                    lexeme = ""
+                    state = 0
+            else:
+                print(f"ERROR IN STATE 429: Unexpected character {token}")
+                invalid_lexeme = lexeme
+                display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                found_error = True
+                lookahead_char = None
+                lexeme = ""
+                state = 0
+
+        # First decimal digit
+        elif state == 430:
+            print("Passed state 430")
+            lexeme += token
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 431")      
+                state = 431
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""
+            elif lookahead_char in allval:
+                state = 432  # Go to second decimal digit state
+            else:
+                print(f"ERROR IN STATE 430: Unexpected character {lookahead_char}")
+                invalid_lexeme = lexeme + lookahead_char
+                display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                found_error = True
+                lookahead_char = None
+                lexeme = ""
+                state = 0
+
+        # Second decimal digit
+        elif state == 432:
+            print("Passed state 432")
+            lexeme += token
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 433")      
+                state = 433
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""
+            elif lookahead_char in allval:
+                state = 434  # Go to third decimal digit state
+            else:
+                print(f"ERROR IN STATE 432: Unexpected character {lookahead_char}")
+                invalid_lexeme = lexeme + lookahead_char
+                display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                found_error = True
+                lookahead_char = None
+                lexeme = ""
+                state = 0
+
+        # Third decimal digit
+        elif state == 434:
+            print("Passed state 434")
+            lexeme += token
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 435")      
+                state = 435
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""
+            elif lookahead_char in allval:
+                state = 436  # Go to fourth decimal digit state
+            else:
+                print(f"ERROR IN STATE 434: Unexpected character {lookahead_char}")
+                invalid_lexeme = lexeme + lookahead_char
+                display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                found_error = True
+                lookahead_char = None
+                lexeme = ""
+                state = 0
+
+        # Fourth decimal digit
+        elif state == 436:
+            print("Passed state 436")
+            lexeme += token
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 437")      
+                state = 437
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""
+            elif lookahead_char in allval:
+                state = 438  # Go to fifth decimal digit state
+            else:
+                print(f"ERROR IN STATE 436: Unexpected character {lookahead_char}")
+                invalid_lexeme = lexeme + lookahead_char
+                display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                found_error = True
+                lookahead_char = None
+                lexeme = ""
+                state = 0
+
+        # Fifth decimal digit
+        elif state == 438:
+            print("Passed state 438")
+            lexeme += token
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 439")      
+                state = 439
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""
+            elif lookahead_char in allval:
+                state = 440  # Go to sixth decimal digit state
+            else:
+                print(f"ERROR IN STATE 438: Unexpected character {lookahead_char}")
+                invalid_lexeme = lexeme + lookahead_char
+                display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                found_error = True
+                lookahead_char = None
+                lexeme = ""
+                state = 0
+
+        # Sixth decimal digit
+        elif state == 440:
+            print("Passed state 440")
+            lexeme += token
+            if lookahead_char in delim_num or lookahead_char is None or lookahead_char == "\n":     
+                print("Passed state 441")      
+                state = 441
+                tokens.append((lexeme, "numlit"))
+                lexeme = ""
+            else:
+                print(f"ERROR IN STATE 440: Unexpected character {lookahead_char}")
+                invalid_lexeme = lexeme + lookahead_char
+                display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                found_error = True
+                lookahead_char = None
+                lexeme = ""
+                state = 0
 
         #DELIM_GEN DELIMITERS
         elif state in {2, 4, 8, 14, 20, 41, 74, 78, 85, 105}:
