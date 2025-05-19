@@ -37,7 +37,7 @@ class SemanticAnalyzer:
     def next_token(self):
         while self.token_index < len(self.tokens) and self.tokens[self.token_index][1] in ["space", "tab", "newline"]:
             self.token_index += 1  # Skip spaces, tabs, and newlines
-        if self.token_index < len(self.tokens):
+        if self.token_index < len(self.tokens): # push notif git
             self.current_token = self.tokens[self.token_index]
             self.token_index += 1
         else:
