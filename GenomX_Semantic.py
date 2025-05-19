@@ -78,9 +78,9 @@ class SemanticAnalyzer:
                 self.next_token()
                 
             # Expect identifier
-            if self.current_token is None or self.current_token[1] != 'Identifier':
-                self.errors.append(f"Semantic Error: Expected identifier after 'void', but found {self.current_token}")
-                return
+            # if self.current_token is None or self.current_token[1] != 'Identifier':
+            #     self.errors.append(f"Semantic Error: Expected identifier after 'void', but found {self.current_token}")
+            #     return
                 
             function_name = self.current_token[0]
             self.next_token()  # Move past identifier
@@ -89,8 +89,10 @@ class SemanticAnalyzer:
             function_name = self.current_token[0]
             self.next_token()  # Move past identifier
         else:
-            self.errors.append(f"Semantic Error: Expected 'gene', 'void', or identifier after 'act', but found {self.current_token}")
-            return
+            # self.errors.append(f"Semantic Error: Expected 'gene', 'void', or identifier after 'act', but found {self.current_token}")
+            # return
+            pass
+            return  
         
         # Check if function name already exists in symbol table (as a variable)
         if function_name in self.global_symbol_table:
@@ -111,7 +113,8 @@ class SemanticAnalyzer:
 
         # Check for '('
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after function name, but found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '(' after function name, but found {self.current_token}")
+            pass
             return
         self.next_token()  # Move past '('
         
@@ -127,7 +130,7 @@ class SemanticAnalyzer:
                 
             # Get parameter type
             if self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
-                self.errors.append(f"Semantic Error: Expected valid type for function parameter, found {self.current_token}")
+                self.errors.append(f"Semantic Error: Invalid type for function parameter, found {self.current_token}")
                 # Skip to next comma or closing parenthesis
                 while self.current_token is not None and self.current_token[0] != ',' and self.current_token[0] != ')':
                     self.next_token()
@@ -142,7 +145,7 @@ class SemanticAnalyzer:
             
             # Get parameter name
             if self.current_token is None or self.current_token[1] != 'Identifier':
-                self.errors.append(f"Semantic Error: Expected identifier for function parameter, found {self.current_token}")
+                self.errors.append(f"Semantic Error: Missing Identifier for function parameter, found {self.current_token}")
                 # Skip to next comma or closing parenthesis
                 while self.current_token is not None and self.current_token[0] != ',' and self.current_token[0] != ')':
                     self.next_token()
@@ -162,11 +165,14 @@ class SemanticAnalyzer:
             if self.current_token is not None and self.current_token[0] == ',':
                 self.next_token()  # Move past comma
             elif self.current_token is not None and self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ',' or ')' after parameter, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ',' or ')' after parameter, found {self.current_token}")
+                pass
+
         
         # Check for ')'
         if self.current_token is None or self.current_token[0] != ')':
-            self.errors.append(f"Semantic Error: Expected ')' after '(', but found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ')' after '(', but found {self.current_token}")
+            pass
             return
         self.next_token()  # Move past ')'
         
@@ -176,7 +182,7 @@ class SemanticAnalyzer:
 
         # Check for '{'
         if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after function declaration, but found {self.current_token}")
+            self.errors.append(f"Semantic Error: Invalid function start")
             return
         self.next_token()  # Move past '{'
         
@@ -229,7 +235,7 @@ class SemanticAnalyzer:
         
         # Check for '}'
         if self.current_token is None or self.current_token[0] != '}':
-            self.errors.append(f"Semantic Error: Expected '}}' at end of function body, found {self.current_token}")
+            self.errors.append(f"Semantic Error: Invalid function ender")
             return
         self.next_token()  # Move past '}'
         print(f"Finished parsing function: {function_name}")
@@ -319,7 +325,7 @@ class SemanticAnalyzer:
             
         # Get the data type
         if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
-            self.errors.append(f"Semantic Error: Expected data type after 'perms', found {self.current_token}")
+            self.errors.append(f"Semantic Error: No  data type found for perms declaration")
             return
             
         var_type = self.current_token[1]
@@ -333,7 +339,7 @@ class SemanticAnalyzer:
         while True:
             # Get constant name
             if self.current_token is None or self.current_token[1] != 'Identifier':
-                self.errors.append(f"Semantic Error: Expected identifier after type in perms declaration, found {self.current_token}")
+                self.errors.append(f"Semantic Error: No Identifier found after type in perms declaration")
                 return
 
             const_name = self.current_token[0]
@@ -573,7 +579,8 @@ class SemanticAnalyzer:
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after perms declaration, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ';' after perms declaration, found {self.current_token}")
+            pass
         else:
             self.next_token()  # Move past semicolon
     def prod_statement(self):
@@ -693,7 +700,8 @@ class SemanticAnalyzer:
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';': 
-            self.errors.append(f"Semantic Error: Expected ';' after prod statement, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ';' after prod statement, found {self.current_token}")
+            pass 
             return
             
         self.next_token()  # Move past ';'
@@ -707,7 +715,7 @@ class SemanticAnalyzer:
         
         # Get function name
         if self.current_token is None or self.current_token[1] != 'Identifier':
-            self.errors.append(f"Semantic Error: Expected function identifier after 'func', found {self.current_token}")
+            self.errors.append(f"Semantic Error: No Identifier found after func keyword")
             # Skip to end of statement for error recovery
             while self.current_token is not None and self.current_token[0] != ';':
                 self.next_token()
@@ -836,7 +844,7 @@ class SemanticAnalyzer:
                     })
                     
                 else:
-                    self.errors.append(f"Semantic Error: Expected valid argument, found {self.current_token}")
+                    self.errors.append(f"Semantic Error: Invalid argument, found {self.current_token}")
                     # Skip to end of statement for error recovery
                     while self.current_token is not None and self.current_token[0] != ';':
                         self.next_token()
@@ -859,7 +867,7 @@ class SemanticAnalyzer:
                     self.next_token()  # Move past comma
                     continue
                 elif self.current_token[0] != ')':
-                    self.errors.append(f"Semantic Error: Expected ',' or ')' in function arguments, found {self.current_token}")
+                    self.errors.append(f"Semantic Error: Invalid function arguments")
                     # Skip to end of statement for error recovery
                     while self.current_token is not None and self.current_token[0] != ';':
                         self.next_token()
@@ -997,7 +1005,7 @@ class SemanticAnalyzer:
         
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'stimuli', found {self.current_token}")
+            self.errors.append(f"Semantic Error: No input context for stimuli")
             # Try to skip ahead to recover
             while self.current_token is not None and self.current_token[0] != ';':
                 self.next_token()
@@ -1013,14 +1021,16 @@ class SemanticAnalyzer:
             prompt = self.current_token[0].strip('"\'')
             self.next_token()  # Move past string literal
         else:
-            self.errors.append(f"Semantic Error: Expected string literal for input prompt, found {self.current_token}")
+          #  self.errors.append(f"Semantic Error: Expected string literal for input prompt, found {self.current_token}")
+          pass
         
         # Skip ahead to closing parenthesis
         while self.current_token is not None and self.current_token[0] != ')':
             self.next_token()
         
         if self.current_token is None or self.current_token[0] != ')':
-            self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}")
+            pass
             # Try to skip ahead to recover
             while self.current_token is not None and self.current_token[0] != ';':
                 self.next_token()
@@ -1051,7 +1061,7 @@ class SemanticAnalyzer:
             
         # Get element type
         if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
-            self.errors.append(f"Semantic Error: Expected valid type after 'clust', found {self.current_token}")
+            self.errors.append(f"Semantic Error: Invalid data type for clust.")
             return
             
         element_type = self.current_token[1]
@@ -1063,7 +1073,7 @@ class SemanticAnalyzer:
             
         # Get array name
         if self.current_token is None or self.current_token[1] != 'Identifier':
-            self.errors.append(f"Semantic Error: Expected identifier for array name, found {self.current_token}")
+            self.errors.append(f"Semantic Error: Invalid Identifier for clust.")
             return
             
         array_name = self.current_token[0]
@@ -1076,14 +1086,16 @@ class SemanticAnalyzer:
         
         # Check for array size
         if self.current_token is None or self.current_token[0] != '[':
-            self.errors.append(f"Semantic Error: Expected '[' for array size, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '[' for array size, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '['
         
         # Get array first dimension size
         if self.current_token is None or self.current_token[1] != 'numlit':
-            self.errors.append(f"Semantic Error: Expected numeric value for array size, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected numeric value for array size, found {self.current_token}")
+            pass
             return
             
         try:
@@ -1098,7 +1110,8 @@ class SemanticAnalyzer:
         self.next_token()  # Move past size
         
         if self.current_token is None or self.current_token[0] != ']':
-            self.errors.append(f"Semantic Error: Expected ']' after array size, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ']' after array size, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ']'
@@ -1113,7 +1126,8 @@ class SemanticAnalyzer:
             
             # Get array second dimension size
             if self.current_token is None or self.current_token[1] != 'numlit':
-                self.errors.append(f"Semantic Error: Expected numeric value for second array dimension, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected numeric value for second array dimension, found {self.current_token}")
+                pass
                 return
                 
             try:
@@ -1128,7 +1142,8 @@ class SemanticAnalyzer:
             self.next_token()  # Move past size
             
             if self.current_token is None or self.current_token[0] != ']':
-                self.errors.append(f"Semantic Error: Expected ']' after second array dimension, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ']' after second array dimension, found {self.current_token}")
+                pass 
                 return
                 
             self.next_token()  # Move past ']'
@@ -1158,7 +1173,9 @@ class SemanticAnalyzer:
             
             # Check for array initializer
             if self.current_token is None or self.current_token[0] != '{':
-                self.errors.append(f"Semantic Error: Expected '{{' for array initialization, found {self.current_token}")
+
+                # self.errors.append(f"Semantic Error: Expected '{{' for array initialization, found {self.current_token}")
+                pass
                 return
                 
             self.next_token()  # Move past '{'
@@ -1178,7 +1195,8 @@ class SemanticAnalyzer:
                         
                     # Expect '{' for row start
                     if self.current_token[0] != '{':
-                        self.errors.append(f"Semantic Error: Expected '{{' for start of row in 2D array, found {self.current_token}")
+                        # self.errors.append(f"Semantic Error: Expected '{{' for start of row in 2D array, found {self.current_token}")
+                        pass
                         return
                         
                     self.next_token()  # Move past '{'
@@ -1235,7 +1253,8 @@ class SemanticAnalyzer:
                             return
                             
                         if self.current_token[0] != ',' and self.current_token[0] != '}':
-                            self.errors.append(f"Semantic Error: Expected ',' or '}}' in array row initialization, found {self.current_token}")
+                            # self.errors.append(f"Semantic Error: Expected ',' or '}}' in array row initialization, found {self.current_token}")
+                            pass
                     
                     # Check if row size matches second dimension
                     if len(row_elements) != array_size2:
@@ -1250,7 +1269,8 @@ class SemanticAnalyzer:
                         return
                         
                     if self.current_token[0] != '}':
-                        self.errors.append(f"Semantic Error: Expected '}}' at end of array row, found {self.current_token}")
+                        # self.errors.append(f"Semantic Error: Expected '}}' at end of array row, found {self.current_token}")
+                        pass
                         return
                         
                     self.next_token()  # Move past '}'
@@ -1315,7 +1335,8 @@ class SemanticAnalyzer:
                         return
                         
                     if self.current_token[0] != ',' and self.current_token[0] != '}':
-                        self.errors.append(f"Semantic Error: Expected ',' or '}}' in array initialization, found {self.current_token}")
+                        # self.errors.append(f"Semantic Error: Expected ',' or '}}' in array initialization, found {self.current_token}")
+                        pass
                 
                 # Check if number of elements matches array size
                 if len(elements) != array_size1:
@@ -1326,14 +1347,16 @@ class SemanticAnalyzer:
                 self.symbol_table[array_name]['value'] = elements
             
             if self.current_token is None or self.current_token[0] != '}':
-                self.errors.append(f"Semantic Error: Expected '}}' at end of array initialization, found {self.current_token}")
+               # self.errors.append(f"Semantic Error: Expected '}}' at end of array initialization, found {self.current_token}")
+                pass
                 return
                 
             self.next_token()  # Move past '}'
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after array declaration, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ';' after array declaration, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ';'
@@ -1456,7 +1479,8 @@ class SemanticAnalyzer:
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after 'break', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ';' after 'break', found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ';'
@@ -1470,123 +1494,124 @@ class SemanticAnalyzer:
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after 'continue', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ';' after 'continue', found {self.current_token}")
+            pass 
             return
             
         self.next_token()  # Move past ';'
     
-    def array_declaration(self):
-        """Parse array declaration"""
-        self.next_token()  # Move past 'array'
+    # def array_declaration(self):
+    #     """Parse array declaration"""
+    #     self.next_token()  # Move past 'array'
         
-        # Skip spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()
+    #     # Skip spaces
+    #     while self.current_token is not None and self.current_token[1] == 'space':
+    #         self.next_token()
         
-        # Get element type
-        if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
-            self.errors.append(f"Semantic Error: Expected valid type after 'array', found {self.current_token}")
-            return
+    #     # Get element type
+    #     if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
+    #         self.errors.append(f"Semantic Error: Expected valid type after 'array', found {self.current_token}")
+    #         return
             
-        element_type = self.current_token[1]
-        self.next_token()  # Move past element type
+    #     element_type = self.current_token[1]
+    #     self.next_token()  # Move past element type
         
-        # Skip spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()
+    #     # Skip spaces
+    #     while self.current_token is not None and self.current_token[1] == 'space':
+    #         self.next_token()
             
-        # Get array name
-        if self.current_token is None or self.current_token[1] != 'Identifier':
-            self.errors.append(f"Semantic Error: Expected identifier for array name, found {self.current_token}")
-            return
+    #     # Get array name
+    #     if self.current_token is None or self.current_token[1] != 'Identifier':
+    #         self.errors.append(f"Semantic Error: Expected identifier for array name, found {self.current_token}")
+    #         return
             
-        array_name = self.current_token[0]
+    #     array_name = self.current_token[0]
         
-        # Check for redeclaration
-        if array_name in self.symbol_table:
-            self.errors.append(f"Semantic Error: Variable '{array_name}' already declared")
+    #     # Check for redeclaration
+    #     if array_name in self.symbol_table:
+    #         self.errors.append(f"Semantic Error: Variable '{array_name}' already declared")
             
-        self.next_token()  # Move past identifier
+    #     self.next_token()  # Move past identifier
         
-        # Add to symbol table
-        self.symbol_table[array_name] = {
-            'type': f'array_{element_type}',
-            'value': [],
-            'element_type': element_type
-        }
+    #     # Add to symbol table
+    #     self.symbol_table[array_name] = {
+    #         'type': f'array_{element_type}',
+    #         'value': [],
+    #         'element_type': element_type
+    #     }
         
-        # Check for assignment
-        if self.current_token is not None and self.current_token[0] == '=':
-            self.next_token()  # Move past '='
+    #     # Check for assignment
+    #     if self.current_token is not None and self.current_token[0] == '=':
+    #         self.next_token()  # Move past '='
             
-            # Check for array initializer
-            if self.current_token is None or self.current_token[0] != '[':
-                self.errors.append(f"Semantic Error: Expected '[' for array initialization, found {self.current_token}")
-                return
+    #         # Check for array initializer
+    #         if self.current_token is None or self.current_token[0] != '[':
+    #             self.errors.append(f"Semantic Error: Expected '[' for array initialization, found {self.current_token}")
+    #             return
                 
-            self.next_token()  # Move past '['
+    #         self.next_token()  # Move past '['
             
-            # Parse array elements
-            elements = []
-            while self.current_token is not None and self.current_token[0] != ']':
-                # Skip spaces and commas
-                while self.current_token is not None and (self.current_token[1] == 'space' or self.current_token[0] == ','):
-                    self.next_token()
+    #         # Parse array elements
+    #         elements = []
+    #         while self.current_token is not None and self.current_token[0] != ']':
+    #             # Skip spaces and commas
+    #             while self.current_token is not None and (self.current_token[1] == 'space' or self.current_token[0] == ','):
+    #                 self.next_token()
                     
-                if self.current_token is None or self.current_token[0] == ']':
-                    break
+    #             if self.current_token is None or self.current_token[0] == ']':
+    #                 break
                     
-                # Check element type
-                if element_type == 'dose' and (self.current_token[1] != 'numlit' or '.' in self.current_token[0]):
-                    self.errors.append(f"Semantic Error: Expected integer value for dose array element, found {self.current_token}")
-                elif element_type == 'quant' and self.current_token[1] != 'numlit':
-                    self.errors.append(f"Semantic Error: Expected numeric value for quant array element, found {self.current_token}")
-                elif element_type == 'seq' and self.current_token[1] != 'string literal':
-                    self.errors.append(f"Semantic Error: Expected string value for seq array element, found {self.current_token}")
-                elif element_type == 'allele' and self.current_token[0] not in ['dom', 'rec']:
-                    self.errors.append(f"Semantic Error: Expected 'dom' or 'rec' for allele array element, found {self.current_token}")
+    #             # Check element type
+    #             if element_type == 'dose' and (self.current_token[1] != 'numlit' or '.' in self.current_token[0]):
+    #                 self.errors.append(f"Semantic Error: Expected integer value for dose array element, found {self.current_token}")
+    #             elif element_type == 'quant' and self.current_token[1] != 'numlit':
+    #                 self.errors.append(f"Semantic Error: Expected numeric value for quant array element, found {self.current_token}")
+    #             elif element_type == 'seq' and self.current_token[1] != 'string literal':
+    #                 self.errors.append(f"Semantic Error: Expected string value for seq array element, found {self.current_token}")
+    #             elif element_type == 'allele' and self.current_token[0] not in ['dom', 'rec']:
+    #                 self.errors.append(f"Semantic Error: Expected 'dom' or 'rec' for allele array element, found {self.current_token}")
                 
-                # Store element
-                if element_type == 'dose':
-                    try:
-                        elements.append(int(self.current_token[0]))
-                    except:
-                        pass
-                elif element_type == 'quant':
-                    try:
-                        elements.append(float(self.current_token[0]))
-                    except:
-                        pass
-                elif element_type == 'seq':
-                    elements.append(self.current_token[0].strip('"\''))
-                elif element_type == 'allele':
-                    elements.append(self.current_token[0] == 'dom')
+    #             # Store element
+    #             if element_type == 'dose':
+    #                 try:
+    #                     elements.append(int(self.current_token[0]))
+    #                 except:
+    #                     pass
+    #             elif element_type == 'quant':
+    #                 try:
+    #                     elements.append(float(self.current_token[0]))
+    #                 except:
+    #                     pass
+    #             elif element_type == 'seq':
+    #                 elements.append(self.current_token[0].strip('"\''))
+    #             elif element_type == 'allele':
+    #                 elements.append(self.current_token[0] == 'dom')
                 
-                self.next_token()  # Move past element
+    #             self.next_token()  # Move past element
                 
-                # Look for comma or closing bracket
-                if self.current_token is None:
-                    self.errors.append("Semantic Error: Unexpected end of tokens in array initialization")
-                    return
+    #             # Look for comma or closing bracket
+    #             if self.current_token is None:
+    #                 self.errors.append("Semantic Error: Unexpected end of tokens in array initialization")
+    #                 return
                     
-                if self.current_token[0] != ',' and self.current_token[0] != ']':
-                    self.errors.append(f"Semantic Error: Expected ',' or ']' in array initialization, found {self.current_token}")
+    #             if self.current_token[0] != ',' and self.current_token[0] != ']':
+    #                 self.errors.append(f"Semantic Error: Expected ',' or ']' in array initialization, found {self.current_token}")
             
-            # Update symbol table with elements
-            self.symbol_table[array_name]['value'] = elements
+    #         # Update symbol table with elements
+    #         self.symbol_table[array_name]['value'] = elements
             
-            if self.current_token is None or self.current_token[0] != ']':
-                self.errors.append(f"Semantic Error: Expected ']' at end of array initialization, found {self.current_token}")
-                return
+    #         if self.current_token is None or self.current_token[0] != ']':
+    #             self.errors.append(f"Semantic Error: Expected ']' at end of array initialization, found {self.current_token}")
+    #             return
                 
-            self.next_token()  # Move past ']'
+    #         self.next_token()  # Move past ']'
         
-        # Check for semicolon
-        if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after array declaration, found {self.current_token}")
-            return
+    #     # Check for semicolon
+    #     if self.current_token is None or self.current_token[0] != ';':
+    #         self.errors.append(f"Semantic Error: Expected ';' after array declaration, found {self.current_token}")
+    #         return
             
-        self.next_token()  # Move past ';'
+    #     self.next_token()  # Move past ';'
     
     def function_declaration(self):
         """Parse function declaration"""
@@ -1610,7 +1635,7 @@ class SemanticAnalyzer:
         
         # Get function name
         if self.current_token is None or self.current_token[1] != 'Identifier':
-            self.errors.append(f"Semantic Error: Expected identifier for function name, found {self.current_token}")
+            self.errors.append(f"Semantic Error: No Identifier found for function name.")
             return
             
         function_name = self.current_token[0]
@@ -1628,7 +1653,8 @@ class SemanticAnalyzer:
         
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after function name, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '(' after function name, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '('
@@ -1660,7 +1686,7 @@ class SemanticAnalyzer:
             
             # Get parameter name
             if self.current_token is None or self.current_token[1] != 'Identifier':
-                self.errors.append(f"Semantic Error: Expected identifier for function parameter, found {self.current_token}")
+                self.errors.append(f"Semantic Error: No Identifier found for function parameter")
                 # Skip to next comma or closing parenthesis
                 while self.current_token is not None and self.current_token[0] != ',' and self.current_token[0] != ')':
                     self.next_token()
@@ -1682,14 +1708,16 @@ class SemanticAnalyzer:
                 return
                 
             if self.current_token[0] != ',' and self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ',' or ')' in function parameters, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ',' or ')' in function parameters, found {self.current_token}")
+                pass
                 # Skip to next comma or closing parenthesis
                 while self.current_token is not None and self.current_token[0] != ',' and self.current_token[0] != ')':
                     self.next_token()
         
         # Check for closing parenthesis
         if self.current_token is None or self.current_token[0] != ')':
-            self.errors.append(f"Semantic Error: Expected ')' after function parameters, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ')' after function parameters, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ')'
@@ -1700,7 +1728,8 @@ class SemanticAnalyzer:
         
         # Check for opening brace
         if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after function header, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '{{' after function header, found {self.current_token}")
+            pass 
             return
             
         # Save function info
@@ -1726,7 +1755,8 @@ class SemanticAnalyzer:
         
         # Check for closing brace
         if self.current_token is None or self.current_token[0] != '}':
-            self.errors.append(f"Semantic Error: Expected '}}' at end of function block, found {self.current_token}")
+           # self.errors.append(f"Semantic Error: Expected '}}' at end of function block, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '}'
@@ -2523,7 +2553,7 @@ class SemanticAnalyzer:
                 
         # Now get the data type
         if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
-            self.errors.append(f"Semantic Error: Expected data type, found {self.current_token}")
+            self.errors.append(f"Semantic Error: Invalid data type found")
             return
             
         var_type = self.current_token[1]
@@ -2537,7 +2567,7 @@ class SemanticAnalyzer:
         while True:
             # Get variable name
             if self.current_token is None or self.current_token[1] != 'Identifier':
-                self.errors.append(f"Semantic Error: Expected identifier after type declaration, found {self.current_token}")
+                self.errors.append(f"Semantic Error: Invalid variable name")
                 return
 
             var_name = self.current_token[0]
@@ -2803,7 +2833,8 @@ class SemanticAnalyzer:
             
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'if', found {self.current_token}")
+           # self.errors.append(f"Semantic Error: Expected '(' after 'if', found {self.current_token}")
+            pass
             # Try to recover by skipping to the { if possible
             while self.current_token is not None and self.current_token[0] != '{':
                 self.next_token()
@@ -2852,7 +2883,8 @@ class SemanticAnalyzer:
             
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'elif', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '(' after 'elif', found {self.current_token}")
+            pass
             # Try to recover by skipping to the { if possible
             while self.current_token is not None and self.current_token[0] != '{':
                 self.next_token()
@@ -2874,7 +2906,8 @@ class SemanticAnalyzer:
         
         # Check for opening brace
         if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after elif condition, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '{{' after elif condition, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '{'
@@ -2899,7 +2932,8 @@ class SemanticAnalyzer:
         
         # Check for opening brace
         if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after else, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '{{' after else, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '{'
@@ -3149,7 +3183,8 @@ class SemanticAnalyzer:
             
             # Check for opening parenthesis
             if self.current_token is None or self.current_token[0] != '(':
-                self.errors.append(f"Semantic Error: Expected '(' after 'seq', found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected '(' after 'seq', found {self.current_token}")     
+                pass
                 return 'unknown'
                 
                 
@@ -3171,7 +3206,8 @@ class SemanticAnalyzer:
             
             # Check for closing parenthesis
             if self.current_token is None or self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ')' after seq argument, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ')' after seq argument, found {self.current_token}")
+                pass
                 return factor_type
                 
             self.next_token()  # Move past ')'
@@ -3186,7 +3222,8 @@ class SemanticAnalyzer:
             
             # Check for opening parenthesis
             if self.current_token is None or self.current_token[0] != '(':
-                self.errors.append(f"Semantic Error: Expected '(' after 'stimuli', found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected '(' after 'stimuli', found {self.current_token}")
+                pass
                 return 'unknown'
                 
             self.next_token()  # Move past '('
@@ -3197,7 +3234,7 @@ class SemanticAnalyzer:
             
             # Check for prompt message (string literal)
             if self.current_token is None or self.current_token[1] != 'string literal':
-                self.errors.append(f"Semantic Error: Expected string literal for input prompt, found {self.current_token}")
+                self.errors.append(f"Semantic Error: Invalid message found inside stimuli() function")
                 # Skip to closing parenthesis to continue parsing
                 while self.current_token is not None and self.current_token[0] != ')':
                     self.next_token()
@@ -3211,7 +3248,8 @@ class SemanticAnalyzer:
             
             # Check for closing parenthesis
             if self.current_token is None or self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}")
+                pass
                 return 'unknown'
                 
             self.next_token()  # Move past ')'
@@ -3241,7 +3279,8 @@ class SemanticAnalyzer:
             
             # Check for closing parenthesis
             if self.current_token is None or self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ')' after expression, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ')' after expression, found {self.current_token}")
+                pass
             else:
                 self.next_token()  # Move past ')'
                 
@@ -3262,7 +3301,8 @@ class SemanticAnalyzer:
         
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'for', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '(' after 'for', found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '('
@@ -3274,7 +3314,7 @@ class SemanticAnalyzer:
         if self.current_token is not None and self.current_token[1] == 'dose':
             self.declaration()  # This will handle the first part of the for loop    
         else:
-            self.errors.append(f"Semantic Error: Expected 'dose' declaration as for loop initialization, found {self.current_token}")
+            self.errors.append(f"Semantic Error: No dose declaration found in for loop initialization")
             # Skip until semicolon
             while self.current_token is not None and self.current_token[0] != ';':
                 self.next_token()
@@ -3285,7 +3325,8 @@ class SemanticAnalyzer:
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after for loop condition, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ';' after for loop condition, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ';'
@@ -3323,17 +3364,19 @@ class SemanticAnalyzer:
                 else:
                     self.next_token()  # Move past the second + or - character
             else:
-                self.errors.append(f"Semantic Error: Expected increment/decrement operator in for loop update, found {self.current_token}")
+                self.errors.append(f"Semantic Error: Invalid increment/decrement operator in for loop update, found {self.current_token}")
                 self.next_token()  # Skip the current token
         else:
-            self.errors.append(f"Semantic Error: Expected identifier in for loop update, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected identifier in for loop update, found {self.current_token}")
+            pass
             
         # Skip until closing parenthesis
         while self.current_token is not None and self.current_token[0] != ')':
             self.next_token()
             
         if self.current_token is None or self.current_token[0] != ')':
-            self.errors.append(f"Semantic Error: Expected ')' after for loop update, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ')' after for loop update, found {self.current_token}")
+            pass 
             return
             
         self.next_token()  # Move past ')'
@@ -3344,7 +3387,8 @@ class SemanticAnalyzer:
         
         # Check for opening brace
         if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after for loop header, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '{{' after for loop header, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '{'
@@ -3354,7 +3398,8 @@ class SemanticAnalyzer:
         
         # Check for closing brace
         if self.current_token is None or self.current_token[0] != '}':
-            self.errors.append(f"Semantic Error: Expected '}}' at end of for loop block, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '}}' at end of for loop block, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '}'
@@ -3372,7 +3417,8 @@ class SemanticAnalyzer:
         
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'while', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '(' after 'while', found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '('
@@ -3383,6 +3429,7 @@ class SemanticAnalyzer:
         # Check for closing parenthesis
         if self.current_token is None or self.current_token[0] != ')':
             # self.errors.append(f"Semantic Error: Expected ')' after while condition, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ')'
@@ -3394,6 +3441,7 @@ class SemanticAnalyzer:
         # Check for opening brace
         if self.current_token is None or self.current_token[0] != '{':
             # self.errors.append(f"Semantic Error: Expected '{{' after while condition, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '{'
@@ -3403,7 +3451,8 @@ class SemanticAnalyzer:
         
         # Check for closing brace
         if self.current_token is None or self.current_token[0] != '}':
-            self.errors.append(f"Semantic Error: Expected '}}' at end of while loop block, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '}}' at end of while loop block, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '}'
@@ -3418,7 +3467,8 @@ class SemanticAnalyzer:
         
         # Check for opening brace
         if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after 'do', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '{{' after 'do', found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '{'
@@ -3428,7 +3478,8 @@ class SemanticAnalyzer:
         
         # Check for closing brace
         if self.current_token is None or self.current_token[0] != '}':
-            self.errors.append(f"Semantic Error: Expected '}}' after do block, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '}}' after do block, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '}'
@@ -3439,7 +3490,8 @@ class SemanticAnalyzer:
         
         # Check for 'while'
         if self.current_token is None or self.current_token[1] != 'while':
-            self.errors.append(f"Semantic Error: Expected 'while' after do block, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected 'while' after do block, found {self.current_token}")      
+            pass
             return
             
         self.next_token()  # Move past 'while'
@@ -3450,7 +3502,8 @@ class SemanticAnalyzer:
         
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'while', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '(' after 'while', found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '('
@@ -3460,14 +3513,16 @@ class SemanticAnalyzer:
         
         # Check for closing parenthesis
         if self.current_token is None or self.current_token[0] != ')':
-            self.errors.append(f"Semantic Error: Expected ')' after do-while condition, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ')' after do-while condition, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ')'
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after do-while statement, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ';' after do-while statement, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ';'
@@ -3482,7 +3537,8 @@ class SemanticAnalyzer:
         
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'express', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '(' after 'express', found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '('
@@ -3685,7 +3741,8 @@ class SemanticAnalyzer:
                                 self.next_token()  # Move past comma
                                 continue
                             elif self.current_token[0] != ')':
-                                self.errors.append(f"Semantic Error: Expected ',' or ')' in function arguments, found {self.current_token}")
+                                #  self.errors.append(f"Semantic Error: Expected ',' or ')' in function arguments, found {self.current_token}") 
+                                pass
                                 break
                         
                         # Validate parameter types and number
@@ -3811,15 +3868,16 @@ class SemanticAnalyzer:
         
         # Check for closing parenthesis
         if self.current_token is None or self.current_token[0] != ')':
-            self.errors.append(f"Semantic Error: Expected ')' in express statement, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ')' in express statement, found {self.current_token}")    
+            pass
             return
             
         self.next_token()  # Move past ')'
         
         # Check for semicolon
-        if self.current_token is None or self.current_token[0] != ';':
-            
+        if self.current_token is None or self.current_token[0] != ';':                                
             # self.errors.append(f"Semantic Error: Expected ';' after express statement, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ';'
@@ -3921,7 +3979,8 @@ class SemanticAnalyzer:
             
             # Check for opening parenthesis
             if self.current_token is None or self.current_token[0] != '(':
-                self.errors.append(f"Semantic Error: Expected '(' after 'stimuli', found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected '(' after 'stimuli', found {self.current_token}")
+                pass
                 return
                 
             self.next_token()  # Move past '('
@@ -3932,7 +3991,7 @@ class SemanticAnalyzer:
             
             # Check for prompt message (string literal)
             if self.current_token is None or self.current_token[1] != 'string literal':
-                self.errors.append(f"Semantic Error: Expected string literal for input prompt, found {self.current_token}")
+                self.errors.append(f"Semantic Error: Invalid message found inside stimuli() function")
                 return
                 
             prompt = self.current_token[0].strip('"\'')  # Store the prompt message
@@ -3944,7 +4003,8 @@ class SemanticAnalyzer:
             
             # Check for closing parenthesis
             if self.current_token is None or self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}")
+              #  self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}") 
+                pass
                 return
                 
             self.next_token()  # Move past ')'
@@ -3961,7 +4021,8 @@ class SemanticAnalyzer:
             
             # Check for closing parenthesis
             if self.current_token is None or self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ')' but found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ')' but found {self.current_token}")
+                pass
             else:
                 self.next_token()  # Move past ')'
                 
@@ -4091,7 +4152,7 @@ class SemanticAnalyzer:
         self.symbol_table = self.global_symbol_table
 
 
-def generate_symtab(parsed_tokens):
+def generate_symtab(parsed_tokens): 
     """Create a symbol table from parsed tokens"""
     analyzer = SemanticAnalyzer(parsed_tokens)
     analyzer.parse()
