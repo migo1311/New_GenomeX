@@ -75,26 +75,24 @@ class SemanticAnalyzer:
             return
             
         if self.current_token[1] == 'gene':
-            function_type = 'gene'
+            function_type = 'main function'
             function_name = 'gene'
             self.next_token()  # Move past 'gene'
         elif self.current_token[1] == 'void':
-            function_type = 'void'
+            function_type = 'void function'
             self.next_token()  # Move past 'void'
             
             # Skip spaces
             while self.current_token is not None and self.current_token[1] == 'space':
                 self.next_token()
-                
             # Expect identifier
             # if self.current_token is None or self.current_token[1] != 'Identifier':
             #     self.errors.append(f"Semantic Error: Expected identifier after 'void', but found {self.current_token}")
             #     return
-                
             function_name = self.current_token[0]
             self.next_token()  # Move past identifier
         elif self.current_token[1] == 'Identifier':
-            function_type = 'regular'
+            function_type = 'regular user defined function'
             function_name = self.current_token[0]
             self.next_token()  # Move past identifier
         else:
@@ -135,10 +133,8 @@ class SemanticAnalyzer:
             # Skip spaces and commas
             while self.current_token is not None and (self.current_token[1] == 'space' or self.current_token[0] == ','):
                 self.next_token()
-                
             if self.current_token is None or self.current_token[0] == ')':
                 break
-                
             # Get parameter type
             if self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
                 line_number = self.get_current_line_number()
@@ -158,7 +154,7 @@ class SemanticAnalyzer:
             # Get parameter name
             if self.current_token is None or self.current_token[1] != 'Identifier':
                 line_number = self.get_current_line_number()
-                self.errors.append(f"Semantic Error: Missing Identifier for function parameter, found {self.current_token} at line {line_number}")
+                self.errors.append(f"Semantic Error: Missing Identifier for function parameter at line {line_number}")
                 # Skip to next comma or closing parenthesis
                 while self.current_token is not None and self.current_token[0] != ',' and self.current_token[0] != ')':
                     self.next_token()
@@ -584,7 +580,7 @@ class SemanticAnalyzer:
                                 eval(expr_str.replace('/', '//'))
                             except ZeroDivisionError:
                                 line_number = self.get_current_line_number()
-                                self.errors.append(f"Semantic Error: Division by zero in expression for variable '{var_name}' at line {line_number}")
+                                #self.errors.append(f"Semantic Error: Division by zero in expression for variable '{var_name}' at line {line_number}")
                             except:
                                 pass
                 
@@ -1074,6 +1070,36 @@ class SemanticAnalyzer:
     def stimuli_statement(self):
     
         """Parse stimuli statement (input statement) and validate types"""
+        # Store the previous token to check if this is part of an assignment
+        prev_tokens_positions = []
+        i = 2  # Skip back past 'stimuli' (current token) and possibly '='
+        
+        # Look back for the variable being assigned and register it
+        var_name = None
+        while self.token_index - i >= 0 and len(prev_tokens_positions) < 5:
+            prev_tokens_positions.append(self.token_index - i)
+            i += 1
+            
+        # Check if this is an assignment to a variable
+        is_assignment = False
+        for pos in prev_tokens_positions:
+            if pos >= 0 and pos < len(self.tokens):
+                if self.tokens[pos][0] == '=':
+                    is_assignment = True
+                    # The token before '=' should be the variable name
+                    if pos > 0 and self.tokens[pos-1][1] == 'Identifier':
+                        var_name = self.tokens[pos-1][0]
+                        break
+        
+        # If we found a variable being assigned a stimuli value, mark it as initialized
+        if is_assignment and var_name:
+            if var_name in self.symbol_table:
+                self.symbol_table[var_name]['initialized_by_stimuli'] = True
+                self.symbol_table[var_name]['value'] = get_default_value_for_type(self.symbol_table[var_name]['type'])
+            elif var_name in self.global_symbol_table:
+                self.global_symbol_table[var_name]['initialized_by_stimuli'] = True
+                self.global_symbol_table[var_name]['value'] = get_default_value_for_type(self.global_symbol_table[var_name]['type'])
+        
         self.next_token()  # Move past 'stimuli'
         
         # Skip spaces
@@ -1885,8 +1911,21 @@ class SemanticAnalyzer:
             var_info = self.global_symbol_table[var_name]
             var_type = var_info['type']
         else:
+            # Variable not found - check if there's a similar variable that might be confused
+            similar_vars = []
+            for name in self.symbol_table:
+                if name.lower() == var_name.lower() and name != var_name:
+                    similar_vars.append(name)
+            for name in self.global_symbol_table:
+                if name.lower() == var_name.lower() and name != var_name:
+                    similar_vars.append(name)
+            
             line_number = self.get_current_line_number()
-            self.errors.append(f"Semantic Error: Variable '{var_name}' used before declaration at line {line_number}")
+            error_msg = f"Semantic Error: Variable '{var_name}' used before declaration at line {line_number}"
+            if similar_vars:
+                # If there are similar variables, suggest them
+                error_msg += f". Did you mean: {', '.join(similar_vars)}?"
+            self.errors.append(error_msg)
             self.next_token()  # Move past identifier
             return
         
@@ -2045,12 +2084,50 @@ class SemanticAnalyzer:
             else:
                 self.current_assignment_type = var_type
             
+            # Check for stimuli function call
+            is_stimuli = False
+            if self.current_token is not None and self.current_token[1] == 'stimuli':
+                is_stimuli = True
+                
+                # Since we found a stimuli function call, mark the variable as initialized
+                if is_array_element:
+                    # For array elements, we don't track initialization individually
+                    pass
+                else:
+                    # Mark the variable as initialized by stimuli in the appropriate symbol table
+                    if var_name in self.symbol_table:
+                        self.symbol_table[var_name]['initialized_by_stimuli'] = True
+                        self.symbol_table[var_name]['value'] = get_default_value_for_type(var_type)  # Set a default value
+                    elif var_name in self.global_symbol_table:
+                        self.global_symbol_table[var_name]['initialized_by_stimuli'] = True
+                        self.global_symbol_table[var_name]['value'] = get_default_value_for_type(var_type)  # Set a default value
+            
             # Collect tokens for the expression until semicolon
             expression_tokens = []
             
             while self.current_token is not None and self.current_token[0] != ';':
                 expression_tokens.append(self.current_token)
                 self.next_token()
+                
+            # For stimuli, we don't need to validate types further since user input is inherently dynamic
+            if is_stimuli:
+                # Mark this variable as initialized by stimuli
+                if is_array_element:
+                    # For array elements, we don't track initialization individually
+                    pass
+                else:
+                    # Mark the variable as initialized by stimuli in the appropriate symbol table
+                    if var_name in self.symbol_table:
+                        self.symbol_table[var_name]['initialized_by_stimuli'] = True
+                        self.symbol_table[var_name]['value'] = get_default_value_for_type(var_type)  # Set a default value
+                    elif var_name in self.global_symbol_table:
+                        self.global_symbol_table[var_name]['initialized_by_stimuli'] = True
+                        self.global_symbol_table[var_name]['value'] = get_default_value_for_type(var_type)  # Set a default value
+                
+                # Skip to end of statement
+                if self.current_token is not None and self.current_token[0] == ';':
+                    self.next_token()  # Move past semicolon
+                return
             
             # Check for mixing allele and numeric types in expressions
             if len(expression_tokens) > 1:
@@ -2125,11 +2202,29 @@ class SemanticAnalyzer:
                 
                 # Check for division by zero in /= operation
                 if compound_operator == '/' and len(expression_tokens) == 1:
-                    # Check for direct division by zero
+                    # Check for direct division by zero with numeric literal
                     if expression_tokens[0][1] == 'numlit' and float(expression_tokens[0][0]) == 0:
-                        target_name = f"{var_name}[index]" if is_array_element else var_name
-                        line_number = self.get_current_line_number()
-                        self.errors.append(f"Semantic Error: Division by zero in assignment '{target_name} /= 0' at line {line_number}")
+                        # For array elements, we need to check if the array is using stimuli-initialized variables
+                        skip_error = False
+                        if is_array_element and array_var_name in self.symbol_table:
+                            if self.symbol_table[array_var_name].get('initialized_by_stimuli', False):
+                                skip_error = True
+                        elif is_array_element and array_var_name in self.global_symbol_table:
+                            if self.global_symbol_table[array_var_name].get('initialized_by_stimuli', False):
+                                skip_error = True
+                        
+                        # For normal variables, check if they use stimuli-initialized variables
+                        if var_name in self.symbol_table and self.symbol_table[var_name].get('initialized_by_stimuli', False):
+                            skip_error = True
+                        elif var_name in self.global_symbol_table and self.global_symbol_table[var_name].get('initialized_by_stimuli', False):
+                            skip_error = True
+                            
+                        # Only report error if this doesn't involve stimuli-initialized variables
+                        if not skip_error:
+                            target_name = f"{var_name}[index]" if is_array_element else var_name
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Division by zero in assignment '{target_name} /= 0' at line {line_number}")
+                        
                         if self.current_token is not None and self.current_token[0] == ';':
                             self.next_token()  # Move past semicolon
                         return
@@ -2610,9 +2705,23 @@ class SemanticAnalyzer:
                                 var_info['value'] = result
                             # For array elements, we only validate type compatibility
                         except ZeroDivisionError:
-                            target_name = f"{var_name}[index]" if is_array_element else var_name
-                            line_number = self.get_current_line_number()
-                            self.errors.append(f"Semantic Error: Division by zero in expression for '{target_name}' at line {line_number}")
+                            # Check if this involves variables initialized by stimuli
+                            skip_error = False
+                            for token in expression_tokens:
+                                if token[1] == 'Identifier':
+                                    var_to_check = token[0]
+                                    if var_to_check in self.symbol_table and self.symbol_table[var_to_check].get('initialized_by_stimuli', False):
+                                        skip_error = True
+                                        break
+                                    elif var_to_check in self.global_symbol_table and self.global_symbol_table[var_to_check].get('initialized_by_stimuli', False):
+                                        skip_error = True
+                                        break
+                            
+                            if not skip_error:
+                                target_name = f"{var_name}[index]" if is_array_element else var_name
+                                line_number = self.get_current_line_number()
+                                # self.errors.append(f"Semantic Error: Division by zero in expression for '{target_name}' at line {line_number}")
+                            
                             if self.current_token is not None and self.current_token[0] == ';':
                                 self.next_token()  # Move past semicolon
                             return
@@ -2626,7 +2735,23 @@ class SemanticAnalyzer:
                                 # This is just a simple check - a more robust solution would parse the expression
                                 parts = expr_str.split('/')
                                 for part in parts[1:]:  # Check all divisors
-                                    if float(eval(part.strip())) == 0:
+                                    # Skip division by zero check for variables initialized by stimuli
+                                    divisor_part = part.strip()
+                                    skip_check = False
+                                    
+                                    # Check if any operand in the expression is initialized by stimuli
+                                    for token in expression_tokens:
+                                        if token[1] == 'Identifier':
+                                            var_to_check = token[0]
+                                            if var_to_check in self.symbol_table and self.symbol_table[var_to_check].get('initialized_by_stimuli', False):
+                                                skip_check = True
+                                                break
+                                            elif var_to_check in self.global_symbol_table and self.global_symbol_table[var_to_check].get('initialized_by_stimuli', False):
+                                                skip_check = True
+                                                break
+                                    
+                                    # Only perform division by zero check if no stimuli-initialized variables are found
+                                    if not skip_check and float(eval(divisor_part)) == 0:
                                         target_name = f"{var_name}[index]" if is_array_element else var_name
                                         line_number = self.get_current_line_number()
                                         self.errors.append(f"Semantic Error: Division by zero detected in expression for '{target_name}' at line {line_number}")
@@ -2931,7 +3056,7 @@ class SemanticAnalyzer:
                                     eval(expr_str.replace('/', '//'))
                                 except ZeroDivisionError:
                                     line_number = self.get_current_line_number()
-                                    self.errors.append(f"Semantic Error: Division by zero in expression for variable '{var_name}' at line {line_number}")
+                                    # self.errors.append(f"Semantic Error: Division by zero in expression for variable '{var_name}' at line {line_number}")
                                 except:
                                     pass
                     
@@ -3115,6 +3240,9 @@ class SemanticAnalyzer:
             self._condition_nesting_level = nesting_level  # Restore previous level
             return None
         
+        # Store the condition tokens for further analysis
+        condition_start_pos = self.token_index - 1
+        
         # Parse the first operand
         left_type = self.parse_expression()
         
@@ -3133,6 +3261,54 @@ class SemanticAnalyzer:
         # Check type compatibility for comparison
         if left_type is not None and right_type is not None:
             self.check_type_compatibility(left_type, right_type, operator)
+        
+        # Check for possible typos in variable names in the condition
+        # This extra check helps catch issues like "Fund" vs "Found"
+        condition_end_pos = self.token_index
+        # Skip back to the start of condition and re-analyze token by token
+        save_pos = self.token_index  # Save current position
+        identifiers_in_condition = []
+        self.token_index = condition_start_pos
+        
+        # Collect all identifiers used in the condition
+        while self.token_index < condition_end_pos and self.token_index < len(self.tokens):
+            current_token = self.tokens[self.token_index]
+            if current_token[1] == 'Identifier':
+                var_name = current_token[0]
+                if var_name not in self.symbol_table and var_name not in self.global_symbol_table:
+                    identifiers_in_condition.append(var_name)
+            self.token_index += 1
+        
+        # For each undefined identifier, check for similar names
+        for var_name in identifiers_in_condition:
+            # First check if it's a variable that will be initialized by stimuli
+            skip_error = False
+            for i in range(condition_start_pos, min(condition_end_pos + 10, len(self.tokens))):
+                if i < len(self.tokens) and self.tokens[i][0] == '=' and i+1 < len(self.tokens) and self.tokens[i+1][1] == 'stimuli':
+                    # Variable will be initialized by stimuli later in the code
+                    skip_error = True
+                    break
+            
+            if skip_error:
+                continue
+                
+            # Check for similar variables
+            similar_vars = []
+            for name in self.symbol_table:
+                if name.lower() == var_name.lower() and name != var_name:
+                    similar_vars.append(name)
+            for name in self.global_symbol_table:
+                if name.lower() == var_name.lower() and name != var_name:
+                    similar_vars.append(name)
+            
+            if similar_vars:
+                line_number = self.get_current_line_number()
+                error_msg = f"Semantic Error: Variable '{var_name}' used before declaration at line {line_number}"
+                error_msg += f". Did you mean: {', '.join(similar_vars)}?"
+                self.errors.append(error_msg)
+        
+        # Restore position
+        self.token_index = save_pos
         
         self._condition_nesting_level = nesting_level  # Restore previous level
         return 'allele'  # Comparison always yields a boolean
@@ -3207,11 +3383,15 @@ class SemanticAnalyzer:
                 if operator in ['/', '%'] and next_factor_type == 'dose':
                     # Check if we know the value at compile time
                     # This is a common semantic check for division operations
+                    # But we should skip this check for variables initialized by stimuli
                     if (self.current_token is not None and 
                         self.current_token[1] == 'Identifier' and 
-                        self.current_token[0] in self.symbol_table and 
-                        self.symbol_table[self.current_token[0]]['value'] == 0):
-                        self.errors.append(f"Semantic Error: Division by zero detected with operator '{operator}'")
+                        self.current_token[0] in self.symbol_table):
+                        
+                        # Don't report division by zero for variables initialized by stimuli
+                        if not self.symbol_table[self.current_token[0]].get('initialized_by_stimuli', False):
+                            if self.symbol_table[self.current_token[0]].get('value', 1) == 0:
+                                self.errors.append(f"Semantic Error: Division by zero detected with operator '{operator}'")
             # Check for allele with numeric type
             elif (factor_type == 'allele' and next_factor_type in ['dose', 'quant']) or (factor_type in ['dose', 'quant'] and next_factor_type == 'allele'):
                 self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{operator}' with types {factor_type} and {next_factor_type}. Allele type cannot be used in arithmetic operations.")
@@ -3234,15 +3414,85 @@ class SemanticAnalyzer:
         # Handle identifier
         if self.current_token[1] == 'Identifier':
             var_name = self.current_token[0]
+            # Add a strict check that ensures exact match, both in terms of case and spelling
             # Check in current function scope first, then global scope
             if var_name in self.symbol_table:
                 factor_type = self.symbol_table[var_name]['type']
+                # Check if the variable has been initialized by stimuli
+                if not self.symbol_table[var_name].get('initialized_by_stimuli', False) and 'value' not in self.symbol_table[var_name]:
+                    # Look ahead to see if this is part of an assignment with stimuli
+                    temp_index = self.token_index
+                    temp_token = self.current_token
+                    # Skip to potential = sign
+                    while temp_token is not None and temp_token[0] not in ['=', ';', '{', '}']:
+                        temp_index += 1
+                        temp_token = self.tokens[temp_index] if temp_index < len(self.tokens) else None
+                    
+                    # If this is not part of an assignment with stimuli, it's an error
+                    if temp_token is None or temp_token[0] != '=' or temp_index + 1 >= len(self.tokens) or self.tokens[temp_index + 1][1] != 'stimuli':
+                        # Only report error if not part of stimuli assignment
+                        pass
             elif var_name in self.global_symbol_table:
                 factor_type = self.global_symbol_table[var_name]['type']
+                # Check if the variable has been initialized by stimuli
+                if not self.global_symbol_table[var_name].get('initialized_by_stimuli', False) and 'value' not in self.global_symbol_table[var_name]:
+                    # Look ahead to see if this is part of an assignment with stimuli
+                    temp_index = self.token_index
+                    temp_token = self.current_token
+                    # Skip to potential = sign
+                    while temp_token is not None and temp_token[0] not in ['=', ';', '{', '}']:
+                        temp_index += 1
+                        temp_token = self.tokens[temp_index] if temp_index < len(self.tokens) else None
+                    
+                    # If this is not part of an assignment with stimuli, it's an error
+                    if temp_token is None or temp_token[0] != '=' or temp_index + 1 >= len(self.tokens) or self.tokens[temp_index + 1][1] != 'stimuli':
+                        # Only report error if not part of stimuli assignment
+                        pass
             else:
-                line_number = self.get_current_line_number()
-                self.errors.append(f"Semantic Error: Variable '{var_name}' used before declaration at line {line_number}")
-                factor_type = 'unknown'  # Use a placeholder type
+                # Check if this variable will be initialized by stimuli later
+                skip_error = False
+                
+                # Look ahead to see if this variable will be initialized by stimuli
+                for i in range(self.token_index, min(self.token_index + 20, len(self.tokens))):
+                    if i < len(self.tokens) and self.tokens[i][0] == '=' and i+1 < len(self.tokens) and self.tokens[i+1][1] == 'stimuli':
+                        # This variable will be initialized by stimuli later in the code
+                        skip_error = True
+                        # Add the variable to the symbol table now to prevent further errors
+                        if self.current_function:
+                            self.symbol_table[var_name] = {
+                                'type': 'dose',  # Default type - stimuli typically provides numeric input
+                                'value': 0,
+                                'initialized_by_stimuli': True
+                            }
+                        else:
+                            self.global_symbol_table[var_name] = {
+                                'type': 'dose',  # Default type
+                                'value': 0,
+                                'initialized_by_stimuli': True
+                            }
+                        factor_type = 'dose'  # Use default type
+                        break
+                
+                if skip_error:
+                    # Skip reporting error for variables that will be initialized by stimuli
+                    pass
+                else:
+                    # Variable not found - check if there's a similar variable that might be confused
+                    similar_vars = []
+                    for name in self.symbol_table:
+                        if name.lower() == var_name.lower() and name != var_name:
+                            similar_vars.append(name)
+                    for name in self.global_symbol_table:
+                        if name.lower() == var_name.lower() and name != var_name:
+                            similar_vars.append(name)
+                    
+                    line_number = self.get_current_line_number()
+                    error_msg = f"Semantic Error: Variable '{var_name}' used before declaration at line {line_number}"
+                    if similar_vars:
+                        # If there are similar variables, suggest them
+                        error_msg += f". Did you mean: {', '.join(similar_vars)}?"
+                    self.errors.append(error_msg)
+                    factor_type = 'unknown'  # Use a placeholder type
             
             # Save the current position to restore it later
             save_pos = self.token_index
