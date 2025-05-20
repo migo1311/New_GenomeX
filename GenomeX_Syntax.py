@@ -1389,7 +1389,7 @@ def parseSyntax(tokens, output_text):
 
             # Check if we have a valid arithmetic value after the opening parenthesis
             if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier') or 
-                    tokens[start_idx][0] in {'(', '!', '+', '-'}):
+                    tokens[start_idx][0] in {'(', '!', '+', '-'} or tokens[start_idx][1] == 'string literal'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                 output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid arithmetic value but found {tokens[start_idx]}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
