@@ -4277,11 +4277,11 @@ def parseSyntax(tokens, output_text):
         print(f"  First few tokens: {[(t[0], t[1]) for t in first_few]}")
             
         # Handle comments and multiline comments
-        if first_token in ["comment", "multiline_comment"]:
+        if first_token in ["comment", "multiline"]:
             print(f"Found {first_token} in line {line_num}")
             
             # Skip this line if it's just a comment
-            valid_tokens_after_comment = {"space", "newline", "token", "tab", "_G", "act"}
+            valid_tokens_after_comment = {"space", "newline", "token", "tab", "_G", "act", "comment", "multiline"}
             
             # Check next tokens until we find something meaningful
             next_token_idx = 1
