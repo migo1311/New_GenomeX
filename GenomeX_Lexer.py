@@ -1724,6 +1724,13 @@ def parseLexer(input_stream):
                     lookahead_char = None
                     lexeme = ""
                     state = 0  # Reset to initial state to continue parsing
+                elif lookahead_char not in ["e"]:
+                    invalid_lexeme = lexeme + lookahead_char
+                    display_lexical_error(f"Invalid lexeme: {invalid_lexeme.strip()} on line {line_number}")
+                    found_error = True
+                    lookahead_char = None
+                    lexeme = ""
+                    state = 0
             else:
                 print("WRONG IN STATE 62")
                 invalid_lexeme = lexeme + lookahead_char

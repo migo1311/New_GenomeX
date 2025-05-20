@@ -250,9 +250,29 @@ class SemanticAnalyzer:
         # Check for '}'
         if self.current_token is None or self.current_token[0] != '}':
             line_number = self.get_current_line_number()
-            self.errors.append(f"Semantic Error: Invalid function ender at line {line_number}")
+            # self.errors.append(f"Semantic Error: Invalid function ender at line {line_number}")
+            pass
             return
         self.next_token()  # Move past '}'
+        
+        # Continue parsing any remaining tokens until we find another function declaration or EOF
+        print(f"Finishing function: {function_name}")
+        
+        # Check if there are any remaining tokens to parse that might be part of this function
+        # This ensures elif/else blocks that come after the main function body are properly parsed
+        while self.current_token is not None:
+            if self.current_token[1] == 'elif':
+                self.enter_function_scope(function_name)  # Re-enter the function scope
+                self.elif_statement()
+                self.exit_function_scope()
+            elif self.current_token[1] == 'else':
+                self.enter_function_scope(function_name)  # Re-enter the function scope
+                self.else_statement()
+                self.exit_function_scope()
+            else:
+                # If not elif/else, we've reached the true end of the function
+                break
+        
         print(f"Finished parsing function: {function_name}")
     # Parameter Passing
     def check_parameter_passing(self, function_name, args):
@@ -3072,8 +3092,8 @@ class SemanticAnalyzer:
             
         self.next_token()  # Move past '{'
         
-        # Skip the entire else block body
-        self.skip_to_end_of_block()
+        # Instead of skipping the else block body, parse the body statements to check variable declarations
+        self.parse_body_statements()
 
     def parse_condition(self):
         """Parse a condition, checking operands and operator compatibility"""
@@ -3714,6 +3734,11 @@ class SemanticAnalyzer:
                 elif var_name in self.global_symbol_table:
                     var_info = self.global_symbol_table[var_name]
                 
+                # Check if the variable itself is declared
+                if var_info is None:
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement before declaration at line {line_number}")
+                
                 # Save current position
                 save_pos = self.token_index
                 
@@ -3722,6 +3747,15 @@ class SemanticAnalyzer:
                 # Check if this is an array access
                 if self.current_token is not None and self.current_token[0] == '[':
                     self.next_token()  # Move past '['
+                    
+                    # Check if array index is an identifier (variable)
+                    if self.current_token is not None and self.current_token[1] == 'Identifier':
+                        index_var_name = self.current_token[0]
+                        
+                        # Check if index variable is declared
+                        if index_var_name not in self.symbol_table and index_var_name not in self.global_symbol_table:
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Array index variable '{index_var_name}' used before declaration at line {line_number}")
                     
                     # Check for splicing pattern with colon
                     if self.current_token is not None and self.current_token[0] == ':':
@@ -3745,6 +3779,16 @@ class SemanticAnalyzer:
                             bracket_count += 1
                         elif self.current_token[0] == ']':
                             bracket_count -= 1
+                            
+                        # Check for another index variable if we're moving to next dimension
+                        if bracket_count == 1 and self.current_token is not None and self.current_token[1] == 'Identifier':
+                            next_index_var_name = self.current_token[0]
+                            
+                            # Check if this index variable is declared
+                            if next_index_var_name not in self.symbol_table and next_index_var_name not in self.global_symbol_table:
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Array index variable '{next_index_var_name}' used before declaration at line {line_number}")
+                            
                         if bracket_count > 0:
                             self.next_token()
                     
@@ -3837,9 +3881,8 @@ class SemanticAnalyzer:
                 if self.current_token is not None and self.current_token[0] == '(':
                     # Handle function call
                     if var_name not in self.functions:
-                        # self.errors.append(f"Semantic Error: Function '{var_name}' used in express statement before declaration")
-                        # values_to_print.append(f"undefined({var_name})")
-                        pass
+                        self.errors.append(f"Semantic Error: Function '{var_name}' used in express statement before declaration")
+                        values_to_print.append(f"undefined({var_name})")
                     else:
                         # Parse function arguments
                         args = []
@@ -4101,12 +4144,31 @@ class SemanticAnalyzer:
                 if var_type.startswith('array_') or var_type.startswith('2d_array_') or var_type == 'seq':
                     # Skip the array index
                     self.next_token()  # Move past '['
+                    
+                    # Check if index is a variable and if it's declared
+                    if self.current_token is not None and self.current_token[1] == 'Identifier':
+                        index_var_name = self.current_token[0]
+                        # Check if index variable exists in either scope
+                        if index_var_name not in self.symbol_table and index_var_name not in self.global_symbol_table:
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Array index variable '{index_var_name}' used before declaration at line {line_number}")
+                    
+                    # Continue processing the array access
                     bracket_count = 1
                     while self.current_token is not None and bracket_count > 0:
                         if self.current_token[0] == '[':
                             bracket_count += 1
                         elif self.current_token[0] == ']':
                             bracket_count -= 1
+                            
+                        # Check for additional index variables when moving to next dimension
+                        if bracket_count == 1 and self.current_token is not None and self.current_token[1] == 'Identifier' and self.current_token[0] != var_name:
+                            index_var_name = self.current_token[0]
+                            # Check if index variable exists in either scope
+                            if index_var_name not in self.symbol_table and index_var_name not in self.global_symbol_table:
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Array index variable '{index_var_name}' used before declaration at line {line_number}")
+                            
                         if bracket_count > 0:
                             self.next_token()
                     self.next_token()  # Move past the closing ']'
@@ -4127,7 +4189,7 @@ class SemanticAnalyzer:
         elif self.current_token[0] in ['dom', 'rec']:
             self.next_token()  # Move past boolean
             
-        # Handle stimuli function
+        # Handle stimuli func
         elif self.current_token[1] == 'stimuli':
             self.next_token()  # Move past 'stimuli'
             
