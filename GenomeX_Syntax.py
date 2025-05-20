@@ -651,6 +651,9 @@ def parseSyntax(tokens, output_text):
 
                     if new_idx is None:
                         print("[main_function] Error in main function body statements")
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid statements in main function but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}\n")
+                        output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                         return False, None
                         
                     start_idx = new_idx
@@ -1404,17 +1407,6 @@ def parseSyntax(tokens, output_text):
 
             start_idx = new_idx  
             start_idx = skip_spaces(tokens, start_idx)
-
-            if not is_token(tokens, start_idx, ')'):
-                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in express statement")
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis in express statement but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                return False, None
-                
-            start_idx += 1 
-            start_idx = skip_spaces(tokens, start_idx)
-
             # Handle array indexing if present
             if is_token(tokens, start_idx, '['):
                 start_idx += 1
@@ -1439,6 +1431,17 @@ def parseSyntax(tokens, output_text):
                 
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
+                
+            if not is_token(tokens, start_idx, ')'):
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in express statement")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a closing parenthesis in express statement but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
+                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                return False, None
+                
+            start_idx += 1 
+            start_idx = skip_spaces(tokens, start_idx)
+
    
             if is_token(tokens, start_idx, ';'):
                 return True, start_idx + 1
@@ -1471,11 +1474,6 @@ def parseSyntax(tokens, output_text):
             - VAR %= <expression>;
             - VAR[index] %= <expression>;
             """
-            print(f"DEBUG SYNTAX: Starting stimuli_statement at index {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-            
-            # Try to locate the current line in the source for better debugging
-            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-            print(f"DEBUG SYNTAX: FOUND CURRENT MATCH: {{'tokens': {line_tokens}, 'line_number': {line_number}}}")
         
             start_idx = skip_spaces(tokens, start_idx)
             
@@ -1542,19 +1540,14 @@ def parseSyntax(tokens, output_text):
             start_idx = skip_spaces(tokens, start_idx)
 
             
-            # First, explicitly check if the current token is '=' 
-            if start_idx < len(tokens) and tokens[start_idx][0] == '=':
-                print(f"DEBUG SYNTAX: Found equals sign at index {start_idx}")
-                # We continue - found a valid equals sign
-            # Then check the standard way
-            elif not any(is_token(tokens, start_idx, op) for op in assignment_op):
+            if not any(is_token(tokens, start_idx, op) for op in assignment_op):
+
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an assignment operator but found {tokens[start_idx][0]}\n")
+                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an assignment operator but found  {tokens[start_idx][0]}\n")
                 output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                 return False, None
             
             
-            # Proceed with the correct assignment operator token
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
             
@@ -1564,28 +1557,9 @@ def parseSyntax(tokens, output_text):
                 start_idx = skip_spaces(tokens, start_idx)
                 return statements.parse_stimuli_call(tokens, start_idx)
             else:
-                print(f"DEBUG SYNTAX: Proceeding to assignment_statement with start_idx = {start_idx}")
+                
                 start_idx = skip_spaces(tokens, start_idx)
-                result = statements.assignment_value(tokens, start_idx)
-                if not result[0]:
-                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Invalid assignment value\n")
-                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                    return False, None
-                
-                # Assignment is valid, move past the semicolon 
-                new_idx = result[1]
-                start_idx = skip_spaces(tokens, new_idx)
-                
-                # Check for semicolon
-                if not is_token(tokens, start_idx, ';'):
-                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected semicolon but found {tokens[start_idx][0]}\n")
-                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                    return False, None
-                    
-                # Move past semicolon and return success
-                return True, start_idx + 1
+                return statements.assignment_statement(tokens, start_idx - 2)
 
         @staticmethod
         def parse_stimuli_call(tokens, start_idx):
