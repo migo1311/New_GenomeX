@@ -8,6 +8,14 @@ import sys
 from itertools import chain
 
 class SemanticAnalyzer:
+    def get_current_line_number(self):
+       # gets the current line number based on the index of the tokens 
+        line_number = 1
+        for i in range(self.token_index - 1):
+            if self.tokens[i][1] == "newline":
+                line_number += 1
+        return line_number
+    
     def __init__(self, tokens, symbol_table=None):
         self.tokens = tokens
         self.current_token = None
@@ -29,24 +37,12 @@ class SemanticAnalyzer:
     def next_token(self):
         while self.token_index < len(self.tokens) and self.tokens[self.token_index][1] in ["space", "tab", "newline"]:
             self.token_index += 1  # Skip spaces, tabs, and newlines
-        if self.token_index < len(self.tokens):
+        if self.token_index < len(self.tokens): # push notif git
             self.current_token = self.tokens[self.token_index]
             self.token_index += 1
         else:
             self.current_token = None
         print(f"Moved to next token: {self.current_token}") 
-
-    def get_current_line_number(self):
-        """
-        Calculate the current line number based on token position
-        Returns: The line number (1-based)
-        """
-        line_number = 1
-        for i in range(self.token_index - 1):
-            if self.tokens[i][1] == "newline":
-                line_number += 1
-        return line_number
-        
     def parse(self):
         while self.current_token is not None:
             if self.current_token[1] == '_G':
@@ -74,7 +70,8 @@ class SemanticAnalyzer:
         function_name = None
         
         if self.current_token is None:
-            self.errors.append("Semantic Error: Unexpected end of tokens after 'act'")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Unexpected end of tokens after 'act' at line {line_number}")   
             return
             
         if self.current_token[1] == 'gene':
@@ -90,9 +87,9 @@ class SemanticAnalyzer:
                 self.next_token()
                 
             # Expect identifier
-            if self.current_token is None or self.current_token[1] != 'Identifier':
-                self.errors.append(f"Semantic Error: Expected identifier after 'void', but found {self.current_token}")
-                return
+            # if self.current_token is None or self.current_token[1] != 'Identifier':
+            #     self.errors.append(f"Semantic Error: Expected identifier after 'void', but found {self.current_token}")
+            #     return
                 
             function_name = self.current_token[0]
             self.next_token()  # Move past identifier
@@ -101,18 +98,22 @@ class SemanticAnalyzer:
             function_name = self.current_token[0]
             self.next_token()  # Move past identifier
         else:
-            self.errors.append(f"Semantic Error: Expected 'gene', 'void', or identifier after 'act', but found {self.current_token}")
-            return
+            # self.errors.append(f"Semantic Error: Expected 'gene', 'void', or identifier after 'act', but found {self.current_token}")
+            # return
+            pass
+            return  
         
         # Check if function name already exists in symbol table (as a variable)
         if function_name in self.global_symbol_table:
-            self.errors.append(f"Semantic Error: Function name '{function_name}' already used as a variable")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Function name '{function_name}' already used as a variable at line {line_number}")
             return
         
         # Check if function name exists in any function scope
         for scope_name, scope in self.function_scopes.items():
             if function_name in scope:
-                self.errors.append(f"Semantic Error: Function name '{function_name}' already used as a variable in function '{scope_name}'")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Function name '{function_name}' already used as a variable in function '{scope_name}' at line {line_number}")
                 return
             
         print(f"Function type: {function_type}, Function name: {function_name}")
@@ -123,7 +124,8 @@ class SemanticAnalyzer:
 
         # Check for '('
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after function name, but found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '(' after function name, but found {self.current_token}")
+            pass
             return
         self.next_token()  # Move past '('
         
@@ -139,7 +141,8 @@ class SemanticAnalyzer:
                 
             # Get parameter type
             if self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
-                self.errors.append(f"Semantic Error: Expected valid type for function parameter, found {self.current_token}")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Invalid type for function parameter, found {self.current_token} at line {line_number}")
                 # Skip to next comma or closing parenthesis
                 while self.current_token is not None and self.current_token[0] != ',' and self.current_token[0] != ')':
                     self.next_token()
@@ -154,7 +157,8 @@ class SemanticAnalyzer:
             
             # Get parameter name
             if self.current_token is None or self.current_token[1] != 'Identifier':
-                self.errors.append(f"Semantic Error: Expected identifier for function parameter, found {self.current_token}")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Missing Identifier for function parameter, found {self.current_token} at line {line_number}")
                 # Skip to next comma or closing parenthesis
                 while self.current_token is not None and self.current_token[0] != ',' and self.current_token[0] != ')':
                     self.next_token()
@@ -174,11 +178,14 @@ class SemanticAnalyzer:
             if self.current_token is not None and self.current_token[0] == ',':
                 self.next_token()  # Move past comma
             elif self.current_token is not None and self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ',' or ')' after parameter, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ',' or ')' after parameter, found {self.current_token}")
+                pass
+
         
         # Check for ')'
         if self.current_token is None or self.current_token[0] != ')':
-            self.errors.append(f"Semantic Error: Expected ')' after '(', but found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ')' after '(', but found {self.current_token}")
+            pass
             return
         self.next_token()  # Move past ')'
         
@@ -188,7 +195,8 @@ class SemanticAnalyzer:
 
         # Check for '{'
         if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after function declaration, but found {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Invalid function start at line {line_number}")
             return
         self.next_token()  # Move past '{'
         
@@ -241,15 +249,37 @@ class SemanticAnalyzer:
         
         # Check for '}'
         if self.current_token is None or self.current_token[0] != '}':
-            self.errors.append(f"Semantic Error: Expected '}}' at end of function body, found {self.current_token}")
+            line_number = self.get_current_line_number()
+            # self.errors.append(f"Semantic Error: Invalid function ender at line {line_number}")
+            pass
             return
         self.next_token()  # Move past '}'
+        
+        # Continue parsing any remaining tokens until we find another function declaration or EOF
+        print(f"Finishing function: {function_name}")
+        
+        # Check if there are any remaining tokens to parse that might be part of this function
+        # This ensures elif/else blocks that come after the main function body are properly parsed
+        while self.current_token is not None:
+            if self.current_token[1] == 'elif':
+                self.enter_function_scope(function_name)  # Re-enter the function scope
+                self.elif_statement()
+                self.exit_function_scope()
+            elif self.current_token[1] == 'else':
+                self.enter_function_scope(function_name)  # Re-enter the function scope
+                self.else_statement()
+                self.exit_function_scope()
+            else:
+                # If not elif/else, we've reached the true end of the function
+                break
+        
         print(f"Finished parsing function: {function_name}")
     # Parameter Passing
     def check_parameter_passing(self, function_name, args):
         """Check if arguments match function parameters"""
         if function_name not in self.functions:
-            self.errors.append(f"Semantic Error: Function '{function_name}' not defined")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Function '{function_name}' not defined at line {line_number}")
             return False
 
         func_info = self.functions[function_name]
@@ -260,7 +290,8 @@ class SemanticAnalyzer:
             # Only report an error if the function has parameters but was called with a different number
             # Allow calling a no-parameter function with no arguments
             if not (len(expected_params) == 0 and len(args) == 0):
-                self.errors.append(f"Semantic Error: Function '{function_name}' expects {len(expected_params)} arguments but got {len(args)}")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Function '{function_name}' expects {len(expected_params)} arguments but got {len(args)} at line {line_number}")
                 return False
 
         # If there are no parameters, nothing to check further
@@ -300,7 +331,8 @@ class SemanticAnalyzer:
                     # Allow numeric types to be converted to boolean (non-zero = dom, zero = rec)
                     pass
                 else:
-                    self.errors.append(f"Semantic Error: Function '{function_name}' parameter {i+1} ('{param_name}') expects {param_type} but got {arg_type}")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Function '{function_name}' parameter {i+1} ('{param_name}') expects {param_type} but got {arg_type} at line {line_number}")
                     return False
             
             # Store the argument value in a temporary variable for this function call
@@ -331,7 +363,8 @@ class SemanticAnalyzer:
             
         # Get the data type
         if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
-            self.errors.append(f"Semantic Error: Expected data type after 'perms', found {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: No  data type found for perms declaration at line {line_number}")
             return
             
         var_type = self.current_token[1]
@@ -345,18 +378,21 @@ class SemanticAnalyzer:
         while True:
             # Get constant name
             if self.current_token is None or self.current_token[1] != 'Identifier':
-                self.errors.append(f"Semantic Error: Expected identifier after type in perms declaration, found {self.current_token}")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: No Identifier found after type in perms declaration at line {line_number}")
                 return
 
             const_name = self.current_token[0]
             
             # Check for redeclaration
             if const_name in self.symbol_table:
-                self.errors.append(f"Semantic Error: Constant '{const_name}' already declared")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Constant '{const_name}' already declared at line {line_number}")
                 
             # Check if constant name already exists as a function name
             if const_name in self.functions:
-                self.errors.append(f"Semantic Error: Constant name '{const_name}' already used as a function")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Constant name '{const_name}' already used as a function at line {line_number}")
                 
             self.next_token()  # Move past identifier
 
@@ -366,7 +402,8 @@ class SemanticAnalyzer:
                 
             # Check for assignment (required for perms)
             if self.current_token is None or self.current_token[0] != '=':
-                self.errors.append(f"Semantic Error: Perms declaration for '{const_name}' requires initialization with '='")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Perms declaration for '{const_name}' requires initialization with '=' at line {line_number}")
                 return
                 
             self.next_token()  # Move past '='
@@ -387,7 +424,8 @@ class SemanticAnalyzer:
             
             # Check if there's an initialization value
             if not expression_tokens:
-                self.errors.append(f"Semantic Error: Perms declaration for '{const_name}' requires a value")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Perms declaration for '{const_name}' requires a value at line {line_number}")
                 return
                 
             # Evaluate the expression for the constant
@@ -406,10 +444,12 @@ class SemanticAnalyzer:
                         if var_type == assigned_type or (var_type == 'quant' and assigned_type == 'dose'):
                             value = assigned_value
                         else:
-                            self.errors.append(f"Semantic Error: Cannot assign {assigned_type} value to {var_type} perms '{const_name}'")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Cannot assign {assigned_type} value to {var_type} perms '{const_name}' at line {line_number}")
                             value = None
                     else:
-                        self.errors.append(f"Semantic Error: Variable '{var_to_assign}' used before declaration")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Variable '{var_to_assign}' used before declaration at line {line_number}")
                         value = None
                 
                 # Handle literals
@@ -418,16 +458,19 @@ class SemanticAnalyzer:
                         try:
                             value = int(token[0])
                         except:
-                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose perms '{const_name}'")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose perms '{const_name}' at line {line_number}")
                             value = 0
                     elif var_type == 'quant':
                         try:
                             value = float(token[0])
                         except:
-                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant perms '{const_name}'")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant perms '{const_name}' at line {line_number}")
                             value = 0.0
                     else:
-                        self.errors.append(f"Semantic Error: Cannot assign numeric value to {var_type} perms '{const_name}'")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Cannot assign numeric value to {var_type} perms '{const_name}' at line {line_number}")
                         value = None
                 
                 elif token[1] == 'string literal':
@@ -435,17 +478,20 @@ class SemanticAnalyzer:
                         # Remove quotation marks
                         value = token[0].strip('"\'')
                     else:
-                        self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} perms '{const_name}'")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} perms '{const_name}' at line {line_number}")
                         value = None
                 
                 elif token[0] in ['dom', 'rec']:
                     if var_type == 'allele':
                         value = (token[0] == 'dom')
                     else:
-                        self.errors.append(f"Semantic Error: Cannot assign boolean value to {var_type} perms '{const_name}'")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Cannot assign boolean value to {var_type} perms '{const_name}' at line {line_number}")
                         value = None
                 else:
-                    self.errors.append(f"Semantic Error: Invalid value for perms '{const_name}'")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Invalid value for perms '{const_name}' at line {line_number}")
                     value = None
             
             # Handle complex expressions
@@ -463,20 +509,23 @@ class SemanticAnalyzer:
                     for token in expression_tokens:
                         if token[1] == 'string literal':
                             has_string_operand = True
-                            self.errors.append(f"Semantic Error: Cannot use string '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}'")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Cannot use string '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}' at line {line_number}")
                             valid_expression = False
                             break
                         elif token[1] == 'Identifier':
                             if token[0] in self.symbol_table:
                                 if self.symbol_table[token[0]]['type'] == 'seq':
                                     has_string_operand = True
-                                    self.errors.append(f"Semantic Error: Cannot use string variable '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}'")
+                                    line_number = self.get_current_line_number()
+                                    self.errors.append(f"Semantic Error: Cannot use string variable '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}' at line {line_number}")
                                     valid_expression = False
                                     break
                             elif token[0] in self.global_symbol_table:
                                 if self.global_symbol_table[token[0]]['type'] == 'seq':
                                     has_string_operand = True
-                                    self.errors.append(f"Semantic Error: Cannot use string variable '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}'")
+                                    line_number = self.get_current_line_number()
+                                    self.errors.append(f"Semantic Error: Cannot use string variable '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}' at line {line_number}")
                                     valid_expression = False
                                     break
                     
@@ -491,11 +540,13 @@ class SemanticAnalyzer:
                                 if self.symbol_table[token[0]]['type'] in ['dose', 'quant']:
                                     expr_str += str(self.symbol_table[token[0]]['value'])
                                 else:
-                                    self.errors.append(f"Semantic Error: Cannot use non-numeric variable '{token[0]}' in arithmetic expression")
+                                    line_number = self.get_current_line_number()
+                                    self.errors.append(f"Semantic Error: Cannot use non-numeric variable '{token[0]}' in arithmetic expression at line {line_number}")
                                     valid_expression = False
                                     break
                             else:
-                                self.errors.append(f"Semantic Error: Variable '{token[0]}' used before declaration")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Variable '{token[0]}' used before declaration at line {line_number}")
                                 valid_expression = False
                                 break
                         elif token[1] == 'numlit':
@@ -508,7 +559,8 @@ class SemanticAnalyzer:
                         elif token[1] == 'space':
                             continue  # Skip spaces
                         else:
-                            self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in arithmetic expression")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in arithmetic expression at line {line_number}")
                             valid_expression = False
                             break
                     
@@ -522,7 +574,8 @@ class SemanticAnalyzer:
                             
                             self.symbol_table[var_name]['value'] = result
                         except Exception as e:
-                            self.errors.append(f"Semantic Error: Failed to evaluate expression: {str(e)}")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Failed to evaluate expression: {str(e)} at line {line_number}")
                             pass
                         # Check for division by zero
                         if contains_division and '/' in expr_str:
@@ -530,7 +583,8 @@ class SemanticAnalyzer:
                                 # This is just a simple check - a more robust solution would parse the expression
                                 eval(expr_str.replace('/', '//'))
                             except ZeroDivisionError:
-                                self.errors.append(f"Semantic Error: Division by zero in expression for variable '{var_name}'")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Division by zero in expression for variable '{var_name}' at line {line_number}")
                             except:
                                 pass
                 
@@ -550,7 +604,8 @@ class SemanticAnalyzer:
                         elif token[1] == 'space':
                             continue
                         else:
-                            self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in perms string expression")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Invalid token '{token[0]}' in perms string expression at line {line_number}")
                             valid_expression = False
                             break
                     
@@ -559,10 +614,12 @@ class SemanticAnalyzer:
                     else:
                         value = ""
                 else:
-                    self.errors.append(f"Semantic Error: Complex expressions not supported for {var_type} perms")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Complex expressions not supported for {var_type} perms at line {line_number}")
                     value = None
             else:
-                self.errors.append(f"Semantic Error: Empty expression for perms '{const_name}'")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Empty expression for perms '{const_name}' at line {line_number}")
                 value = None
                 
             # Add to symbol table
@@ -585,7 +642,8 @@ class SemanticAnalyzer:
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after perms declaration, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ';' after perms declaration, found {self.current_token}")
+            pass
         else:
             self.next_token()  # Move past semicolon
     def prod_statement(self):
@@ -598,7 +656,8 @@ class SemanticAnalyzer:
         
         # Check if we're in a function
         if not self.functions:
-            self.errors.append("Semantic Error: 'prod' statement can only be used inside a function")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: 'prod' statement can only be used inside a function at line {line_number}")
             return
             
         # Get the current function's return type
@@ -621,7 +680,8 @@ class SemanticAnalyzer:
         if return_type == 'void':
             # Void functions should not return a value
             if self.current_token is not None and self.current_token[0] != ';':
-                self.errors.append("Semantic Error: Void function cannot return a value")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Void function cannot return a value at line {line_number}")
                 
                 # Skip until semicolon
                 while self.current_token is not None and self.current_token[0] != ';':
@@ -660,7 +720,8 @@ class SemanticAnalyzer:
                         if not ((expected_type == 'quant' and value_type == 'dose') or
                                (expected_type == 'seq' and value_type == 'chr') or
                                (expected_type == 'allele' and value_type in ['dose', 'quant'])):
-                            self.errors.append(f"Semantic Error: Function's return value for parameter '{returned_var}' should be {expected_type} but got {value_type}")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Function's return value for parameter '{returned_var}' should be {expected_type} but got {value_type} at line {line_number}")
                 else:
                     # Handle the case where the returned value doesn't match a parameter name
                     # Find the first unused expected return type
@@ -674,7 +735,8 @@ class SemanticAnalyzer:
                                 if not ((expected_type == 'quant' and value_type == 'dose') or
                                        (expected_type == 'seq' and value_type == 'chr') or
                                        (expected_type == 'allele' and value_type in ['dose', 'quant'])):
-                                    self.errors.append(f"Semantic Error: Function's return value at position {i+1} should be {expected_type} but got {value_type}")
+                                    line_number = self.get_current_line_number()
+                                    self.errors.append(f"Semantic Error: Function's return value at position {i+1} should be {expected_type} but got {value_type} at line {line_number}")
                             break
             else:
                 # For literal values or complex expressions, find the first unused expected return type
@@ -688,7 +750,8 @@ class SemanticAnalyzer:
                             if not ((expected_type == 'quant' and value_type == 'dose') or
                                    (expected_type == 'seq' and value_type == 'chr') or
                                    (expected_type == 'allele' and value_type in ['dose', 'quant'])):
-                                self.errors.append(f"Semantic Error: Function's return value at position {i+1} should be {expected_type} but got {value_type}")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Function's return value at position {i+1} should be {expected_type} but got {value_type} at line {line_number}")
                         break
         else:
             # Single return value - check against the function's primary return type
@@ -701,11 +764,13 @@ class SemanticAnalyzer:
                 if not (return_type == 'quant' and value_type == 'dose'):
                     # Skip error for dom/rec returns
                     if not (self.current_token is not None and self.current_token[0] in ['dom', 'rec']):
-                        self.errors.append(f"Semantic Error: Function returns {return_type} but got {value_type}")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Function returns {return_type} but got {value_type} at line {line_number}")
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';': 
-            self.errors.append(f"Semantic Error: Expected ';' after prod statement, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ';' after prod statement, found {self.current_token}")
+            pass 
             return
             
         self.next_token()  # Move past ';'
@@ -719,7 +784,8 @@ class SemanticAnalyzer:
         
         # Get function name
         if self.current_token is None or self.current_token[1] != 'Identifier':
-            self.errors.append(f"Semantic Error: Expected function identifier after 'func', found {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: No Identifier found after func keyword at line {line_number}")
             # Skip to end of statement for error recovery
             while self.current_token is not None and self.current_token[0] != ';':
                 self.next_token()
@@ -753,7 +819,8 @@ class SemanticAnalyzer:
                 
                 # Check for semicolon
                 if self.current_token is None or self.current_token[0] != ';':
-                    self.errors.append(f"Semantic Error: Expected ';' after function call, found {self.current_token}")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Expected ';' after function call, found {self.current_token} at line {line_number}")
                     return
                     
                 self.next_token()  # Move past ';'
@@ -784,7 +851,8 @@ class SemanticAnalyzer:
                         arg_type = self.global_symbol_table[arg_name]['type']
                         arg_value = self.global_symbol_table[arg_name].get('value')
                     else:
-                        self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration at line {line_number}")
                         # Skip to end of statement for error recovery
                         while self.current_token is not None and self.current_token[0] != ';':
                             self.next_token()
@@ -848,7 +916,8 @@ class SemanticAnalyzer:
                     })
                     
                 else:
-                    self.errors.append(f"Semantic Error: Expected valid argument, found {self.current_token}")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Invalid argument, found {self.current_token} at line {line_number}")
                     # Skip to end of statement for error recovery
                     while self.current_token is not None and self.current_token[0] != ';':
                         self.next_token()
@@ -864,14 +933,16 @@ class SemanticAnalyzer:
                 
                 # Check for comma or closing parenthesis
                 if self.current_token is None:
-                    self.errors.append("Semantic Error: Unexpected end of tokens in function arguments")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Unexpected end of tokens in function arguments at line {line_number}")
                     return
                 
                 if self.current_token[0] == ',':
                     self.next_token()  # Move past comma
                     continue
                 elif self.current_token[0] != ')':
-                    self.errors.append(f"Semantic Error: Expected ',' or ')' in function arguments, found {self.current_token}")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Invalid function arguments at line {line_number}")
                     # Skip to end of statement for error recovery
                     while self.current_token is not None and self.current_token[0] != ';':
                         self.next_token()
@@ -907,7 +978,8 @@ class SemanticAnalyzer:
                         arg_type = self.global_symbol_table[arg_name]['type']
                         arg_value = self.global_symbol_table[arg_name].get('value')
                     else:
-                        self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration at line {line_number}")
                         # Skip to end of statement for error recovery
                         while self.current_token is not None and self.current_token[0] != ';':
                             self.next_token()
@@ -970,7 +1042,8 @@ class SemanticAnalyzer:
                         'value': arg_value
                     })
                 else:
-                    self.errors.append(f"Semantic Error: Expected valid argument, found {self.current_token}")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Expected valid argument, found {self.current_token} at line {line_number}")
                     # Skip to end of statement for error recovery
                     while self.current_token is not None and self.current_token[0] != ';':
                         self.next_token()
@@ -1009,7 +1082,8 @@ class SemanticAnalyzer:
         
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'stimuli', found {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: No input context for stimuli at line {line_number}")
             # Try to skip ahead to recover
             while self.current_token is not None and self.current_token[0] != ';':
                 self.next_token()
@@ -1025,14 +1099,16 @@ class SemanticAnalyzer:
             prompt = self.current_token[0].strip('"\'')
             self.next_token()  # Move past string literal
         else:
-            self.errors.append(f"Semantic Error: Expected string literal for input prompt, found {self.current_token}")
+          #  self.errors.append(f"Semantic Error: Expected string literal for input prompt, found {self.current_token}")
+          pass
         
         # Skip ahead to closing parenthesis
         while self.current_token is not None and self.current_token[0] != ')':
             self.next_token()
         
         if self.current_token is None or self.current_token[0] != ')':
-            self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}")
+            pass
             # Try to skip ahead to recover
             while self.current_token is not None and self.current_token[0] != ';':
                 self.next_token()
@@ -1044,7 +1120,8 @@ class SemanticAnalyzer:
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after stimuli statement, found {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Expected ';' after stimuli statement, found {self.current_token} at line {line_number}")
             # Try to skip ahead to recover
             while self.current_token is not None and self.current_token[0] != ';':
                 self.next_token()
@@ -1063,7 +1140,8 @@ class SemanticAnalyzer:
             
         # Get element type
         if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
-            self.errors.append(f"Semantic Error: Expected valid type after 'clust', found {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Invalid data type for clust. at line {line_number}")
             return
             
         element_type = self.current_token[1]
@@ -1075,42 +1153,49 @@ class SemanticAnalyzer:
             
         # Get array name
         if self.current_token is None or self.current_token[1] != 'Identifier':
-            self.errors.append(f"Semantic Error: Expected identifier for array name, found {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Invalid Identifier for clust. at line {line_number}")
             return
             
         array_name = self.current_token[0]
         
         # Check for redeclaration
         if array_name in self.symbol_table:
-            self.errors.append(f"Semantic Error: Variable '{array_name}' already declared")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Variable '{array_name}' already declared at line {line_number}")
             
         self.next_token()  # Move past identifier
         
         # Check for array size
         if self.current_token is None or self.current_token[0] != '[':
-            self.errors.append(f"Semantic Error: Expected '[' for array size, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '[' for array size, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '['
         
         # Get array first dimension size
         if self.current_token is None or self.current_token[1] != 'numlit':
-            self.errors.append(f"Semantic Error: Expected numeric value for array size, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected numeric value for array size, found {self.current_token}")
+            pass
             return
             
         try:
             array_size1 = int(self.current_token[0])
             if array_size1 <= 0:
-                self.errors.append(f"Semantic Error: Array size must be positive, found {array_size1}")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Array size must be positive, found {array_size1} at line {line_number}")
                 return
         except ValueError:
-            self.errors.append(f"Semantic Error: Invalid array size value, found {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Invalid array size value, found {self.current_token} at line {line_number}")
             return
             
         self.next_token()  # Move past size
         
         if self.current_token is None or self.current_token[0] != ']':
-            self.errors.append(f"Semantic Error: Expected ']' after array size, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ']' after array size, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ']'
@@ -1125,22 +1210,26 @@ class SemanticAnalyzer:
             
             # Get array second dimension size
             if self.current_token is None or self.current_token[1] != 'numlit':
-                self.errors.append(f"Semantic Error: Expected numeric value for second array dimension, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected numeric value for second array dimension, found {self.current_token}")
+                pass
                 return
                 
             try:
                 array_size2 = int(self.current_token[0])
                 if array_size2 <= 0:
-                    self.errors.append(f"Semantic Error: Array second dimension must be positive, found {array_size2}")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Array second dimension must be positive, found {array_size2} at line {line_number}")
                     return
             except ValueError:
-                self.errors.append(f"Semantic Error: Invalid array size value for second dimension, found {self.current_token}")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Invalid array size value for second dimension, found {self.current_token} at line {line_number}")
                 return
                 
             self.next_token()  # Move past size
             
             if self.current_token is None or self.current_token[0] != ']':
-                self.errors.append(f"Semantic Error: Expected ']' after second array dimension, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ']' after second array dimension, found {self.current_token}")
+                pass 
                 return
                 
             self.next_token()  # Move past ']'
@@ -1170,7 +1259,9 @@ class SemanticAnalyzer:
             
             # Check for array initializer
             if self.current_token is None or self.current_token[0] != '{':
-                self.errors.append(f"Semantic Error: Expected '{{' for array initialization, found {self.current_token}")
+
+                # self.errors.append(f"Semantic Error: Expected '{{' for array initialization, found {self.current_token}")
+                pass
                 return
                 
             self.next_token()  # Move past '{'
@@ -1190,7 +1281,8 @@ class SemanticAnalyzer:
                         
                     # Expect '{' for row start
                     if self.current_token[0] != '{':
-                        self.errors.append(f"Semantic Error: Expected '{{' for start of row in 2D array, found {self.current_token}")
+                        # self.errors.append(f"Semantic Error: Expected '{{' for start of row in 2D array, found {self.current_token}")
+                        pass
                         return
                         
                     self.next_token()  # Move past '{'
@@ -1207,13 +1299,17 @@ class SemanticAnalyzer:
                             
                         # Check element type
                         if element_type == 'dose' and (self.current_token[1] != 'numlit' or '.' in self.current_token[0]):
-                            self.errors.append(f"Semantic Error: Expected integer value for dose array element, found {self.current_token}")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Expected integer value for dose array element, found {self.current_token} at line {line_number}")
                         elif element_type == 'quant' and self.current_token[1] != 'numlit':
-                            self.errors.append(f"Semantic Error: Expected numeric value for quant array element, found {self.current_token}")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Expected numeric value for quant array element, found {self.current_token} at line {line_number}")
                         elif element_type == 'seq' and self.current_token[1] != 'string literal':
-                            self.errors.append(f"Semantic Error: Expected string value for seq array element, found {self.current_token}")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Expected string value for seq array element, found {self.current_token} at line {line_number}")
                         elif element_type == 'allele' and self.current_token[0] not in ['dom', 'rec']:
-                            self.errors.append(f"Semantic Error: Expected 'dom' or 'rec' for allele array element, found {self.current_token}")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Expected 'dom' or 'rec' for allele array element, found {self.current_token} at line {line_number}")
                         
                         # Store element
                         if element_type == 'dose':
@@ -1243,26 +1339,31 @@ class SemanticAnalyzer:
                         
                         # Look for comma or closing brace
                         if self.current_token is None:
-                            self.errors.append("Semantic Error: Unexpected end of tokens in 2D array row initialization")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Unexpected end of tokens in 2D array row initialization at line {line_number}")
                             return
                             
                         if self.current_token[0] != ',' and self.current_token[0] != '}':
-                            self.errors.append(f"Semantic Error: Expected ',' or '}}' in array row initialization, found {self.current_token}")
+                            # self.errors.append(f"Semantic Error: Expected ',' or '}}' in array row initialization, found {self.current_token}")
+                            pass
                     
                     # Check if row size matches second dimension
                     if len(row_elements) != array_size2:
-                        self.errors.append(f"Semantic Error: Incomplete initialization - row {row_count+1} has {len(row_elements)} elements but should have {array_size2}")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Incomplete initialization - row {row_count+1} has {len(row_elements)} elements but should have {array_size2} at line {line_number}")
                         return  # Return early to stop processing after incomplete initialization
                     
                     all_elements.append(row_elements)
                     row_count += 1
                     
                     if self.current_token is None:
-                        self.errors.append("Semantic Error: Unexpected end of tokens in 2D array initialization")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Unexpected end of tokens in 2D array initialization at line {line_number}")
                         return
                         
                     if self.current_token[0] != '}':
-                        self.errors.append(f"Semantic Error: Expected '}}' at end of array row, found {self.current_token}")
+                        # self.errors.append(f"Semantic Error: Expected '}}' at end of array row, found {self.current_token}")
+                        pass
                         return
                         
                     self.next_token()  # Move past '}'
@@ -1287,13 +1388,17 @@ class SemanticAnalyzer:
                         
                     # Check element type
                     if element_type == 'dose' and (self.current_token[1] != 'numlit' or '.' in self.current_token[0]):
-                        self.errors.append(f"Semantic Error: Expected integer value for dose array element, found {self.current_token}")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Expected integer value for dose array element, found {self.current_token} at line {line_number}")
                     elif element_type == 'quant' and self.current_token[1] != 'numlit':
-                        self.errors.append(f"Semantic Error: Expected numeric value for quant array element, found {self.current_token}")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Expected numeric value for quant array element, found {self.current_token} at line {line_number}")
                     elif element_type == 'seq' and self.current_token[1] != 'string literal':
-                        self.errors.append(f"Semantic Error: Expected string value for seq array element, found {self.current_token}")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Expected string value for seq array element, found {self.current_token} at line {line_number}")
                     elif element_type == 'allele' and self.current_token[0] not in ['dom', 'rec']:
-                        self.errors.append(f"Semantic Error: Expected 'dom' or 'rec' for allele array element, found {self.current_token}")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Expected 'dom' or 'rec' for allele array element, found {self.current_token} at line {line_number}")
                     
                     # Store element
                     if element_type == 'dose':
@@ -1323,29 +1428,34 @@ class SemanticAnalyzer:
                     
                     # Look for comma or closing brace
                     if self.current_token is None:
-                        self.errors.append("Semantic Error: Unexpected end of tokens in array initialization")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Unexpected end of tokens in array initialization at line {line_number}")
                         return
                         
                     if self.current_token[0] != ',' and self.current_token[0] != '}':
-                        self.errors.append(f"Semantic Error: Expected ',' or '}}' in array initialization, found {self.current_token}")
+                        # self.errors.append(f"Semantic Error: Expected ',' or '}}' in array initialization, found {self.current_token}")
+                        pass
                 
                 # Check if number of elements matches array size
                 if len(elements) != array_size1:
-                    self.errors.append(f"Semantic Error: Incomplete initialization - array has {len(elements)} elements but should have {array_size1}")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Incomplete initialization - array has {len(elements)} elements but should have {array_size1} at line {line_number}")
                     return  # Return early to stop processing after incomplete initialization
                 
                 # Update symbol table with elements
                 self.symbol_table[array_name]['value'] = elements
             
             if self.current_token is None or self.current_token[0] != '}':
-                self.errors.append(f"Semantic Error: Expected '}}' at end of array initialization, found {self.current_token}")
+               # self.errors.append(f"Semantic Error: Expected '}}' at end of array initialization, found {self.current_token}")
+                pass
                 return
                 
             self.next_token()  # Move past '}'
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after array declaration, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ';' after array declaration, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ';'
@@ -1450,7 +1560,8 @@ class SemanticAnalyzer:
                         self.next_token()
             except Exception as e:
                 # In case of any exception, try to recover by skipping to next semicolon or closing brace
-                self.errors.append(f"Semantic Error: Exception in parsing: {str(e)}")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Exception in parsing: {str(e)} at line {line_number}")
                 while (self.current_token is not None and 
                        self.current_token[0] != ';' and 
                        self.current_token[0] != '}'):
@@ -1462,13 +1573,15 @@ class SemanticAnalyzer:
     def destroy_statement(self):
         """Parse break statement"""
         if not self.in_loop:
-            self.errors.append("Semantic Error: 'break' statement can only be used inside a loop")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: 'break' statement can only be used inside a loop at line {line_number}")
         
         self.next_token()  # Move past 'break'
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after 'break', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ';' after 'break', found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ';'
@@ -1476,129 +1589,131 @@ class SemanticAnalyzer:
     def continue_statement(self):
         """Parse continue statement"""
         if not self.in_loop:
-            self.errors.append("Semantic Error: 'continue' statement can only be used inside a loop")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: 'continue' statement can only be used inside a loop at line {line_number}")
         
         self.next_token()  # Move past 'continue'
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after 'continue', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ';' after 'continue', found {self.current_token}")
+            pass 
             return
             
         self.next_token()  # Move past ';'
     
-    def array_declaration(self):
-        """Parse array declaration"""
-        self.next_token()  # Move past 'array'
+    # def array_declaration(self):
+    #     """Parse array declaration"""
+    #     self.next_token()  # Move past 'array'
         
-        # Skip spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()
+    #     # Skip spaces
+    #     while self.current_token is not None and self.current_token[1] == 'space':
+    #         self.next_token()
         
-        # Get element type
-        if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
-            self.errors.append(f"Semantic Error: Expected valid type after 'array', found {self.current_token}")
-            return
+    #     # Get element type
+    #     if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
+    #         self.errors.append(f"Semantic Error: Expected valid type after 'array', found {self.current_token}")
+    #         return
             
-        element_type = self.current_token[1]
-        self.next_token()  # Move past element type
+    #     element_type = self.current_token[1]
+    #     self.next_token()  # Move past element type
         
-        # Skip spaces
-        while self.current_token is not None and self.current_token[1] == 'space':
-            self.next_token()
+    #     # Skip spaces
+    #     while self.current_token is not None and self.current_token[1] == 'space':
+    #         self.next_token()
             
-        # Get array name
-        if self.current_token is None or self.current_token[1] != 'Identifier':
-            self.errors.append(f"Semantic Error: Expected identifier for array name, found {self.current_token}")
-            return
+    #     # Get array name
+    #     if self.current_token is None or self.current_token[1] != 'Identifier':
+    #         self.errors.append(f"Semantic Error: Expected identifier for array name, found {self.current_token}")
+    #         return
             
-        array_name = self.current_token[0]
+    #     array_name = self.current_token[0]
         
-        # Check for redeclaration
-        if array_name in self.symbol_table:
-            self.errors.append(f"Semantic Error: Variable '{array_name}' already declared")
+    #     # Check for redeclaration
+    #     if array_name in self.symbol_table:
+    #         self.errors.append(f"Semantic Error: Variable '{array_name}' already declared")
             
-        self.next_token()  # Move past identifier
+    #     self.next_token()  # Move past identifier
         
-        # Add to symbol table
-        self.symbol_table[array_name] = {
-            'type': f'array_{element_type}',
-            'value': [],
-            'element_type': element_type
-        }
+    #     # Add to symbol table
+    #     self.symbol_table[array_name] = {
+    #         'type': f'array_{element_type}',
+    #         'value': [],
+    #         'element_type': element_type
+    #     }
         
-        # Check for assignment
-        if self.current_token is not None and self.current_token[0] == '=':
-            self.next_token()  # Move past '='
+    #     # Check for assignment
+    #     if self.current_token is not None and self.current_token[0] == '=':
+    #         self.next_token()  # Move past '='
             
-            # Check for array initializer
-            if self.current_token is None or self.current_token[0] != '[':
-                self.errors.append(f"Semantic Error: Expected '[' for array initialization, found {self.current_token}")
-                return
+    #         # Check for array initializer
+    #         if self.current_token is None or self.current_token[0] != '[':
+    #             self.errors.append(f"Semantic Error: Expected '[' for array initialization, found {self.current_token}")
+    #             return
                 
-            self.next_token()  # Move past '['
+    #         self.next_token()  # Move past '['
             
-            # Parse array elements
-            elements = []
-            while self.current_token is not None and self.current_token[0] != ']':
-                # Skip spaces and commas
-                while self.current_token is not None and (self.current_token[1] == 'space' or self.current_token[0] == ','):
-                    self.next_token()
+    #         # Parse array elements
+    #         elements = []
+    #         while self.current_token is not None and self.current_token[0] != ']':
+    #             # Skip spaces and commas
+    #             while self.current_token is not None and (self.current_token[1] == 'space' or self.current_token[0] == ','):
+    #                 self.next_token()
                     
-                if self.current_token is None or self.current_token[0] == ']':
-                    break
+    #             if self.current_token is None or self.current_token[0] == ']':
+    #                 break
                     
-                # Check element type
-                if element_type == 'dose' and (self.current_token[1] != 'numlit' or '.' in self.current_token[0]):
-                    self.errors.append(f"Semantic Error: Expected integer value for dose array element, found {self.current_token}")
-                elif element_type == 'quant' and self.current_token[1] != 'numlit':
-                    self.errors.append(f"Semantic Error: Expected numeric value for quant array element, found {self.current_token}")
-                elif element_type == 'seq' and self.current_token[1] != 'string literal':
-                    self.errors.append(f"Semantic Error: Expected string value for seq array element, found {self.current_token}")
-                elif element_type == 'allele' and self.current_token[0] not in ['dom', 'rec']:
-                    self.errors.append(f"Semantic Error: Expected 'dom' or 'rec' for allele array element, found {self.current_token}")
+    #             # Check element type
+    #             if element_type == 'dose' and (self.current_token[1] != 'numlit' or '.' in self.current_token[0]):
+    #                 self.errors.append(f"Semantic Error: Expected integer value for dose array element, found {self.current_token}")
+    #             elif element_type == 'quant' and self.current_token[1] != 'numlit':
+    #                 self.errors.append(f"Semantic Error: Expected numeric value for quant array element, found {self.current_token}")
+    #             elif element_type == 'seq' and self.current_token[1] != 'string literal':
+    #                 self.errors.append(f"Semantic Error: Expected string value for seq array element, found {self.current_token}")
+    #             elif element_type == 'allele' and self.current_token[0] not in ['dom', 'rec']:
+    #                 self.errors.append(f"Semantic Error: Expected 'dom' or 'rec' for allele array element, found {self.current_token}")
                 
-                # Store element
-                if element_type == 'dose':
-                    try:
-                        elements.append(int(self.current_token[0]))
-                    except:
-                        pass
-                elif element_type == 'quant':
-                    try:
-                        elements.append(float(self.current_token[0]))
-                    except:
-                        pass
-                elif element_type == 'seq':
-                    elements.append(self.current_token[0].strip('"\''))
-                elif element_type == 'allele':
-                    elements.append(self.current_token[0] == 'dom')
+    #             # Store element
+    #             if element_type == 'dose':
+    #                 try:
+    #                     elements.append(int(self.current_token[0]))
+    #                 except:
+    #                     pass
+    #             elif element_type == 'quant':
+    #                 try:
+    #                     elements.append(float(self.current_token[0]))
+    #                 except:
+    #                     pass
+    #             elif element_type == 'seq':
+    #                 elements.append(self.current_token[0].strip('"\''))
+    #             elif element_type == 'allele':
+    #                 elements.append(self.current_token[0] == 'dom')
                 
-                self.next_token()  # Move past element
+    #             self.next_token()  # Move past element
                 
-                # Look for comma or closing bracket
-                if self.current_token is None:
-                    self.errors.append("Semantic Error: Unexpected end of tokens in array initialization")
-                    return
+    #             # Look for comma or closing bracket
+    #             if self.current_token is None:
+    #                 self.errors.append("Semantic Error: Unexpected end of tokens in array initialization")
+    #                 return
                     
-                if self.current_token[0] != ',' and self.current_token[0] != ']':
-                    self.errors.append(f"Semantic Error: Expected ',' or ']' in array initialization, found {self.current_token}")
+    #             if self.current_token[0] != ',' and self.current_token[0] != ']':
+    #                 self.errors.append(f"Semantic Error: Expected ',' or ']' in array initialization, found {self.current_token}")
             
-            # Update symbol table with elements
-            self.symbol_table[array_name]['value'] = elements
+    #         # Update symbol table with elements
+    #         self.symbol_table[array_name]['value'] = elements
             
-            if self.current_token is None or self.current_token[0] != ']':
-                self.errors.append(f"Semantic Error: Expected ']' at end of array initialization, found {self.current_token}")
-                return
+    #         if self.current_token is None or self.current_token[0] != ']':
+    #             self.errors.append(f"Semantic Error: Expected ']' at end of array initialization, found {self.current_token}")
+    #             return
                 
-            self.next_token()  # Move past ']'
+    #         self.next_token()  # Move past ']'
         
-        # Check for semicolon
-        if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after array declaration, found {self.current_token}")
-            return
+    #     # Check for semicolon
+    #     if self.current_token is None or self.current_token[0] != ';':
+    #         self.errors.append(f"Semantic Error: Expected ';' after array declaration, found {self.current_token}")
+    #         return
             
-        self.next_token()  # Move past ';'
+    #     self.next_token()  # Move past ';'
     
     def function_declaration(self):
         """Parse function declaration"""
@@ -1610,7 +1725,8 @@ class SemanticAnalyzer:
         
         # Get return type
         if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele', 'void']:
-            self.errors.append(f"Semantic Error: Expected valid return type for function, found {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Expected valid return type for function, found {self.current_token} at line {line_number}")
             return
             
         return_type = self.current_token[1]
@@ -1622,14 +1738,16 @@ class SemanticAnalyzer:
         
         # Get function name
         if self.current_token is None or self.current_token[1] != 'Identifier':
-            self.errors.append(f"Semantic Error: Expected identifier for function name, found {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: No Identifier found for function name at line {line_number}")
             return
             
         function_name = self.current_token[0]
         
         # Check for redeclaration
         if function_name in self.functions:
-            self.errors.append(f"Semantic Error: Function '{function_name}' already declared")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Function '{function_name}' already declared at line {line_number}")
             
         self.next_token()  # Move past function name
         
@@ -1640,7 +1758,8 @@ class SemanticAnalyzer:
         
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after function name, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '(' after function name, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '('
@@ -1657,7 +1776,8 @@ class SemanticAnalyzer:
                 
             # Get parameter type
             if self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
-                self.errors.append(f"Semantic Error: Expected valid type for function parameter, found {self.current_token}")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Expected valid type for function parameter, found {self.current_token} at line {line_number}")
                 # Skip to next comma or closing parenthesis
                 while self.current_token is not None and self.current_token[0] != ',' and self.current_token[0] != ')':
                     self.next_token()
@@ -1672,7 +1792,8 @@ class SemanticAnalyzer:
             
             # Get parameter name
             if self.current_token is None or self.current_token[1] != 'Identifier':
-                self.errors.append(f"Semantic Error: Expected identifier for function parameter, found {self.current_token}")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: No Identifier found for function parameter at line {line_number}")
                 # Skip to next comma or closing parenthesis
                 while self.current_token is not None and self.current_token[0] != ',' and self.current_token[0] != ')':
                     self.next_token()
@@ -1690,18 +1811,21 @@ class SemanticAnalyzer:
             
             # Look for comma or closing parenthesis
             if self.current_token is None:
-                self.errors.append("Semantic Error: Unexpected end of tokens in function parameters")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Unexpected end of tokens in function parameters at line {line_number}")
                 return
                 
             if self.current_token[0] != ',' and self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ',' or ')' in function parameters, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ',' or ')' in function parameters, found {self.current_token}")
+                pass
                 # Skip to next comma or closing parenthesis
                 while self.current_token is not None and self.current_token[0] != ',' and self.current_token[0] != ')':
                     self.next_token()
         
         # Check for closing parenthesis
         if self.current_token is None or self.current_token[0] != ')':
-            self.errors.append(f"Semantic Error: Expected ')' after function parameters, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ')' after function parameters, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ')'
@@ -1712,7 +1836,8 @@ class SemanticAnalyzer:
         
         # Check for opening brace
         if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after function header, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '{{' after function header, found {self.current_token}")
+            pass 
             return
             
         # Save function info
@@ -1738,7 +1863,8 @@ class SemanticAnalyzer:
         
         # Check for closing brace
         if self.current_token is None or self.current_token[0] != '}':
-            self.errors.append(f"Semantic Error: Expected '}}' at end of function block, found {self.current_token}")
+           # self.errors.append(f"Semantic Error: Expected '}}' at end of function block, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '}'
@@ -1759,7 +1885,8 @@ class SemanticAnalyzer:
             var_info = self.global_symbol_table[var_name]
             var_type = var_info['type']
         else:
-            self.errors.append(f"Semantic Error: Variable '{var_name}' used before declaration")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Variable '{var_name}' used before declaration at line {line_number}")
             self.next_token()  # Move past identifier
             return
         
@@ -1846,7 +1973,8 @@ class SemanticAnalyzer:
                     # Check if it's a negative float (starts with ^ and has a decimal point)
                     value = self.current_token[0]
                     if value.startswith('^') and '.' in value:
-                        self.errors.append("Semantic Error: negative quant values are not allowed in array splicing")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: negative quant values are not allowed in array splicing at line {line_number}")
                 
                 if self.current_token[0] == '[':
                     bracket_count += 1
@@ -1896,7 +2024,8 @@ class SemanticAnalyzer:
         if self.current_token is not None and (self.current_token[0] == '=' or self.current_token[0] in ['+=', '-=', '*=', '/=', '%=']):
             # Check if the variable is a perms (constant)
             if var_info.get('is_perms', False):
-                self.errors.append(f"Semantic Error: Cannot reassign value to perms (constant) '{var_name}'")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Cannot reassign value to perms (constant) '{var_name}' at line {line_number}")
                 # Skip to the end of the statement
                 while self.current_token is not None and self.current_token[0] != ';':
                     self.next_token()
@@ -1950,7 +2079,8 @@ class SemanticAnalyzer:
                         for i, token in enumerate(expression_tokens):
                             if token[0] in ['+', '-', '*', '/', '%'] and i > 0 and i < len(expression_tokens) - 1:
                                 # We found an operator between operands, one of which is allele
-                                self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{token[0]}' with allele and numeric types. Allele type cannot be used in arithmetic operations.")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{token[0]}' with allele and numeric types. Allele type cannot be used in arithmetic operations at line {line_number}")
                                 break
             
             # For compound assignments (+=, -=, etc.), check if types are compatible with the operation
@@ -1960,7 +2090,8 @@ class SemanticAnalyzer:
                 # Check if we're trying to do arithmetic with allele type
                 if check_type == 'allele' and compound_operator in ['+', '-', '*', '/', '%']:
                     target_name = f"{var_name}[index]" if is_array_element else var_name
-                    self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{compound_operator}=' on allele type variable '{target_name}'")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{compound_operator}=' on allele type variable '{target_name}' at line {line_number}")
                     if self.current_token is not None and self.current_token[0] == ';':
                         self.next_token()  # Move past semicolon
                     return
@@ -1986,7 +2117,8 @@ class SemanticAnalyzer:
                     
                     if has_allele_operand:
                         target_name = f"{var_name}[index]" if is_array_element else var_name
-                        self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{compound_operator}=' with allele and {check_type} types. Allele type cannot be used in arithmetic operations.")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Cannot perform arithmetic operation '{compound_operator}=' with allele and {check_type} types. Allele type cannot be used in arithmetic operations at line {line_number}")
                         if self.current_token is not None and self.current_token[0] == ';':
                             self.next_token()  # Move past semicolon
                         return
@@ -1996,7 +2128,8 @@ class SemanticAnalyzer:
                     # Check for direct division by zero
                     if expression_tokens[0][1] == 'numlit' and float(expression_tokens[0][0]) == 0:
                         target_name = f"{var_name}[index]" if is_array_element else var_name
-                        self.errors.append(f"Semantic Error: Division by zero in assignment '{target_name} /= 0'")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Division by zero in assignment '{target_name} /= 0' at line {line_number}")
                         if self.current_token is not None and self.current_token[0] == ';':
                             self.next_token()  # Move past semicolon
                         return
@@ -2006,7 +2139,8 @@ class SemanticAnalyzer:
                     # For strings, only += (concatenation) is allowed, not other arithmetic ops
                     if compound_operator != '+':
                         target_name = f"{var_name}[index]" if is_array_element else var_name
-                        self.errors.append(f"Semantic Error: Invalid operation '{target_name} {compound_operator}=' for {check_type} type. Only '+=' is supported for strings.")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Invalid operation '{target_name} {compound_operator}=' for {check_type} type. Only '+=' is supported for strings at line {line_number}")
                         if self.current_token is not None and self.current_token[0] == ';':
                             self.next_token()  # Move past semicolon
                         return
@@ -2022,7 +2156,8 @@ class SemanticAnalyzer:
                     
                     if has_non_string_operand:
                         target_name = f"{var_name}[index]" if is_array_element else var_name
-                        self.errors.append(f"Semantic Error: Cannot concatenate non-string value to {check_type} variable '{target_name}'")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Cannot concatenate non-string value to {check_type} variable '{target_name}' at line {line_number}")
                         if self.current_token is not None and self.current_token[0] == ';':
                             self.next_token()  # Move past semicolon
                         return
@@ -2039,7 +2174,8 @@ class SemanticAnalyzer:
                     
                     if has_string_operand:
                         target_name = f"{var_name}[index]" if is_array_element else var_name
-                        self.errors.append(f"Semantic Error: Cannot use string operands in arithmetic operation for {check_type} variable '{target_name}'")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Cannot use string operands in arithmetic operation for {check_type} variable '{target_name}' at line {line_number}")
                         if self.current_token is not None and self.current_token[0] == ';':
                             self.next_token()  # Move past semicolon
                         return
@@ -2075,7 +2211,8 @@ class SemanticAnalyzer:
             if len(expression_tokens) >= 1 and expression_tokens[0][1] == 'stimuli':
                 # Check if the variable is a perms (constant)
                 if var_info.get('is_perms', False):
-                    self.errors.append(f"Semantic Error: Cannot assign input value to perms (constant) '{var_name}'")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Cannot assign input value to perms (constant) '{var_name}' at line {line_number}")
                     # Skip to the end of the statement
                     if self.current_token is not None and self.current_token[0] == ';':
                         self.next_token()  # Move past semicolon
@@ -2091,7 +2228,8 @@ class SemanticAnalyzer:
                         break
                 
                 if prompt is None:
-                    self.errors.append(f"Semantic Error: Missing prompt in stimuli function")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Missing prompt in stimuli function at line {line_number}")
                 
                 # Store the default value based on variable type
                 if is_array_element:
@@ -2109,7 +2247,8 @@ class SemanticAnalyzer:
                             # No direct update needed for array element
                             pass
                     else:
-                        self.errors.append(f"Semantic Error: Cannot use stimuli with {array_element_type} type array element")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Cannot use stimuli with {array_element_type} type array element at line {line_number}")
                 else:
                     # Regular variable assignment
                     if var_type == 'dose':
@@ -2185,6 +2324,7 @@ class SemanticAnalyzer:
                         else:
                             # Incompatible types
                             target_name = f"{var_name}[index]" if is_array_element else var_name
+                            line_number = self.get_current_line_number()
                             self.errors.append(f"Semantic Error: Cannot assign {assign_element_type} array element to {check_type} {target_name}")
                             if self.current_token is not None and self.current_token[0] == ';':
                                 self.next_token()  # Move past semicolon
@@ -2203,7 +2343,8 @@ class SemanticAnalyzer:
                     elif var_to_assign in self.global_symbol_table:
                         assigned_value_info = self.global_symbol_table[var_to_assign]
                     else:
-                        self.errors.append(f"Semantic Error: Variable '{var_to_assign}' used before declaration")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Variable '{var_to_assign}' used before declaration at line {line_number}")
                         return
 
                     # Get value from the identifier's stored value
@@ -2236,7 +2377,8 @@ class SemanticAnalyzer:
                                 var_info['value'] = bool(assigned_value)
                     else:
                         target_name = f"{var_name}[index]" if is_array_element else var_name
-                        self.errors.append(f"Semantic Error: Cannot assign {assigned_type} variable to {check_type} {target_name}")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Cannot assign {assigned_type} variable to {check_type} {target_name} at line {line_number}")
                 
                 # Handle literals
                 elif token[1] == 'numlit':
@@ -2246,7 +2388,8 @@ class SemanticAnalyzer:
                         # For dose type, check if the value has a decimal point
                         if '.' in token[0]:
                             target_name = f"{var_name}[index]" if is_array_element else var_name
-                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose {target_name}")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose {target_name} at line {line_number}")
                         else:
                             try:
                                 # Handle ^ as negative sign for dose
@@ -2259,7 +2402,8 @@ class SemanticAnalyzer:
                                     var_info['value'] = numeric_value
                             except:
                                 target_name = f"{var_name}[index]" if is_array_element else var_name
-                                self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose {target_name}")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose {target_name} at line {line_number}")
                     elif check_type == 'quant':
                         try:
                             # Handle ^ as negative sign for quant
@@ -2272,7 +2416,8 @@ class SemanticAnalyzer:
                                 var_info['value'] = numeric_value
                         except:
                             target_name = f"{var_name}[index]" if is_array_element else var_name
-                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant {target_name}")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant {target_name} at line {line_number}")
                     elif check_type == 'allele':
                         # Allow numeric values for allele type, non-zero is dom (true)
                         try:
@@ -2287,10 +2432,12 @@ class SemanticAnalyzer:
                                 var_info['value'] = boolean_val
                         except:
                             target_name = f"{var_name}[index]" if is_array_element else var_name
-                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to allele value for {target_name}")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Cannot convert {token[0]} to allele value for {target_name} at line {line_number}")
                     else:
                         target_name = f"{var_name}[index]" if is_array_element else var_name
-                        self.errors.append(f"Semantic Error: Cannot assign numeric value to {check_type} {target_name}")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Cannot assign numeric value to {check_type} {target_name} at line {line_number}")
                 
                 elif token[1] == 'string literal':
                     check_type = array_element_type if is_array_element else var_type
@@ -2308,7 +2455,8 @@ class SemanticAnalyzer:
                             var_info['value'] = boolean_val
                     else:
                         target_name = f"{var_name}[index]" if is_array_element else var_name
-                        self.errors.append(f"Semantic Error: Cannot assign string value to {check_type} {target_name}")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Cannot assign string value to {check_type} {target_name} at line {line_number}")
             
             # Handle complex expressions (with operators)
             elif len(expression_tokens) > 1:
@@ -2385,7 +2533,8 @@ class SemanticAnalyzer:
                         if token[1] == 'string literal':
                             has_string_operands = True
                             target_name = f"{var_name}[index]" if is_array_element else var_name
-                            self.errors.append(f"Semantic Error: Cannot use string '{token[0]}' in arithmetic expression for {check_type} variable '{target_name}'")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Cannot use string '{token[0]}' in arithmetic expression for {check_type} variable '{target_name}' at line {line_number}")
                             valid_expression = False
                             break
                         elif token[1] == 'Identifier':
@@ -2400,7 +2549,8 @@ class SemanticAnalyzer:
                             if token_var_info and token_var_info['type'] == 'seq':
                                 has_string_operands = True
                                 target_name = f"{var_name}[index]" if is_array_element else var_name
-                                self.errors.append(f"Semantic Error: Cannot use string variable '{token_var_name}' in arithmetic expression for {check_type} variable '{target_name}'")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Cannot use string variable '{token_var_name}' in arithmetic expression for {check_type} variable '{target_name}' at line {line_number}")
                                 valid_expression = False
                                 break
                     
@@ -2419,7 +2569,8 @@ class SemanticAnalyzer:
                             elif token_var_name in self.global_symbol_table:
                                 token_var_info = self.global_symbol_table[token_var_name]
                             else:
-                                self.errors.append(f"Semantic Error: Variable '{token_var_name}' used before declaration")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Variable '{token_var_name}' used before declaration at line {line_number}")
                                 valid_expression = False
                                 break
                                 
@@ -2460,7 +2611,8 @@ class SemanticAnalyzer:
                             # For array elements, we only validate type compatibility
                         except ZeroDivisionError:
                             target_name = f"{var_name}[index]" if is_array_element else var_name
-                            self.errors.append(f"Semantic Error: Division by zero in expression for '{target_name}'")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Division by zero in expression for '{target_name}' at line {line_number}")
                             if self.current_token is not None and self.current_token[0] == ';':
                                 self.next_token()  # Move past semicolon
                             return
@@ -2476,7 +2628,8 @@ class SemanticAnalyzer:
                                 for part in parts[1:]:  # Check all divisors
                                     if float(eval(part.strip())) == 0:
                                         target_name = f"{var_name}[index]" if is_array_element else var_name
-                                        self.errors.append(f"Semantic Error: Division by zero detected in expression for '{target_name}'")
+                                        line_number = self.get_current_line_number()
+                                        self.errors.append(f"Semantic Error: Division by zero detected in expression for '{target_name}' at line {line_number}")
                                         break
                             except:
                                 # If we can't evaluate the right side, we ignore this check
@@ -2490,7 +2643,8 @@ class SemanticAnalyzer:
                         for token in expression_tokens:
                             if token[0] in ['*', '/', '%']:
                                 target_name = f"{var_name}[index]" if is_array_element else var_name
-                                self.errors.append(f"Semantic Error: Cannot assign arithmetic expression result to {check_type} variable '{target_name}'")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Cannot assign arithmetic expression result to {check_type} variable '{target_name}' at line {line_number}")
                                 break
                     
                     # For string concatenation, we're less strict now
@@ -2502,7 +2656,8 @@ class SemanticAnalyzer:
                         self.next_token()  # Move past semicolon
                 else:
                     target_name = f"{var_name}[index]" if is_array_element else var_name
-                    self.errors.append(f"Semantic Error: Complex expressions not supported for {check_type} {target_name}")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Complex expressions not supported for {check_type} {target_name} at line {line_number}")
         
         # Check for semicolon if not already consumed
         if self.current_token is not None and self.current_token[0] == ';':
@@ -2535,7 +2690,8 @@ class SemanticAnalyzer:
                 
         # Now get the data type
         if self.current_token is None or self.current_token[1] not in ['dose', 'quant', 'seq', 'allele']:
-            self.errors.append(f"Semantic Error: Expected data type, found {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Invalid data type found at line {line_number}")
             return
             
         var_type = self.current_token[1]
@@ -2549,20 +2705,21 @@ class SemanticAnalyzer:
         while True:
             # Get variable name
             if self.current_token is None or self.current_token[1] != 'Identifier':
-                self.errors.append(f"Semantic Error: Expected identifier after type declaration, found {self.current_token}")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Invalid variable name at line {line_number}")
                 return
 
             var_name = self.current_token[0]
             
             # Check if variable name already exists as a function name
             if var_name in self.functions:
-                self.errors.append(f"Semantic Error: Variable name '{var_name}' already used as a function")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Variable name '{var_name}' already used as a function at line {line_number}")
                 
             # Check for redeclaration in current scope only
             if var_name in self.symbol_table:
-                # Get the current token index to find line number
                 line_number = self.get_current_line_number()
-                self.errors.append(f"Semantic Error at line {line_number}: Variable '{var_name}' already declared in current scope")
+                self.errors.append(f"Semantic Error: Variable '{var_name}' already declared in current scope at line {line_number}")
                 
             self.next_token()  # Move past identifier
 
@@ -2627,9 +2784,11 @@ class SemanticAnalyzer:
                                     # For other types, use the value directly if it's a boolean
                                     self.symbol_table[var_name]['value'] = bool(assigned_value)
                             else:
-                                self.errors.append(f"Semantic Error: Cannot assign {assigned_type} variable to {var_type} variable '{var_name}'")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Cannot assign {assigned_type} variable to {var_type} variable '{var_name}' at line {line_number}")
                         else:
-                            self.errors.append(f"Semantic Error: Variable '{var_to_assign}' used before declaration")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Variable '{var_to_assign}' used before declaration at line {line_number}")
                     
                     # Handle literals
                     elif token[1] == 'numlit':
@@ -2642,7 +2801,8 @@ class SemanticAnalyzer:
                                     converted_value = int(token[0])
                                 self.symbol_table[var_name]['value'] = converted_value
                             except:
-                                self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose variable '{var_name}'")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Cannot convert {token[0]} to integer for dose variable '{var_name}' at line {line_number}")
                         elif var_type == 'quant':
                             try:
                                 # Handle ^ as negative sign
@@ -2652,7 +2812,8 @@ class SemanticAnalyzer:
                                     converted_value = float(token[0])
                                 self.symbol_table[var_name]['value'] = converted_value
                             except:
-                                self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant variable '{var_name}'")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Cannot convert {token[0]} to float for quant variable '{var_name}' at line {line_number}")
                         elif var_type == 'allele':
                             # Allow numeric values for allele type, non-zero is dom (true)
                             try:
@@ -2664,9 +2825,11 @@ class SemanticAnalyzer:
                                 # Convert to boolean - any non-zero value is dom (true)
                                 self.symbol_table[var_name]['value'] = (numeric_value != 0)
                             except:
-                                self.errors.append(f"Semantic Error: Cannot convert {token[0]} to allele value for variable '{var_name}'")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Cannot convert {token[0]} to allele value for variable '{var_name}' at line {line_number}")
                         else:
-                            self.errors.append(f"Semantic Error: Cannot assign numeric value to {var_type} variable '{var_name}'")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Cannot assign numeric value to {var_type} variable '{var_name}' at line {line_number}")
                     
                     elif token[1] == 'string literal':
                         if var_type == 'seq':
@@ -2678,7 +2841,8 @@ class SemanticAnalyzer:
                             string_val = token[0].strip('"\'')
                             self.symbol_table[var_name]['value'] = (string_val != "")
                         else:
-                            self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} variable '{var_name}'")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Cannot assign string value to {var_type} variable '{var_name}' at line {line_number}")
 
                     
                     elif token[0] in ['dom', 'rec']:
@@ -2686,7 +2850,8 @@ class SemanticAnalyzer:
                             boolean_val = (token[0] == 'dom')
                             self.symbol_table[var_name]['value'] = boolean_val
                         else:
-                            self.errors.append(f"Semantic Error: Cannot assign boolean value to {var_type} variable '{var_name}'")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Cannot assign boolean value to {var_type} variable '{var_name}' at line {line_number}")
                 
                 # Handle complex expressions
                 elif len(expression_tokens) > 1:
@@ -2701,11 +2866,13 @@ class SemanticAnalyzer:
                         # First, check for string literals in numeric expression
                         for token in expression_tokens:
                             if token[1] == 'string literal':
-                                self.errors.append(f"Semantic Error: Cannot use string '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}'")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Cannot use string '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}' at line {line_number}")
                                 valid_expression = False
                                 break
                             elif token[1] == 'Identifier' and token[0] in self.symbol_table and self.symbol_table[token[0]]['type'] == 'seq':
-                                self.errors.append(f"Semantic Error: Cannot use string variable '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}'")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Cannot use string variable '{token[0]}' in arithmetic expression for {var_type} variable '{var_name}' at line {line_number}")
                                 valid_expression = False
                                 break
                         
@@ -2723,7 +2890,8 @@ class SemanticAnalyzer:
                                     #     valid_expression = False
                                     #     break
                                 else:
-                                    self.errors.append(f"Semantic Error: Variable '{token[0]}' used before declaration")
+                                    line_number = self.get_current_line_number()
+                                    self.errors.append(f"Semantic Error: Variable '{token[0]}' used before declaration at line {line_number}")
                                     valid_expression = False
                                     break
                             elif token[1] == 'numlit':
@@ -2762,7 +2930,8 @@ class SemanticAnalyzer:
                                     # This is just a simple check - a more robust solution would parse the expression
                                     eval(expr_str.replace('/', '//'))
                                 except ZeroDivisionError:
-                                    self.errors.append(f"Semantic Error: Division by zero in expression for variable '{var_name}'")
+                                    line_number = self.get_current_line_number()
+                                    self.errors.append(f"Semantic Error: Division by zero in expression for variable '{var_name}' at line {line_number}")
                                 except:
                                     pass
                     
@@ -2791,7 +2960,8 @@ class SemanticAnalyzer:
                         if valid_expression:
                             self.symbol_table[var_name]['value'] = result
                     else:
-                        self.errors.append(f"Semantic Error: Complex expressions not supported for {var_type} type")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Complex expressions not supported for {var_type} type at line {line_number}")
             
             # Check if we need to continue for multiple declarations
             if self.current_token is None or self.current_token[0] != ',':
@@ -2817,7 +2987,8 @@ class SemanticAnalyzer:
             
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'if', found {self.current_token}")
+           # self.errors.append(f"Semantic Error: Expected '(' after 'if', found {self.current_token}")
+            pass
             # Try to recover by skipping to the { if possible
             while self.current_token is not None and self.current_token[0] != '{':
                 self.next_token()
@@ -2866,7 +3037,8 @@ class SemanticAnalyzer:
             
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'elif', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '(' after 'elif', found {self.current_token}")
+            pass
             # Try to recover by skipping to the { if possible
             while self.current_token is not None and self.current_token[0] != '{':
                 self.next_token()
@@ -2888,7 +3060,8 @@ class SemanticAnalyzer:
         
         # Check for opening brace
         if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after elif condition, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '{{' after elif condition, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '{'
@@ -2913,13 +3086,14 @@ class SemanticAnalyzer:
         
         # Check for opening brace
         if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after else, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '{{' after else, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '{'
         
-        # Skip the entire else block body
-        self.skip_to_end_of_block()
+        # Instead of skipping the else block body, parse the body statements to check variable declarations
+        self.parse_body_statements()
 
     def parse_condition(self):
         """Parse a condition, checking operands and operator compatibility"""
@@ -2933,7 +3107,8 @@ class SemanticAnalyzer:
         
         # Prevent excessive recursion
         if nesting_level > 100:  # Set a reasonable limit
-            self.errors.append("Semantic Error: Maximum recursion depth exceeded in condition parsing")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Maximum recursion depth exceeded in condition parsing at line {line_number}")
             # Skip to the next semicolon or closing brace
             while self.current_token is not None and self.current_token[0] not in [';', '}']:
                 self.next_token()
@@ -3050,7 +3225,8 @@ class SemanticAnalyzer:
     def parse_factor(self):
         """Parse a factor (variable, literal, or parenthesized expression)"""
         if self.current_token is None:
-            self.errors.append("Semantic Error: Unexpected end of tokens in expression")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Unexpected end of tokens in expression at line {line_number}")
             return None
             
         factor_type = None
@@ -3064,7 +3240,8 @@ class SemanticAnalyzer:
             elif var_name in self.global_symbol_table:
                 factor_type = self.global_symbol_table[var_name]['type']
             else:
-                self.errors.append(f"Semantic Error: Variable '{var_name}' used before declaration")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Variable '{var_name}' used before declaration at line {line_number}")
                 factor_type = 'unknown'  # Use a placeholder type
             
             # Save the current position to restore it later
@@ -3107,7 +3284,8 @@ class SemanticAnalyzer:
                         # Check if it's a negative float (starts with ^ and has a decimal point)
                         value = self.current_token[0]
                         if value.startswith('^') and '.' in value:
-                            self.errors.append("Semantic Error: negative quant values are not allowed in array splicing")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: negative quant values are not allowed in array splicing at line {line_number}")
                     
                     if self.current_token[0] == '[':
                         bracket_count += 1
@@ -3163,7 +3341,8 @@ class SemanticAnalyzer:
             
             # Check for opening parenthesis
             if self.current_token is None or self.current_token[0] != '(':
-                self.errors.append(f"Semantic Error: Expected '(' after 'seq', found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected '(' after 'seq', found {self.current_token}")     
+                pass
                 return 'unknown'
                 
                 
@@ -3185,7 +3364,8 @@ class SemanticAnalyzer:
             
             # Check for closing parenthesis
             if self.current_token is None or self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ')' after seq argument, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ')' after seq argument, found {self.current_token}")
+                pass
                 return factor_type
                 
             self.next_token()  # Move past ')'
@@ -3200,7 +3380,8 @@ class SemanticAnalyzer:
             
             # Check for opening parenthesis
             if self.current_token is None or self.current_token[0] != '(':
-                self.errors.append(f"Semantic Error: Expected '(' after 'stimuli', found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected '(' after 'stimuli', found {self.current_token}")
+                pass
                 return 'unknown'
                 
             self.next_token()  # Move past '('
@@ -3211,7 +3392,8 @@ class SemanticAnalyzer:
             
             # Check for prompt message (string literal)
             if self.current_token is None or self.current_token[1] != 'string literal':
-                self.errors.append(f"Semantic Error: Expected string literal for input prompt, found {self.current_token}")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Invalid message found inside stimuli() function at line {line_number}")
                 # Skip to closing parenthesis to continue parsing
                 while self.current_token is not None and self.current_token[0] != ')':
                     self.next_token()
@@ -3225,7 +3407,8 @@ class SemanticAnalyzer:
             
             # Check for closing parenthesis
             if self.current_token is None or self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}")
+                pass
                 return 'unknown'
                 
             self.next_token()  # Move past ')'
@@ -3246,7 +3429,8 @@ class SemanticAnalyzer:
                     # Keep as string
                     factor_type = 'seq'
                 else:
-                    self.errors.append(f"Semantic Error: Cannot assign stimuli input to {target_type} variable")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Cannot assign stimuli input to {target_type} variable at line {line_number}")
         
         # Handle parenthesized expression
         elif self.current_token[0] == '(':
@@ -3255,12 +3439,14 @@ class SemanticAnalyzer:
             
             # Check for closing parenthesis
             if self.current_token is None or self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ')' after expression, found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ')' after expression, found {self.current_token}")
+                pass
             else:
                 self.next_token()  # Move past ')'
                 
         else:
-            self.errors.append(f"Semantic Error: Unexpected token in expression: {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Unexpected token in expression: {self.current_token} at line {line_number}")
             self.next_token()  # Skip invalid token
             factor_type = 'unknown'  # Use a placeholder type
             
@@ -3276,7 +3462,8 @@ class SemanticAnalyzer:
         
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'for', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '(' after 'for', found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '('
@@ -3288,7 +3475,8 @@ class SemanticAnalyzer:
         if self.current_token is not None and self.current_token[1] == 'dose':
             self.declaration()  # This will handle the first part of the for loop    
         else:
-            self.errors.append(f"Semantic Error: Expected 'dose' declaration as for loop initialization, found {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: No dose declaration found in for loop initialization at line {line_number}")
             # Skip until semicolon
             while self.current_token is not None and self.current_token[0] != ';':
                 self.next_token()
@@ -3299,7 +3487,8 @@ class SemanticAnalyzer:
         
         # Check for semicolon
         if self.current_token is None or self.current_token[0] != ';':
-            self.errors.append(f"Semantic Error: Expected ';' after for loop condition, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ';' after for loop condition, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ';'
@@ -3308,17 +3497,20 @@ class SemanticAnalyzer:
         if self.current_token is not None and self.current_token[1] == 'Identifier':
             var_name = self.current_token[0]
             if var_name not in self.symbol_table:
-                self.errors.append(f"Semantic Error: Variable '{var_name}' used in for loop update before declaration")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Variable '{var_name}' used in for loop update before declaration at line {line_number}")
             else:
                 var_type = self.symbol_table[var_name]['type']
                 if var_type != 'dose':
-                    self.errors.append(f"Semantic Error: For loop update variable must be dose type, found {var_type}")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: For loop update variable must be dose type, found {var_type} at line {line_number}")
                     
             self.next_token()  # Move past identifier
 
             # Check for ++ or -- operators which may be tokenized either as '++', '--' or as separate + or - tokens
             if self.current_token is None:
-                self.errors.append("Semantic Error: Unexpected end of tokens in for loop update")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Unexpected end of tokens in for loop update at line {line_number}")
             elif self.current_token[0] in ['++', '--']:
                 # Handle pre-tokenized increment/decrement operators
                 self.next_token()  # Move past the operator
@@ -3333,21 +3525,25 @@ class SemanticAnalyzer:
                 
                 # Check if next token is the same (++ or --)
                 if self.current_token is None or self.current_token[0] != first_char:
-                    self.errors.append(f"Semantic Error: Expected '{first_char}{first_char}' in for loop update, found incomplete operator")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Expected '{first_char}{first_char}' in for loop update, found incomplete operator at line {line_number}")
                 else:
                     self.next_token()  # Move past the second + or - character
             else:
-                self.errors.append(f"Semantic Error: Expected increment/decrement operator in for loop update, found {self.current_token}")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Invalid increment/decrement operator in for loop update, found {self.current_token} at line {line_number}")
                 self.next_token()  # Skip the current token
         else:
-            self.errors.append(f"Semantic Error: Expected identifier in for loop update, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected identifier in for loop update, found {self.current_token}")
+            pass
             
         # Skip until closing parenthesis
         while self.current_token is not None and self.current_token[0] != ')':
             self.next_token()
             
         if self.current_token is None or self.current_token[0] != ')':
-            self.errors.append(f"Semantic Error: Expected ')' after for loop update, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ')' after for loop update, found {self.current_token}")
+            pass 
             return
             
         self.next_token()  # Move past ')'
@@ -3358,7 +3554,8 @@ class SemanticAnalyzer:
         
         # Check for opening brace
         if self.current_token is None or self.current_token[0] != '{':
-            self.errors.append(f"Semantic Error: Expected '{{' after for loop header, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '{{' after for loop header, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '{'
@@ -3368,7 +3565,8 @@ class SemanticAnalyzer:
         
         # Check for closing brace
         if self.current_token is None or self.current_token[0] != '}':
-            self.errors.append(f"Semantic Error: Expected '}}' at end of for loop block, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '}}' at end of for loop block, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '}'
@@ -3386,7 +3584,8 @@ class SemanticAnalyzer:
         
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'while', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '(' after 'while', found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '('
@@ -3397,6 +3596,7 @@ class SemanticAnalyzer:
         # Check for closing parenthesis
         if self.current_token is None or self.current_token[0] != ')':
             # self.errors.append(f"Semantic Error: Expected ')' after while condition, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ')'
@@ -3408,6 +3608,7 @@ class SemanticAnalyzer:
         # Check for opening brace
         if self.current_token is None or self.current_token[0] != '{':
             # self.errors.append(f"Semantic Error: Expected '{{' after while condition, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '{'
@@ -3417,10 +3618,81 @@ class SemanticAnalyzer:
         
         # Check for closing brace
         if self.current_token is None or self.current_token[0] != '}':
-            self.errors.append(f"Semantic Error: Expected '}}' at end of while loop block, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '}}' at end of while loop block, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '}'
+
+    def do_while_statement(self):
+        """Parse do-while statement and check semantic validity"""
+        self.next_token()  # Move past 'do'
+        
+        # Skip spaces
+        while self.current_token is not None and self.current_token[1] == 'space':
+            self.next_token()
+        
+        # Check for opening brace
+        if self.current_token is None or self.current_token[0] != '{':
+            # self.errors.append(f"Semantic Error: Expected '{{' after 'do', found {self.current_token}")
+            pass
+            return
+            
+        self.next_token()  # Move past '{'
+        
+        # Parse do-while body
+        self.parse_body_statements()
+        
+        # Check for closing brace
+        if self.current_token is None or self.current_token[0] != '}':
+            # self.errors.append(f"Semantic Error: Expected '}}' after do block, found {self.current_token}")
+            pass
+            return
+            
+        self.next_token()  # Move past '}'
+        
+        # Skip spaces
+        while self.current_token is not None and self.current_token[1] == 'space':
+            self.next_token()
+        
+        # Check for 'while'
+        if self.current_token is None or self.current_token[1] != 'while':
+            # self.errors.append(f"Semantic Error: Expected 'while' after do block, found {self.current_token}")      
+            pass
+            return
+            
+        self.next_token()  # Move past 'while'
+        
+        # Skip spaces
+        while self.current_token is not None and self.current_token[1] == 'space':
+            self.next_token()
+        
+        # Check for opening parenthesis
+        if self.current_token is None or self.current_token[0] != '(':
+            # self.errors.append(f"Semantic Error: Expected '(' after 'while', found {self.current_token}")
+            pass
+            return
+            
+        self.next_token()  # Move past '('
+        
+        # Parse condition
+        self.parse_condition()
+        
+        # Check for closing parenthesis
+        if self.current_token is None or self.current_token[0] != ')':
+            # self.errors.append(f"Semantic Error: Expected ')' after do-while condition, found {self.current_token}")
+            pass
+            return
+            
+        self.next_token()  # Move past ')'
+        
+        # Check for semicolon
+        if self.current_token is None or self.current_token[0] != ';':
+            # self.errors.append(f"Semantic Error: Expected ';' after do-while statement, found {self.current_token}")
+            pass
+            return
+            
+        self.next_token()  # Move past ';'
 
     def express_statement(self):
         """Parse express statement (print statement) that can handle multiple values"""
@@ -3432,7 +3704,8 @@ class SemanticAnalyzer:
         
         # Check for opening parenthesis
         if self.current_token is None or self.current_token[0] != '(':
-            self.errors.append(f"Semantic Error: Expected '(' after 'express', found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected '(' after 'express', found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past '('
@@ -3461,6 +3734,11 @@ class SemanticAnalyzer:
                 elif var_name in self.global_symbol_table:
                     var_info = self.global_symbol_table[var_name]
                 
+                # Check if the variable itself is declared
+                if var_info is None:
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement before declaration at line {line_number}")
+                
                 # Save current position
                 save_pos = self.token_index
                 
@@ -3469,6 +3747,15 @@ class SemanticAnalyzer:
                 # Check if this is an array access
                 if self.current_token is not None and self.current_token[0] == '[':
                     self.next_token()  # Move past '['
+                    
+                    # Check if array index is an identifier (variable)
+                    if self.current_token is not None and self.current_token[1] == 'Identifier':
+                        index_var_name = self.current_token[0]
+                        
+                        # Check if index variable is declared
+                        if index_var_name not in self.symbol_table and index_var_name not in self.global_symbol_table:
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Array index variable '{index_var_name}' used before declaration at line {line_number}")
                     
                     # Check for splicing pattern with colon
                     if self.current_token is not None and self.current_token[0] == ':':
@@ -3481,7 +3768,8 @@ class SemanticAnalyzer:
                                 # Check if it's a negative float (starts with ^ and has a decimal point)
                                 value = self.current_token[0]
                                 if value.startswith('^') and '.' in value:
-                                    self.errors.append("Semantic Error: negative quant values are not allowed in array splicing")
+                                    line_number = self.get_current_line_number()
+                                    self.errors.append(f"Semantic Error: negative quant values are not allowed in array splicing at line {line_number}")
                             self.next_token()
                     
                     # Skip the rest of the array index expression
@@ -3491,6 +3779,16 @@ class SemanticAnalyzer:
                             bracket_count += 1
                         elif self.current_token[0] == ']':
                             bracket_count -= 1
+                            
+                        # Check for another index variable if we're moving to next dimension
+                        if bracket_count == 1 and self.current_token is not None and self.current_token[1] == 'Identifier':
+                            next_index_var_name = self.current_token[0]
+                            
+                            # Check if this index variable is declared
+                            if next_index_var_name not in self.symbol_table and next_index_var_name not in self.global_symbol_table:
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Array index variable '{next_index_var_name}' used before declaration at line {line_number}")
+                            
                         if bracket_count > 0:
                             self.next_token()
                     
@@ -3562,11 +3860,13 @@ class SemanticAnalyzer:
                     if ((first_operand_type == 'seq' and second_operand_type in ['allele']) or
                         (first_operand_type in ['allele'] and second_operand_type == 'seq')):
                         # Error: Cannot directly concatenate booleans and strings
-                        self.errors.append(f"Semantic Error: Cannot concatenate {first_operand_type} and {second_operand_type} directly. Use seq() function to convert boolean values to strings.")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Cannot concatenate {first_operand_type} and {second_operand_type} directly. Use seq() function to convert boolean values to strings at line {line_number}")
                     elif ((first_operand_type in ['dose', 'quant'] and second_operand_type == 'seq') or
                        (first_operand_type == 'seq' and second_operand_type in ['dose', 'quant'])):
                         # Error: Cannot directly concatenate numbers and strings
-                        self.errors.append(f"Semantic Error: Cannot concatenate {first_operand_type} and {second_operand_type} directly. Use seq() function to convert numeric values to strings.")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Cannot concatenate {first_operand_type} and {second_operand_type} directly. Use seq() function to convert numeric values to strings at line {line_number}")
             
             # Restore position to process the value normally
             self.token_index = save_position
@@ -3581,9 +3881,8 @@ class SemanticAnalyzer:
                 if self.current_token is not None and self.current_token[0] == '(':
                     # Handle function call
                     if var_name not in self.functions:
-                        # self.errors.append(f"Semantic Error: Function '{var_name}' used in express statement before declaration")
-                        # values_to_print.append(f"undefined({var_name})")
-                        pass
+                        self.errors.append(f"Semantic Error: Function '{var_name}' used in express statement before declaration")
+                        values_to_print.append(f"undefined({var_name})")
                     else:
                         # Parse function arguments
                         args = []
@@ -3597,14 +3896,16 @@ class SemanticAnalyzer:
                             
                             # Get argument (variable name)
                             if self.current_token is None or self.current_token[1] != 'Identifier':
-                                self.errors.append(f"Semantic Error: Expected identifier as function argument, found {self.current_token}")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Expected identifier as function argument, found {self.current_token} at line {line_number}")
                                 break
                             
                             arg_name = self.current_token[0]
                             
                             # Check if variable exists in current scope first, then global scope
                             if arg_name not in self.symbol_table and arg_name not in self.global_symbol_table:
-                                self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Variable '{arg_name}' used as argument before declaration at line {line_number}")
                                 break
                             
                             # Get variable info from the appropriate scope
@@ -3628,14 +3929,16 @@ class SemanticAnalyzer:
                             
                             # Check for comma or closing parenthesis
                             if self.current_token is None:
-                                self.errors.append("Semantic Error: Unexpected end of tokens in function arguments")
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Unexpected end of tokens in function arguments at line {line_number}")
                                 break
                             
                             if self.current_token[0] == ',':
                                 self.next_token()  # Move past comma
                                 continue
                             elif self.current_token[0] != ')':
-                                self.errors.append(f"Semantic Error: Expected ',' or ')' in function arguments, found {self.current_token}")
+                                #  self.errors.append(f"Semantic Error: Expected ',' or ')' in function arguments, found {self.current_token}") 
+                                pass
                                 break
                         
                         # Validate parameter types and number
@@ -3683,7 +3986,8 @@ class SemanticAnalyzer:
                                 if self.current_token is not None and self.current_token[1] == 'numlit':
                                     value = self.current_token[0]
                                     if value.startswith('^') and '.' in value:
-                                        self.errors.append("Semantic Error: negative quant values are not allowed in array splicing")
+                                        line_number = self.get_current_line_number()
+                                        self.errors.append(f"Semantic Error: negative quant values are not allowed in array splicing at line {line_number}")
                             
                             # Skip to the end of the array access
                             bracket_count = 1
@@ -3726,7 +4030,8 @@ class SemanticAnalyzer:
                                 values_to_print.append(f"Function {var_name} (returns {func_return_type}, takes {param_count} parameters)")
                         # Regular variable - check in current scope first, then global
                         elif var_name not in self.symbol_table and var_name not in self.global_symbol_table:
-                            self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement is not declared in current scope")
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement is not declared in current scope at line {line_number}")
                             values_to_print.append(f"undefined({var_name})")
                         else:
                             # Get the value from the symbol table for printing
@@ -3761,15 +4066,16 @@ class SemanticAnalyzer:
         
         # Check for closing parenthesis
         if self.current_token is None or self.current_token[0] != ')':
-            self.errors.append(f"Semantic Error: Expected ')' in express statement, found {self.current_token}")
+            # self.errors.append(f"Semantic Error: Expected ')' in express statement, found {self.current_token}")    
+            pass
             return
             
         self.next_token()  # Move past ')'
         
         # Check for semicolon
-        if self.current_token is None or self.current_token[0] != ';':
-            
+        if self.current_token is None or self.current_token[0] != ';':                                
             # self.errors.append(f"Semantic Error: Expected ';' after express statement, found {self.current_token}")
+            pass
             return
             
         self.next_token()  # Move past ';'
@@ -3780,7 +4086,8 @@ class SemanticAnalyzer:
     def expr(self):
         """Parse an expression, which could be a variable, literal, or a chain of operations"""
         if self.current_token is None:
-            self.errors.append("Semantic Error: Unexpected end of tokens in expression")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Unexpected end of tokens in expression at line {line_number}")
             return
             
         # First parse the first operand
@@ -3805,7 +4112,8 @@ class SemanticAnalyzer:
             self.next_token()
             
         if self.current_token is None:
-            self.errors.append("Semantic Error: Expected operand but found end of tokens")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Expected operand but found end of tokens at line {line_number}")
             return
             
         # Variable
@@ -3820,7 +4128,8 @@ class SemanticAnalyzer:
                 var_info = self.global_symbol_table[var_name]
                 
             if var_info is None:
-                self.errors.append(f"Semantic Error: Variable '{var_name}' used in expression before declaration")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Variable '{var_name}' used in expression before declaration at line {line_number}")
             
             # Save position to check for array access
             save_pos = self.token_index
@@ -3835,12 +4144,31 @@ class SemanticAnalyzer:
                 if var_type.startswith('array_') or var_type.startswith('2d_array_') or var_type == 'seq':
                     # Skip the array index
                     self.next_token()  # Move past '['
+                    
+                    # Check if index is a variable and if it's declared
+                    if self.current_token is not None and self.current_token[1] == 'Identifier':
+                        index_var_name = self.current_token[0]
+                        # Check if index variable exists in either scope
+                        if index_var_name not in self.symbol_table and index_var_name not in self.global_symbol_table:
+                            line_number = self.get_current_line_number()
+                            self.errors.append(f"Semantic Error: Array index variable '{index_var_name}' used before declaration at line {line_number}")
+                    
+                    # Continue processing the array access
                     bracket_count = 1
                     while self.current_token is not None and bracket_count > 0:
                         if self.current_token[0] == '[':
                             bracket_count += 1
                         elif self.current_token[0] == ']':
                             bracket_count -= 1
+                            
+                        # Check for additional index variables when moving to next dimension
+                        if bracket_count == 1 and self.current_token is not None and self.current_token[1] == 'Identifier' and self.current_token[0] != var_name:
+                            index_var_name = self.current_token[0]
+                            # Check if index variable exists in either scope
+                            if index_var_name not in self.symbol_table and index_var_name not in self.global_symbol_table:
+                                line_number = self.get_current_line_number()
+                                self.errors.append(f"Semantic Error: Array index variable '{index_var_name}' used before declaration at line {line_number}")
+                            
                         if bracket_count > 0:
                             self.next_token()
                     self.next_token()  # Move past the closing ']'
@@ -3861,7 +4189,7 @@ class SemanticAnalyzer:
         elif self.current_token[0] in ['dom', 'rec']:
             self.next_token()  # Move past boolean
             
-        # Handle stimuli function
+        # Handle stimuli func
         elif self.current_token[1] == 'stimuli':
             self.next_token()  # Move past 'stimuli'
             
@@ -3871,7 +4199,8 @@ class SemanticAnalyzer:
             
             # Check for opening parenthesis
             if self.current_token is None or self.current_token[0] != '(':
-                self.errors.append(f"Semantic Error: Expected '(' after 'stimuli', found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected '(' after 'stimuli', found {self.current_token}")
+                pass
                 return
                 
             self.next_token()  # Move past '('
@@ -3882,7 +4211,7 @@ class SemanticAnalyzer:
             
             # Check for prompt message (string literal)
             if self.current_token is None or self.current_token[1] != 'string literal':
-                self.errors.append(f"Semantic Error: Expected string literal for input prompt, found {self.current_token}")
+                self.errors.append(f"Semantic Error: Invalid message found inside stimuli() function")
                 return
                 
             prompt = self.current_token[0].strip('"\'')  # Store the prompt message
@@ -3894,7 +4223,8 @@ class SemanticAnalyzer:
             
             # Check for closing parenthesis
             if self.current_token is None or self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}")
+              #  self.errors.append(f"Semantic Error: Expected ')' after input prompt, found {self.current_token}") 
+                pass
                 return
                 
             self.next_token()  # Move past ')'
@@ -3911,12 +4241,14 @@ class SemanticAnalyzer:
             
             # Check for closing parenthesis
             if self.current_token is None or self.current_token[0] != ')':
-                self.errors.append(f"Semantic Error: Expected ')' but found {self.current_token}")
+                # self.errors.append(f"Semantic Error: Expected ')' but found {self.current_token}")
+                pass
             else:
                 self.next_token()  # Move past ')'
                 
         else:
-            self.errors.append(f"Semantic Error: Unexpected token in expression: {self.current_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Unexpected token in expression: {self.current_token} at line {line_number}")
             self.next_token()  # Skip invalid token
         
         # Skip spaces after operand
@@ -3951,12 +4283,14 @@ class SemanticAnalyzer:
     def type_check_assignment(self, var_name, value_token):
         """Check if value can be assigned to variable of given type"""
         if var_name not in self.symbol_table:
-            self.errors.append(f"Semantic Error: Variable '{var_name}' not declared")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Variable '{var_name}' not declared at line {line_number}")
             return False
             
         # Check if the variable is a constant (perms)
         if self.symbol_table[var_name].get('is_const', False):
-            self.errors.append(f"Semantic Error: Cannot reassign constant '{var_name}' (declared as perms)")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Cannot reassign constant '{var_name}' (declared as perms) at line {line_number}")
             return False
             
         var_type = self.symbol_table[var_name]['type']
@@ -3967,32 +4301,38 @@ class SemanticAnalyzer:
                 if var_type == 'quant':
                     return True
                 elif var_type == 'dose':
-                    self.errors.append(f"Semantic Error: Cannot assign float to dose variable '{var_name}'")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Cannot assign float to dose variable '{var_name}' at line {line_number}")
                     return False
                 else:
-                    self.errors.append(f"Semantic Error: Cannot assign number to {var_type} variable '{var_name}'")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Cannot assign number to {var_type} variable '{var_name}' at line {line_number}")
                     return False
             else:  # Integer value
                 if var_type in ['dose', 'quant']:
                     return True
                 else:
-                    self.errors.append(f"Semantic Error: Cannot assign number to {var_type} variable '{var_name}'")
+                    line_number = self.get_current_line_number()
+                    self.errors.append(f"Semantic Error: Cannot assign number to {var_type} variable '{var_name}' at line {line_number}")
                     return False
         elif value_token[1] == 'string literal':
             if var_type == 'seq':
                 return True
             else:
-                self.errors.append(f"Semantic Error: Cannot assign string to {var_type} variable '{var_name}'")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Cannot assign string to {var_type} variable '{var_name}' at line {line_number}")
                 return False
         elif value_token[0] in ['dom', 'rec']:
             if var_type == 'allele':
                 return True
             else:
-                self.errors.append(f"Semantic Error: Cannot assign boolean to {var_type} variable '{var_name}'")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Cannot assign boolean to {var_type} variable '{var_name}' at line {line_number}")
                 return False
         elif value_token[1] == 'Identifier':
             if value_token[0] not in self.symbol_table:
-                self.errors.append(f"Semantic Error: Variable '{value_token[0]}' not declared")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Variable '{value_token[0]}' not declared at line {line_number}")
                 return False
                 
             value_type = self.symbol_table[value_token[0]]['type']
@@ -4003,10 +4343,12 @@ class SemanticAnalyzer:
                 # Allow implicit conversion from dose to quant
                 return True
             else:
-                self.errors.append(f"Semantic Error: Cannot assign {value_type} value to {var_type} variable '{var_name}'")
+                line_number = self.get_current_line_number()
+                self.errors.append(f"Semantic Error: Cannot assign {value_type} value to {var_type} variable '{var_name}' at line {line_number}")
                 return False
         else:
-            self.errors.append(f"Semantic Error: Invalid value token: {value_token}")
+            line_number = self.get_current_line_number()
+            self.errors.append(f"Semantic Error: Invalid value token: {value_token} at line {line_number}")
             return False
             
     def skip_to_end_of_block(self):
@@ -4041,7 +4383,7 @@ class SemanticAnalyzer:
         self.symbol_table = self.global_symbol_table
 
 
-def generate_symtab(parsed_tokens):
+def generate_symtab(parsed_tokens): 
     """Create a symbol table from parsed tokens"""
     analyzer = SemanticAnalyzer(parsed_tokens)
     analyzer.parse()
@@ -4202,102 +4544,11 @@ def can_convert_between_types(from_type, to_type):
     
     return False
 
+
 def parseSemantic(tokens, semantic_panel):
     
     # Clear previous output
     semantic_panel.delete("1.0", tk.END)
-    
-    # Helper functions for line handling
-    def get_line_number(tokens, index):
-        """
-        Determine the line number for a token at the given index by counting newlines.
-        
-        Args:
-            tokens: The list of tokens
-            index: The index of the token to find the line number for
-        
-        Returns:
-            The line number (1-based)
-        """
-        if index < 0 or index >= len(tokens):
-            return -1  
-        
-        line_number = 1
-        for i in range(index):
-            if tokens[i][1] == "newline":
-                line_number += 1
-            # We don't count newlines inside multiline comments anymore
-            # because the lexer appears to insert separate newline tokens
-        
-        return line_number
-
-    def find_matching_line(tokens, start_idx, display_lines, get_line_number):
-        # Handle the EOF case (when start_idx is at or past the end of tokens)
-        if start_idx >= len(tokens):
-            print("DEBUG SEMANTIC: AT EOF")
-            
-            # Try to find the last non-empty line in the file
-            if display_lines:
-                # Sort by line number and find the last non-empty line
-                sorted_lines = sorted(display_lines, key=lambda line: line["line_number"])
-                last_line = sorted_lines[-1]  # Default to absolute last line
-                
-                # Try to find the line with actual code, not just whitespace
-                for line in reversed(sorted_lines):
-                    non_space_tokens = [t for t in line["tokens"] if t[1] != "space"]
-                    if non_space_tokens:
-                        last_line = line
-                        break
-                        
-                line_number = last_line["line_number"]
-                line_tokens = last_line["tokens"]
-                # Include the line's text in the error message to help users find where the error is
-                line_text = "End of file after: " + ' '.join([t[0] for t in line_tokens if t[1] != "space"])
-                line_index = start_idx
-                return (line_number, line_tokens, line_text, line_index)
-            else:
-                # If no lines in display_lines, use default
-                return (0, [], "End of tokens", start_idx)
-        
-        # Normal case - we have a valid token
-        current_token = (start_idx, tokens[start_idx])
-        print(f"DEBUG SEMANTIC: CURRENT TOKEN: {current_token}")
-        
-        # Find matching line by looking for the exact token at exact index
-        matching_line = None
-        for line in display_lines:
-            if current_token[1] in [t for t in line["tokens"]]:
-                if "start_idx" in line:
-                    # If the line already tracks its starting index in the global tokens list
-                    start_of_line = line["start_idx"]
-                    end_of_line = start_of_line + len(line["tokens"])
-                    if start_of_line <= current_token[0] < end_of_line:
-                        matching_line = line
-                        print(f"DEBUG SEMANTIC: FOUND CURRENT MATCH: {matching_line}")
-                        break
-                else:
-                    # Alternative approach for lines without start_idx
-                    for i in range(len(tokens) - len(line["tokens"]) + 1):
-                        if all(tokens[i+j] == line["tokens"][j] for j in range(len(line["tokens"]))):
-                            if i <= current_token[0] < i + len(line["tokens"]):
-                                matching_line = line
-                                print(f"DEBUG SEMANTIC: FOUND CURRENT MATCH: {matching_line}")
-                                break
-                    if matching_line:
-                        break
-
-        if matching_line:
-            line_number = matching_line["line_number"]
-            line_tokens = matching_line["tokens"]
-            line_index = current_token[0]  # Use the exact index
-            line_text = ' '.join([t[0] for t in line_tokens if t[1] != "space"])
-        else:
-            line_number = get_line_number(tokens, start_idx)
-            line_tokens = []
-            line_text = ""
-            line_index = start_idx
-        
-        return (line_number, line_tokens, line_text, line_index)
     
     # Create a semantic analyzer instance
     analyzer = SemanticAnalyzer(tokens)
