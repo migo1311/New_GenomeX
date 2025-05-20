@@ -169,10 +169,11 @@ def parseSyntax(tokens, output_text):
         return True, token_idx, number_sign
     
     def display_error(line_number, line_text, error_message):
-        if line_number not in reported_error_lines:
+        if line_number not in reported_error_lines and not hasattr(display_error, 'error_displayed'):
             output_text.insert(tk.END, f"Syntax Error at line {line_number}: {error_message}\n")
             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
             reported_error_lines.add(line_number)
+            display_error.error_displayed = True
             return True
         return False
 
@@ -652,7 +653,7 @@ def parseSyntax(tokens, output_text):
                     if new_idx is None:
                         print("[main_function] Error in main function body statements")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected express, if, prod, Identifier, for, while, func, contig main function but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}\n")
+                        output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid statements in main function but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}\n")
                         output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                         return False, None
                         
@@ -666,7 +667,7 @@ def parseSyntax(tokens, output_text):
                         if not check_statements:
                             print("[main_function] Error: No statements found in main function")
                             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected express, if, prod, Identifier, for, while, func, or contig in main function but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}\n")
+                            output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid statements in main function but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}\n")
                             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
                             return False, None
                             
@@ -1382,9 +1383,9 @@ def parseSyntax(tokens, output_text):
             if not is_token(tokens, start_idx, '('):
                 print(f"Error: Expected '(' at index {start_idx}")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected an open parenthesis in express statement but found {tokens[start_idx][0]}\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                return False, None
+                if display_error(line_number, line_text, f"Expected '(' in express statement but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    return False, None
+                
             start_idx += 1  
             start_idx = skip_spaces(tokens, start_idx)
 
@@ -1395,9 +1396,8 @@ def parseSyntax(tokens, output_text):
                     is_token(tokens, start_idx, 'seq') or tokens[start_idx][0] in {'(', '!', '+', '-'} or 
                     tokens[start_idx][1] == 'string literal'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid arithmetic value but found {tokens[start_idx]}\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                return False, None
+                if display_error(line_number, line_text, f"Expected valid arithmetic value but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    return False, None
 
             is_valid, new_idx = express.express_value(tokens, start_idx)
             if not is_valid:
@@ -1416,9 +1416,8 @@ def parseSyntax(tokens, output_text):
                 # Check for valid array index
                 if not (start_idx < len(tokens) and tokens[start_idx][1] in ["Identifier", "numlit"]):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected Identifier or numlit found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}\n")
-                    output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                    return False, None
+                    if display_error(line_number, line_text, f"Expected Identifier or numlit but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        return False, None
                 
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
@@ -3338,11 +3337,9 @@ def parseSyntax(tokens, output_text):
             is_valid, new_idx = arithmetic.arithmetic_sequence_tail(tokens, start_idx)
             if not is_valid:
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected valid arithmetic value but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n")
-                output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                return False, None
+                if display_error(line_number, line_text, f"Expected valid arithmetic value but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    return False, None
                 
-            
             return True, new_idx
 
         @staticmethod
