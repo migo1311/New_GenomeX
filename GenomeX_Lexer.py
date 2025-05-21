@@ -85,6 +85,7 @@ def parseLexer(input_stream):
     underscore = {'_'}
 
     #DELIMITERS
+    delim_quote = ascii
     delim_arith = {'(', ' ', '^', } 
     delim_equal = {' ', '{', '(', '"'}
     delim_gen = {' ', ';' } 
@@ -104,8 +105,8 @@ def parseLexer(input_stream):
     close_parenthesis_delim =  {')', ' ', '\n', '{', '}', '^', '+', '-', '/', '*', '%', '#', ';', ':'}
     open_braces_delim = {' ', '\\', "{"} 
     close_braces_delim = {' ', '\n', '#', "{", ",", ";", '}'}
-    open_bracket_delim =  value
-    close_bracket_delim = {' ', '=', '[', ',', ';'}
+    open_bracket_delim =  {' ', '\n', '\t', ':'} | valchar
+    close_bracket_delim = {' ', '=', '[', ',', ';', ')'}
     delim_num = { '*', '/', '%', '<', '>', '=', ' ', '#', ')', '}', '&', '|', ";", "]", ",", ':'}
     delim_comment = {' ', '\n', ';', '}'}
     comma_delim = {' ', '\n', '\t'} | valchar
@@ -130,18 +131,18 @@ def parseLexer(input_stream):
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
                 break  # End of input stream
 
-        if token =='\n' and state < 424:
-            if found_error and lexeme:  # If in error state and lexeme exists
-                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
-                lexeme = lookahead_char  # Reset lexeme to avoid appending invalid values
-                state = 0  # Reset state to recover
+        # if token =='\n' and state < 424:
+        #     if found_error and lexeme:  # If in error state and lexeme exists
+        #         display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+        #         lexeme = lookahead_char  # Reset lexeme to avoid appending invalid values
+        #         state = 0  # Reset state to recover
 
-            if token == '\n':
-                tokens.append(("\\n", "newline"))
-                line_number += 1
-            lexeme = lookahead_char  # Reset lexeme after delimiter processing
-            state = 0  # Reset state for next token
-            continue  # Skip further processing for delimiters
+        #     if token == '\n':
+        #         tokens.append(("\\n", "newline"))
+        #         line_number += 1
+        #     lexeme = lookahead_char  # Reset lexeme after delimiter processing
+        #     state = 0  # Reset state for next token
+        #     continue  # Skip further processing for delimiters
 
         try:
             # print(f"lookahead_char before {lookahead_char}")
@@ -160,6 +161,10 @@ def parseLexer(input_stream):
                 tokens.append(("\\t", "tab"))
                 lexeme = lookahead_char
                 state = 0  # Reset state for next token
+            elif token == "\n":
+                tokens.append((" ", "newline"))
+                lexeme = lookahead_char
+                state = 0  # Reset state for next token
             #TEMP SOLUTION
             elif token == ",":
                 if lookahead_char in comma_delim or lookahead_char is None or lookahead_char == "\n":
@@ -174,11 +179,6 @@ def parseLexer(input_stream):
                     # Reset lexeme and state to process the rest of the input
                     lexeme = lookahead_char
                     state = 0  # Reset to initial state to continue parsing
-            #TEMP SOLUTION2
-            # elif token == "[":
-            #     tokens.append((token, token))
-            #     lexeme = lookahead_char  # Reset lexeme after delimiter processing
-            #     state = 0  # Reset state for next token
 
             #:
             elif token == ':':
@@ -817,9 +817,18 @@ def parseLexer(input_stream):
                     state = 0
                     
             elif token == '"':
-                state = 219
-                lexeme = token 
+                if lookahead_char in delim_quote or lookahead_char is None or lookahead_char == "\n":
+                    state = 219
+                    lexeme = token 
+                else:
+                    print("ERROR IN STATE 219")
+                    found_error = True
+                    display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                    lexeme = lookahead_char
+                    state = 0
+                    
             
+
             #NUMLIT
             elif token in allval or token == "^":  # Check for numeric values or negation symbol
                 if token == "^":
@@ -1457,16 +1466,12 @@ def parseLexer(input_stream):
                     state = 0
             elif token == 's':
                 state = 48
-                if lookahead_char is None or lookahead_char == "\n":
+                if lookahead_char is None or lookahead_char == "\n" or lookahead_char not in ["e"]:
                     found_error = True
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
                     lexeme = lookahead_char
                     state = 0
-                elif lookahead_char is not ["e"]:
-                    found_error = True
-                    display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
-                    lexeme = lookahead_char
-                    state = 0
+
             else:
                 print("WRONG IN STATE 29")
                  
@@ -3598,6 +3603,13 @@ def parseLexer(input_stream):
                 state = 219  # Stay in state 219 to continue processing ASCII characters
             elif lookahead_char == '"':
                 state = 220  # Transition to the next state when a double quote is seen
+            elif lookahead_char not in ascii or lookahead_char is not '"' or lookahead_char is not '\n':
+                
+                display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
+                found_error = True
+                lexeme = lookahead_char
+                state = 0
+
             else:
                 print(f"ERROR IN STATE 219: Unexpected character {lookahead_char}")
                  
@@ -3673,6 +3685,7 @@ def parseLexer(input_stream):
                 state = 231  # End state for string literal processing
                 tokens.append((lexeme, "numlit"))
                 lexeme = lookahead_char  # Reset lexeme for next token
+                state = 0
             elif lookahead_char in allval:
                 state = 232
             else:
@@ -3692,6 +3705,7 @@ def parseLexer(input_stream):
                 state = 233  # End state for string literal processing
                 tokens.append((lexeme, "numlit"))
                 lexeme = lookahead_char  # Reset lexeme for next token
+                state = 0
             elif lookahead_char in allval:
                 state = 234
             else:
@@ -3710,7 +3724,8 @@ def parseLexer(input_stream):
                 print("Passed state 235")      
                 state = 235  # End state for string literal processing
                 tokens.append((lexeme, "numlit"))
-                lexeme = lookahead_char  # Reset lexeme for next token
+                lexeme = lookahead_char
+                state = 0 # Reset lexeme for next token
             elif lookahead_char in allval:
                 state = 236
             else:
@@ -3729,7 +3744,8 @@ def parseLexer(input_stream):
                 print("Passed state 237")      
                 state = 237  # End state for string literal processing
                 tokens.append((lexeme, "numlit"))
-                lexeme = lookahead_char  # Reset lexeme for next token
+                lexeme = lookahead_char
+                state = 0 # Reset lexeme for next token
             elif lookahead_char in allval:
                 state = 238
             else:
@@ -3748,7 +3764,8 @@ def parseLexer(input_stream):
                 print("Passed state 239")      
                 state = 239  # End state for string literal processing
                 tokens.append((lexeme, "numlit"))
-                lexeme = lookahead_char  # Reset lexeme for next token
+                lexeme = lookahead_char
+                state = 0 # Reset lexeme for next token
             elif lookahead_char in allval:
                 state = 240
             else:
@@ -3767,8 +3784,8 @@ def parseLexer(input_stream):
                 print("Passed state 241")      
                 state = 241  # End state for string literal processing
                 tokens.append((lexeme, "numlit"))
-                lexeme = lookahead_char  # Reset lexeme for next token
-                state = 0
+                lexeme = lookahead_char
+                state = 0 # Reset lexeme for next token
             else:
                 print(f"ERROR IN STATE 229: Unexpected character {lookahead_char}")
                  
@@ -4261,7 +4278,7 @@ def parseLexer(input_stream):
                 state = 284  # End state for string literal processing
                 tokens.append((lexeme, "numlit"))
                 lexeme = lookahead_char  # Reset lexeme for next token
-                state = 0
+                state = 0   
             elif lookahead_char in allval:
                 state = 285
             else:
