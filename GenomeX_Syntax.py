@@ -723,7 +723,7 @@ def parseSyntax(tokens, output_text):
                 is_valid, new_idx = conditional.condition_value(tokens, start_idx)
                 if not is_valid:
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected literals or Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected 'dom', 'rec', 'numlit', 'string literal' or Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                     print(f"Error: Invalid first condition_value ")
                     
@@ -787,7 +787,7 @@ def parseSyntax(tokens, output_text):
                 if not is_valid:
                     print(f"Error: Invalid second condition_value ")
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected literals, or Identifiers , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected 'dom', 'rec', 'string literal', 'numlit' or Identifiers , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                      return False, None
                     
                 
@@ -3828,6 +3828,7 @@ def parseSyntax(tokens, output_text):
             print("No array access, returning original identifier")
             return True,  start_idx
 
+        
         @staticmethod
         def express_array_value(tokens, start_idx, dimension=0):
             print(f"<express_array_value> dimension={dimension}")
@@ -3843,75 +3844,34 @@ def parseSyntax(tokens, output_text):
             end_index = None
             step_value = None
             has_slice = False
+            found_content = False  # Track if we found at least one numlit or Identifier
 
             # Special case: Check for a slice that starts with ':' or '::' directly
             if start_idx < len(tokens) and tokens[start_idx][0] in (':', '::'):
                 has_slice = True
                 
-                # Handle the case where the token is '::'
-                if tokens[start_idx][0] == '::':
-                    print("Found '::' token for start of slice with step")
-                    start_idx += 1  # Skip the '::' token
-                    start_idx = skip_spaces(tokens, start_idx)
-                    
-                    # Parse step value if present
-                    if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
-                        step_value = tokens[start_idx][0]
-                        print(f"Found step value: {step_value}")
-                        start_idx += 1
-                        start_idx = skip_spaces(tokens, start_idx)
-                    else:
-                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected 'numlit' or 'Identifier' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                            return False, None
+                print("Found '::' token for start of slice with step")
+                start_idx += 1  # Skip the '::' token
+                start_idx = skip_spaces(tokens, start_idx)
                 
-                # Handle the case where the token is ':'
-                # else:
-                #     start_idx += 1  # Skip the ':' token
-                #     start_idx = skip_spaces(tokens, start_idx)
-                    
-                #     # Parse end index if present
-                #     if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
-                #         end_index = tokens[start_idx][0]
-                #         print(f"Found end index: {end_index}")
-                #         start_idx += 1
-                #         start_idx = skip_spaces(tokens, start_idx)
-                    
-                #     # Check if the next token is another colon (for step)
-                #     if start_idx < len(tokens) and tokens[start_idx][0] == ':':
-                #         start_idx += 1
-                #         start_idx = skip_spaces(tokens, start_idx)
-                        
-                #         # Parse step value if present
-                #         if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
-                #             step_value = tokens[start_idx][0]
-                #             print(f"Found step value: {step_value}")
-                #             start_idx += 1
-                #             start_idx = skip_spaces(tokens, start_idx)
-                #     else:
-                #     # Parse end index if present
-                #         if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
-                #             end_index = tokens[start_idx][0]
-                #             print(f"Found end index: {end_index}")
-                #             start_idx += 1
-                #             start_idx = skip_spaces(tokens, start_idx)
-
-                #             # Check for second colon for step
-                #             if start_idx < len(tokens) and tokens[start_idx][0] == ':':
-                #                 start_idx += 1
-                #                 start_idx = skip_spaces(tokens, start_idx)
-
-                #                 # Parse step value if present
-                #                 if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
-                #                     step_value = tokens[start_idx][0]
-                #                     print(f"Found step value: {step_value}")
-                #                     start_idx += 1
-                #                     start_idx = skip_spaces(tokens, start_idx)
+                # Parse step value if present
+                if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
+                    step_value = tokens[start_idx][0]
+                    found_content = True  # Mark that we found content
+                    print(f"Found step value: {step_value}")
+                    start_idx += 1
+                    start_idx = skip_spaces(tokens, start_idx)
+                else:
+                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                    if display_error(line_number, line_text, f"Expected 'numlit' or 'Identifier' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        return False, None
+                
             else:
                 # Standard case: starts with an index or is empty
                 # Parse start index (could be empty)
                 if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
                     start_index = tokens[start_idx][0]
+                    found_content = True  # Mark that we found content
                     print(f"Found start index: {start_index}")
                     start_idx += 1
                     start_idx = skip_spaces(tokens, start_idx)
@@ -3925,6 +3885,7 @@ def parseSyntax(tokens, output_text):
                     # Parse end index
                     if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
                         end_index = tokens[start_idx][0]
+                        found_content = True  # Mark that we found content
                         print(f"Found end index: {end_index}")
                         start_idx += 1
                         start_idx = skip_spaces(tokens, start_idx)
@@ -3936,9 +3897,17 @@ def parseSyntax(tokens, output_text):
 
                         if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
                             step_value = tokens[start_idx][0]
+                            found_content = True  # Mark that we found content
                             print(f"Found step value: {step_value}")
                             start_idx += 1
                             start_idx = skip_spaces(tokens, start_idx)
+
+            # Check if we found at least one numlit or Identifier
+            if not found_content:
+                print("Error: Array access requires at least one 'numlit' or 'Identifier'")
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                if display_error(line_number, line_text, f"Expected ':', '::', 'numlit' or 'Identifier' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    return False, None
 
             # Check for closing bracket
             if start_idx >= len(tokens) or tokens[start_idx][0] != ']':
@@ -3949,8 +3918,6 @@ def parseSyntax(tokens, output_text):
 
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
-
-
 
             return True, start_idx
 
