@@ -321,7 +321,7 @@ def run_analysis():
         display_with_color(lexical_panel, "⚠️ Lexical Analysis: ", "warning")
         display_with_color(lexical_panel, "Errors found\n", "output")
         # Switch to lexical tab to show the error message
-        notebook.select(0)
+        notebook.select(0)  
     elif not tokens:
         # Only show "No tokens found" message if there are no errors
         display_with_color(lexical_panel, "No tokens found.\n", "warning")

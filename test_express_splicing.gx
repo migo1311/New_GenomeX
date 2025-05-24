@@ -1,0 +1,7 @@
+act gene(){
+    _L clust dose Arr[3] = {1, 2, 3};
+    # This should be valid - using negative integer
+    express(Arr[: ^1]);
+    # This should cause a semantic error - using negative float
+    express(Arr[: ^1.1]);
+} 

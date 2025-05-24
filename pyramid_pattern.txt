@@ -1,0 +1,41 @@
+_L perms dose height = 5
+_L perms dose i = 0
+_L perms dose j = 0
+_L perms dose spaces = ""
+_L perms dose numbers = ""
+
+# Print number pyramid
+for i = 1 to height
+    # Create spaces string
+    spaces = ""
+    for j = 1 to height - i
+        spaces = spaces + " "
+    end
+
+    # Create numbers string
+    numbers = ""
+    for j = 1 to i
+        numbers = numbers + i
+    end
+
+    express spaces + numbers
+end
+
+express "Inverted pyramid:"
+
+# Print inverted pyramid
+for i = height to 1 step -1
+    # Create spaces string
+    spaces = ""
+    for j = 1 to height - i
+        spaces = spaces + " "
+    end
+
+    # Create numbers string
+    numbers = ""
+    for j = 1 to i
+        numbers = numbers + i
+    end
+
+    express spaces + numbers
+end 

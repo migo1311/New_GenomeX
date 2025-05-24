@@ -1,0 +1,42 @@
+act gene() {
+    _L dose Limit, Count, First, Second, Next;
+    _L dose A, B, Temp;
+
+    Limit = stimuli("How many Fibonacci terms do you want? ");
+    
+    First = 0;
+    Second = 1;
+    Count = 0;
+    express("Fibonacci in ascending order:");
+    while (Count < Limit) {
+        express(seq(First));
+        Next = First + Second;
+        First = Second;
+        Second = Next;
+        Count = Count + 1;
+    }
+
+    // Calculate up to ALimit-1 Fibonacci numbers
+    // This gives us the two values before the last value in the sequence
+    A = 0;
+    B = 1;
+    Count = 2; // Start from 2 since we already have the first two numbers
+
+    // We need to find the Limit-th and (Limit-1)th Fibonacci numbers
+    while (Count < Limit) {
+        Temp = A + B;
+        A = B;
+        B = Temp;
+        Count = Count + 1;
+    }
+
+    express("Fibonacci in descending order:");
+    Count = 0;
+    while (Count < Limit) {
+        express(seq(B));
+        Temp = B - A;
+        B = A;
+        A = Temp;
+        Count = Count + 1;
+    }
+} 

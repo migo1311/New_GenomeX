@@ -1,0 +1,2289 @@
+Created by PLY version 3.11 (http://www.dabeaz.com/ply)
+
+Grammar
+
+Rule 0     S' -> program
+Rule 1     express_statement_error -> EXPRESS LPAREN expression RPAREN
+Rule 2     program -> global_declarations
+Rule 3     program -> global_declarations main_function
+Rule 4     program -> main_function
+Rule 5     global_declarations -> global_declaration
+Rule 6     global_declarations -> global_declarations global_declaration
+Rule 7     global_declaration -> global_variable_declaration
+Rule 8     global_declaration -> global_variable_declaration_error
+Rule 9     main_function -> GENE LPAREN RPAREN LBRACE statements RBRACE
+Rule 10    main_function -> ACT GENE LPAREN RPAREN LBRACE statements RBRACE
+Rule 11    statements -> statement
+Rule 12    statements -> statements statement
+Rule 13    statements -> COMMENT
+Rule 14    statements -> statements COMMENT
+Rule 15    statements -> express_statement_error
+Rule 16    statements -> statements express_statement_error
+Rule 17    statements -> variable_declaration_error
+Rule 18    statements -> statements variable_declaration_error
+Rule 19    statements -> <empty>
+Rule 20    statement -> variable_declaration
+Rule 21    statement -> express_statement
+Rule 22    statement -> COMMENT
+Rule 23    express_statement -> EXPRESS LPAREN expression RPAREN SEMICOLON
+Rule 24    variable_declaration_error -> LOCAL DOSE SEMICOLON
+Rule 25    variable_declaration_error -> LOCAL QUANT SEMICOLON
+Rule 26    variable_declaration_error -> LOCAL SEQ SEMICOLON
+Rule 27    variable_declaration_error -> LOCAL DOSE EQUALS expression SEMICOLON
+Rule 28    variable_declaration_error -> LOCAL QUANT EQUALS expression SEMICOLON
+Rule 29    variable_declaration_error -> LOCAL SEQ EQUALS expression SEMICOLON
+Rule 30    variable_declaration_error -> LOCAL IDENTIFIER SEMICOLON
+Rule 31    variable_declaration_error -> LOCAL IDENTIFIER EQUALS expression SEMICOLON
+Rule 32    variable_declaration_error -> DOSE IDENTIFIER SEMICOLON
+Rule 33    variable_declaration_error -> QUANT IDENTIFIER SEMICOLON
+Rule 34    variable_declaration_error -> SEQ IDENTIFIER SEMICOLON
+Rule 35    variable_declaration_error -> LOCAL DOSE IDENTIFIER
+Rule 36    variable_declaration_error -> LOCAL QUANT IDENTIFIER
+Rule 37    variable_declaration_error -> LOCAL SEQ IDENTIFIER
+Rule 38    variable_declaration_error -> GLOBAL DOSE SEMICOLON
+Rule 39    variable_declaration_error -> GLOBAL QUANT SEMICOLON
+Rule 40    variable_declaration_error -> GLOBAL SEQ SEMICOLON
+Rule 41    variable_declaration_error -> GLOBAL DOSE EQUALS expression SEMICOLON
+Rule 42    variable_declaration_error -> GLOBAL QUANT EQUALS expression SEMICOLON
+Rule 43    variable_declaration_error -> GLOBAL SEQ EQUALS expression SEMICOLON
+Rule 44    variable_declaration_error -> GLOBAL IDENTIFIER SEMICOLON
+Rule 45    variable_declaration_error -> GLOBAL IDENTIFIER EQUALS expression SEMICOLON
+Rule 46    variable_declaration_error -> GLOBAL DOSE IDENTIFIER
+Rule 47    variable_declaration_error -> GLOBAL QUANT IDENTIFIER
+Rule 48    variable_declaration_error -> GLOBAL SEQ IDENTIFIER
+Rule 49    global_variable_declaration_error -> DOSE IDENTIFIER SEMICOLON
+Rule 50    global_variable_declaration_error -> QUANT IDENTIFIER SEMICOLON
+Rule 51    global_variable_declaration_error -> SEQ IDENTIFIER SEMICOLON
+Rule 52    global_variable_declaration -> GLOBAL DOSE IDENTIFIER EQUALS expression SEMICOLON
+Rule 53    global_variable_declaration -> GLOBAL DOSE IDENTIFIER SEMICOLON
+Rule 54    global_variable_declaration -> GLOBAL QUANT IDENTIFIER EQUALS expression SEMICOLON
+Rule 55    global_variable_declaration -> GLOBAL QUANT IDENTIFIER SEMICOLON
+Rule 56    global_variable_declaration -> GLOBAL SEQ IDENTIFIER EQUALS expression SEMICOLON
+Rule 57    global_variable_declaration -> GLOBAL SEQ IDENTIFIER SEMICOLON
+Rule 58    variable_declaration -> LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON
+Rule 59    variable_declaration -> LOCAL DOSE IDENTIFIER SEMICOLON
+Rule 60    variable_declaration -> LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON
+Rule 61    variable_declaration -> LOCAL QUANT IDENTIFIER SEMICOLON
+Rule 62    variable_declaration -> LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON
+Rule 63    variable_declaration -> LOCAL SEQ IDENTIFIER SEMICOLON
+Rule 64    expression -> IDENTIFIER
+Rule 65    expression -> NUMLIT
+Rule 66    expression -> QUANTLITERAL
+Rule 67    expression -> MINUS NUMLIT
+Rule 68    expression -> expression PLUS expression
+Rule 69    expression -> expression MINUS expression
+Rule 70    expression -> LPAREN expression RPAREN
+
+Terminals, with rules where they appear
+
+ACT                  : 10
+COMMENT              : 13 14 22
+DOSE                 : 24 27 32 35 38 41 46 49 52 53 58 59
+EQUALS               : 27 28 29 31 41 42 43 45 52 54 56 58 60 62
+EXPRESS              : 1 23
+GENE                 : 9 10
+GLOBAL               : 38 39 40 41 42 43 44 45 46 47 48 52 53 54 55 56 57
+IDENTIFIER           : 30 31 32 33 34 35 36 37 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64
+LBRACE               : 9 10
+LOCAL                : 24 25 26 27 28 29 30 31 35 36 37 58 59 60 61 62 63
+LPAREN               : 1 9 10 23 70
+MINUS                : 67 69
+NUMLIT               : 65 67
+PLUS                 : 68
+QUANT                : 25 28 33 36 39 42 47 50 54 55 60 61
+QUANTLITERAL         : 66
+RBRACE               : 9 10
+RPAREN               : 1 9 10 23 70
+SEMICOLON            : 23 24 25 26 27 28 29 30 31 32 33 34 38 39 40 41 42 43 44 45 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63
+SEQ                  : 26 29 34 37 40 43 48 51 56 57 62 63
+error                : 
+
+Nonterminals, with rules where they appear
+
+express_statement    : 21
+express_statement_error : 15 16
+expression           : 1 23 27 28 29 31 41 42 43 45 52 54 56 58 60 62 68 68 69 69 70
+global_declaration   : 5 6
+global_declarations  : 2 3 6
+global_variable_declaration : 7
+global_variable_declaration_error : 8
+main_function        : 3 4
+program              : 0
+statement            : 11 12
+statements           : 9 10 12 14 16 18
+variable_declaration : 20
+variable_declaration_error : 17 18
+
+Parsing method: LALR
+
+state 0
+
+    (0) S' -> . program
+    (2) program -> . global_declarations
+    (3) program -> . global_declarations main_function
+    (4) program -> . main_function
+    (5) global_declarations -> . global_declaration
+    (6) global_declarations -> . global_declarations global_declaration
+    (9) main_function -> . GENE LPAREN RPAREN LBRACE statements RBRACE
+    (10) main_function -> . ACT GENE LPAREN RPAREN LBRACE statements RBRACE
+    (7) global_declaration -> . global_variable_declaration
+    (8) global_declaration -> . global_variable_declaration_error
+    (52) global_variable_declaration -> . GLOBAL DOSE IDENTIFIER EQUALS expression SEMICOLON
+    (53) global_variable_declaration -> . GLOBAL DOSE IDENTIFIER SEMICOLON
+    (54) global_variable_declaration -> . GLOBAL QUANT IDENTIFIER EQUALS expression SEMICOLON
+    (55) global_variable_declaration -> . GLOBAL QUANT IDENTIFIER SEMICOLON
+    (56) global_variable_declaration -> . GLOBAL SEQ IDENTIFIER EQUALS expression SEMICOLON
+    (57) global_variable_declaration -> . GLOBAL SEQ IDENTIFIER SEMICOLON
+    (49) global_variable_declaration_error -> . DOSE IDENTIFIER SEMICOLON
+    (50) global_variable_declaration_error -> . QUANT IDENTIFIER SEMICOLON
+    (51) global_variable_declaration_error -> . SEQ IDENTIFIER SEMICOLON
+
+    GENE            shift and go to state 5
+    ACT             shift and go to state 6
+    GLOBAL          shift and go to state 9
+    DOSE            shift and go to state 10
+    QUANT           shift and go to state 11
+    SEQ             shift and go to state 12
+
+    program                        shift and go to state 1
+    global_declarations            shift and go to state 2
+    main_function                  shift and go to state 3
+    global_declaration             shift and go to state 4
+    global_variable_declaration    shift and go to state 7
+    global_variable_declaration_error shift and go to state 8
+
+state 1
+
+    (0) S' -> program .
+
+
+
+state 2
+
+    (2) program -> global_declarations .
+    (3) program -> global_declarations . main_function
+    (6) global_declarations -> global_declarations . global_declaration
+    (9) main_function -> . GENE LPAREN RPAREN LBRACE statements RBRACE
+    (10) main_function -> . ACT GENE LPAREN RPAREN LBRACE statements RBRACE
+    (7) global_declaration -> . global_variable_declaration
+    (8) global_declaration -> . global_variable_declaration_error
+    (52) global_variable_declaration -> . GLOBAL DOSE IDENTIFIER EQUALS expression SEMICOLON
+    (53) global_variable_declaration -> . GLOBAL DOSE IDENTIFIER SEMICOLON
+    (54) global_variable_declaration -> . GLOBAL QUANT IDENTIFIER EQUALS expression SEMICOLON
+    (55) global_variable_declaration -> . GLOBAL QUANT IDENTIFIER SEMICOLON
+    (56) global_variable_declaration -> . GLOBAL SEQ IDENTIFIER EQUALS expression SEMICOLON
+    (57) global_variable_declaration -> . GLOBAL SEQ IDENTIFIER SEMICOLON
+    (49) global_variable_declaration_error -> . DOSE IDENTIFIER SEMICOLON
+    (50) global_variable_declaration_error -> . QUANT IDENTIFIER SEMICOLON
+    (51) global_variable_declaration_error -> . SEQ IDENTIFIER SEMICOLON
+
+    $end            reduce using rule 2 (program -> global_declarations .)
+    GENE            shift and go to state 5
+    ACT             shift and go to state 6
+    GLOBAL          shift and go to state 9
+    DOSE            shift and go to state 10
+    QUANT           shift and go to state 11
+    SEQ             shift and go to state 12
+
+    main_function                  shift and go to state 13
+    global_declaration             shift and go to state 14
+    global_variable_declaration    shift and go to state 7
+    global_variable_declaration_error shift and go to state 8
+
+state 3
+
+    (4) program -> main_function .
+
+    $end            reduce using rule 4 (program -> main_function .)
+
+
+state 4
+
+    (5) global_declarations -> global_declaration .
+
+    GENE            reduce using rule 5 (global_declarations -> global_declaration .)
+    ACT             reduce using rule 5 (global_declarations -> global_declaration .)
+    GLOBAL          reduce using rule 5 (global_declarations -> global_declaration .)
+    DOSE            reduce using rule 5 (global_declarations -> global_declaration .)
+    QUANT           reduce using rule 5 (global_declarations -> global_declaration .)
+    SEQ             reduce using rule 5 (global_declarations -> global_declaration .)
+    $end            reduce using rule 5 (global_declarations -> global_declaration .)
+
+
+state 5
+
+    (9) main_function -> GENE . LPAREN RPAREN LBRACE statements RBRACE
+
+    LPAREN          shift and go to state 15
+
+
+state 6
+
+    (10) main_function -> ACT . GENE LPAREN RPAREN LBRACE statements RBRACE
+
+    GENE            shift and go to state 16
+
+
+state 7
+
+    (7) global_declaration -> global_variable_declaration .
+
+    GENE            reduce using rule 7 (global_declaration -> global_variable_declaration .)
+    ACT             reduce using rule 7 (global_declaration -> global_variable_declaration .)
+    GLOBAL          reduce using rule 7 (global_declaration -> global_variable_declaration .)
+    DOSE            reduce using rule 7 (global_declaration -> global_variable_declaration .)
+    QUANT           reduce using rule 7 (global_declaration -> global_variable_declaration .)
+    SEQ             reduce using rule 7 (global_declaration -> global_variable_declaration .)
+    $end            reduce using rule 7 (global_declaration -> global_variable_declaration .)
+
+
+state 8
+
+    (8) global_declaration -> global_variable_declaration_error .
+
+    GENE            reduce using rule 8 (global_declaration -> global_variable_declaration_error .)
+    ACT             reduce using rule 8 (global_declaration -> global_variable_declaration_error .)
+    GLOBAL          reduce using rule 8 (global_declaration -> global_variable_declaration_error .)
+    DOSE            reduce using rule 8 (global_declaration -> global_variable_declaration_error .)
+    QUANT           reduce using rule 8 (global_declaration -> global_variable_declaration_error .)
+    SEQ             reduce using rule 8 (global_declaration -> global_variable_declaration_error .)
+    $end            reduce using rule 8 (global_declaration -> global_variable_declaration_error .)
+
+
+state 9
+
+    (52) global_variable_declaration -> GLOBAL . DOSE IDENTIFIER EQUALS expression SEMICOLON
+    (53) global_variable_declaration -> GLOBAL . DOSE IDENTIFIER SEMICOLON
+    (54) global_variable_declaration -> GLOBAL . QUANT IDENTIFIER EQUALS expression SEMICOLON
+    (55) global_variable_declaration -> GLOBAL . QUANT IDENTIFIER SEMICOLON
+    (56) global_variable_declaration -> GLOBAL . SEQ IDENTIFIER EQUALS expression SEMICOLON
+    (57) global_variable_declaration -> GLOBAL . SEQ IDENTIFIER SEMICOLON
+
+    DOSE            shift and go to state 17
+    QUANT           shift and go to state 18
+    SEQ             shift and go to state 19
+
+
+state 10
+
+    (49) global_variable_declaration_error -> DOSE . IDENTIFIER SEMICOLON
+
+    IDENTIFIER      shift and go to state 20
+
+
+state 11
+
+    (50) global_variable_declaration_error -> QUANT . IDENTIFIER SEMICOLON
+
+    IDENTIFIER      shift and go to state 21
+
+
+state 12
+
+    (51) global_variable_declaration_error -> SEQ . IDENTIFIER SEMICOLON
+
+    IDENTIFIER      shift and go to state 22
+
+
+state 13
+
+    (3) program -> global_declarations main_function .
+
+    $end            reduce using rule 3 (program -> global_declarations main_function .)
+
+
+state 14
+
+    (6) global_declarations -> global_declarations global_declaration .
+
+    GENE            reduce using rule 6 (global_declarations -> global_declarations global_declaration .)
+    ACT             reduce using rule 6 (global_declarations -> global_declarations global_declaration .)
+    GLOBAL          reduce using rule 6 (global_declarations -> global_declarations global_declaration .)
+    DOSE            reduce using rule 6 (global_declarations -> global_declarations global_declaration .)
+    QUANT           reduce using rule 6 (global_declarations -> global_declarations global_declaration .)
+    SEQ             reduce using rule 6 (global_declarations -> global_declarations global_declaration .)
+    $end            reduce using rule 6 (global_declarations -> global_declarations global_declaration .)
+
+
+state 15
+
+    (9) main_function -> GENE LPAREN . RPAREN LBRACE statements RBRACE
+
+    RPAREN          shift and go to state 23
+
+
+state 16
+
+    (10) main_function -> ACT GENE . LPAREN RPAREN LBRACE statements RBRACE
+
+    LPAREN          shift and go to state 24
+
+
+state 17
+
+    (52) global_variable_declaration -> GLOBAL DOSE . IDENTIFIER EQUALS expression SEMICOLON
+    (53) global_variable_declaration -> GLOBAL DOSE . IDENTIFIER SEMICOLON
+
+    IDENTIFIER      shift and go to state 25
+
+
+state 18
+
+    (54) global_variable_declaration -> GLOBAL QUANT . IDENTIFIER EQUALS expression SEMICOLON
+    (55) global_variable_declaration -> GLOBAL QUANT . IDENTIFIER SEMICOLON
+
+    IDENTIFIER      shift and go to state 26
+
+
+state 19
+
+    (56) global_variable_declaration -> GLOBAL SEQ . IDENTIFIER EQUALS expression SEMICOLON
+    (57) global_variable_declaration -> GLOBAL SEQ . IDENTIFIER SEMICOLON
+
+    IDENTIFIER      shift and go to state 27
+
+
+state 20
+
+    (49) global_variable_declaration_error -> DOSE IDENTIFIER . SEMICOLON
+
+    SEMICOLON       shift and go to state 28
+
+
+state 21
+
+    (50) global_variable_declaration_error -> QUANT IDENTIFIER . SEMICOLON
+
+    SEMICOLON       shift and go to state 29
+
+
+state 22
+
+    (51) global_variable_declaration_error -> SEQ IDENTIFIER . SEMICOLON
+
+    SEMICOLON       shift and go to state 30
+
+
+state 23
+
+    (9) main_function -> GENE LPAREN RPAREN . LBRACE statements RBRACE
+
+    LBRACE          shift and go to state 31
+
+
+state 24
+
+    (10) main_function -> ACT GENE LPAREN . RPAREN LBRACE statements RBRACE
+
+    RPAREN          shift and go to state 32
+
+
+state 25
+
+    (52) global_variable_declaration -> GLOBAL DOSE IDENTIFIER . EQUALS expression SEMICOLON
+    (53) global_variable_declaration -> GLOBAL DOSE IDENTIFIER . SEMICOLON
+
+    EQUALS          shift and go to state 33
+    SEMICOLON       shift and go to state 34
+
+
+state 26
+
+    (54) global_variable_declaration -> GLOBAL QUANT IDENTIFIER . EQUALS expression SEMICOLON
+    (55) global_variable_declaration -> GLOBAL QUANT IDENTIFIER . SEMICOLON
+
+    EQUALS          shift and go to state 35
+    SEMICOLON       shift and go to state 36
+
+
+state 27
+
+    (56) global_variable_declaration -> GLOBAL SEQ IDENTIFIER . EQUALS expression SEMICOLON
+    (57) global_variable_declaration -> GLOBAL SEQ IDENTIFIER . SEMICOLON
+
+    EQUALS          shift and go to state 37
+    SEMICOLON       shift and go to state 38
+
+
+state 28
+
+    (49) global_variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .
+
+    GENE            reduce using rule 49 (global_variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+    ACT             reduce using rule 49 (global_variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 49 (global_variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 49 (global_variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 49 (global_variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 49 (global_variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+    $end            reduce using rule 49 (global_variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+
+
+state 29
+
+    (50) global_variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .
+
+    GENE            reduce using rule 50 (global_variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+    ACT             reduce using rule 50 (global_variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 50 (global_variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 50 (global_variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 50 (global_variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 50 (global_variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+    $end            reduce using rule 50 (global_variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+
+
+state 30
+
+    (51) global_variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .
+
+    GENE            reduce using rule 51 (global_variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+    ACT             reduce using rule 51 (global_variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 51 (global_variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 51 (global_variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 51 (global_variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 51 (global_variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+    $end            reduce using rule 51 (global_variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+
+
+state 31
+
+    (9) main_function -> GENE LPAREN RPAREN LBRACE . statements RBRACE
+    (11) statements -> . statement
+    (12) statements -> . statements statement
+    (13) statements -> . COMMENT
+    (14) statements -> . statements COMMENT
+    (15) statements -> . express_statement_error
+    (16) statements -> . statements express_statement_error
+    (17) statements -> . variable_declaration_error
+    (18) statements -> . statements variable_declaration_error
+    (19) statements -> .
+    (20) statement -> . variable_declaration
+    (21) statement -> . express_statement
+    (22) statement -> . COMMENT
+    (1) express_statement_error -> . EXPRESS LPAREN expression RPAREN
+    (24) variable_declaration_error -> . LOCAL DOSE SEMICOLON
+    (25) variable_declaration_error -> . LOCAL QUANT SEMICOLON
+    (26) variable_declaration_error -> . LOCAL SEQ SEMICOLON
+    (27) variable_declaration_error -> . LOCAL DOSE EQUALS expression SEMICOLON
+    (28) variable_declaration_error -> . LOCAL QUANT EQUALS expression SEMICOLON
+    (29) variable_declaration_error -> . LOCAL SEQ EQUALS expression SEMICOLON
+    (30) variable_declaration_error -> . LOCAL IDENTIFIER SEMICOLON
+    (31) variable_declaration_error -> . LOCAL IDENTIFIER EQUALS expression SEMICOLON
+    (32) variable_declaration_error -> . DOSE IDENTIFIER SEMICOLON
+    (33) variable_declaration_error -> . QUANT IDENTIFIER SEMICOLON
+    (34) variable_declaration_error -> . SEQ IDENTIFIER SEMICOLON
+    (35) variable_declaration_error -> . LOCAL DOSE IDENTIFIER
+    (36) variable_declaration_error -> . LOCAL QUANT IDENTIFIER
+    (37) variable_declaration_error -> . LOCAL SEQ IDENTIFIER
+    (38) variable_declaration_error -> . GLOBAL DOSE SEMICOLON
+    (39) variable_declaration_error -> . GLOBAL QUANT SEMICOLON
+    (40) variable_declaration_error -> . GLOBAL SEQ SEMICOLON
+    (41) variable_declaration_error -> . GLOBAL DOSE EQUALS expression SEMICOLON
+    (42) variable_declaration_error -> . GLOBAL QUANT EQUALS expression SEMICOLON
+    (43) variable_declaration_error -> . GLOBAL SEQ EQUALS expression SEMICOLON
+    (44) variable_declaration_error -> . GLOBAL IDENTIFIER SEMICOLON
+    (45) variable_declaration_error -> . GLOBAL IDENTIFIER EQUALS expression SEMICOLON
+    (46) variable_declaration_error -> . GLOBAL DOSE IDENTIFIER
+    (47) variable_declaration_error -> . GLOBAL QUANT IDENTIFIER
+    (48) variable_declaration_error -> . GLOBAL SEQ IDENTIFIER
+    (58) variable_declaration -> . LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON
+    (59) variable_declaration -> . LOCAL DOSE IDENTIFIER SEMICOLON
+    (60) variable_declaration -> . LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON
+    (61) variable_declaration -> . LOCAL QUANT IDENTIFIER SEMICOLON
+    (62) variable_declaration -> . LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON
+    (63) variable_declaration -> . LOCAL SEQ IDENTIFIER SEMICOLON
+    (23) express_statement -> . EXPRESS LPAREN expression RPAREN SEMICOLON
+
+  ! shift/reduce conflict for COMMENT resolved as shift
+  ! shift/reduce conflict for EXPRESS resolved as shift
+  ! shift/reduce conflict for LOCAL resolved as shift
+  ! shift/reduce conflict for DOSE resolved as shift
+  ! shift/reduce conflict for QUANT resolved as shift
+  ! shift/reduce conflict for SEQ resolved as shift
+  ! shift/reduce conflict for GLOBAL resolved as shift
+    COMMENT         shift and go to state 41
+    RBRACE          reduce using rule 19 (statements -> .)
+    EXPRESS         shift and go to state 46
+    LOCAL           shift and go to state 47
+    DOSE            shift and go to state 48
+    QUANT           shift and go to state 49
+    SEQ             shift and go to state 50
+    GLOBAL          shift and go to state 51
+
+  ! COMMENT         [ reduce using rule 19 (statements -> .) ]
+  ! EXPRESS         [ reduce using rule 19 (statements -> .) ]
+  ! LOCAL           [ reduce using rule 19 (statements -> .) ]
+  ! DOSE            [ reduce using rule 19 (statements -> .) ]
+  ! QUANT           [ reduce using rule 19 (statements -> .) ]
+  ! SEQ             [ reduce using rule 19 (statements -> .) ]
+  ! GLOBAL          [ reduce using rule 19 (statements -> .) ]
+
+    statements                     shift and go to state 39
+    statement                      shift and go to state 40
+    express_statement_error        shift and go to state 42
+    variable_declaration_error     shift and go to state 43
+    variable_declaration           shift and go to state 44
+    express_statement              shift and go to state 45
+
+state 32
+
+    (10) main_function -> ACT GENE LPAREN RPAREN . LBRACE statements RBRACE
+
+    LBRACE          shift and go to state 52
+
+
+state 33
+
+    (52) global_variable_declaration -> GLOBAL DOSE IDENTIFIER EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 54
+
+state 34
+
+    (53) global_variable_declaration -> GLOBAL DOSE IDENTIFIER SEMICOLON .
+
+    GENE            reduce using rule 53 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER SEMICOLON .)
+    ACT             reduce using rule 53 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 53 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 53 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 53 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 53 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER SEMICOLON .)
+    $end            reduce using rule 53 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER SEMICOLON .)
+
+
+state 35
+
+    (54) global_variable_declaration -> GLOBAL QUANT IDENTIFIER EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 59
+
+state 36
+
+    (55) global_variable_declaration -> GLOBAL QUANT IDENTIFIER SEMICOLON .
+
+    GENE            reduce using rule 55 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER SEMICOLON .)
+    ACT             reduce using rule 55 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 55 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 55 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 55 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 55 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER SEMICOLON .)
+    $end            reduce using rule 55 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER SEMICOLON .)
+
+
+state 37
+
+    (56) global_variable_declaration -> GLOBAL SEQ IDENTIFIER EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 60
+
+state 38
+
+    (57) global_variable_declaration -> GLOBAL SEQ IDENTIFIER SEMICOLON .
+
+    GENE            reduce using rule 57 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER SEMICOLON .)
+    ACT             reduce using rule 57 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 57 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 57 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 57 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 57 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER SEMICOLON .)
+    $end            reduce using rule 57 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER SEMICOLON .)
+
+
+state 39
+
+    (9) main_function -> GENE LPAREN RPAREN LBRACE statements . RBRACE
+    (12) statements -> statements . statement
+    (14) statements -> statements . COMMENT
+    (16) statements -> statements . express_statement_error
+    (18) statements -> statements . variable_declaration_error
+    (20) statement -> . variable_declaration
+    (21) statement -> . express_statement
+    (22) statement -> . COMMENT
+    (1) express_statement_error -> . EXPRESS LPAREN expression RPAREN
+    (24) variable_declaration_error -> . LOCAL DOSE SEMICOLON
+    (25) variable_declaration_error -> . LOCAL QUANT SEMICOLON
+    (26) variable_declaration_error -> . LOCAL SEQ SEMICOLON
+    (27) variable_declaration_error -> . LOCAL DOSE EQUALS expression SEMICOLON
+    (28) variable_declaration_error -> . LOCAL QUANT EQUALS expression SEMICOLON
+    (29) variable_declaration_error -> . LOCAL SEQ EQUALS expression SEMICOLON
+    (30) variable_declaration_error -> . LOCAL IDENTIFIER SEMICOLON
+    (31) variable_declaration_error -> . LOCAL IDENTIFIER EQUALS expression SEMICOLON
+    (32) variable_declaration_error -> . DOSE IDENTIFIER SEMICOLON
+    (33) variable_declaration_error -> . QUANT IDENTIFIER SEMICOLON
+    (34) variable_declaration_error -> . SEQ IDENTIFIER SEMICOLON
+    (35) variable_declaration_error -> . LOCAL DOSE IDENTIFIER
+    (36) variable_declaration_error -> . LOCAL QUANT IDENTIFIER
+    (37) variable_declaration_error -> . LOCAL SEQ IDENTIFIER
+    (38) variable_declaration_error -> . GLOBAL DOSE SEMICOLON
+    (39) variable_declaration_error -> . GLOBAL QUANT SEMICOLON
+    (40) variable_declaration_error -> . GLOBAL SEQ SEMICOLON
+    (41) variable_declaration_error -> . GLOBAL DOSE EQUALS expression SEMICOLON
+    (42) variable_declaration_error -> . GLOBAL QUANT EQUALS expression SEMICOLON
+    (43) variable_declaration_error -> . GLOBAL SEQ EQUALS expression SEMICOLON
+    (44) variable_declaration_error -> . GLOBAL IDENTIFIER SEMICOLON
+    (45) variable_declaration_error -> . GLOBAL IDENTIFIER EQUALS expression SEMICOLON
+    (46) variable_declaration_error -> . GLOBAL DOSE IDENTIFIER
+    (47) variable_declaration_error -> . GLOBAL QUANT IDENTIFIER
+    (48) variable_declaration_error -> . GLOBAL SEQ IDENTIFIER
+    (58) variable_declaration -> . LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON
+    (59) variable_declaration -> . LOCAL DOSE IDENTIFIER SEMICOLON
+    (60) variable_declaration -> . LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON
+    (61) variable_declaration -> . LOCAL QUANT IDENTIFIER SEMICOLON
+    (62) variable_declaration -> . LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON
+    (63) variable_declaration -> . LOCAL SEQ IDENTIFIER SEMICOLON
+    (23) express_statement -> . EXPRESS LPAREN expression RPAREN SEMICOLON
+
+    RBRACE          shift and go to state 61
+    COMMENT         shift and go to state 63
+    EXPRESS         shift and go to state 46
+    LOCAL           shift and go to state 47
+    DOSE            shift and go to state 48
+    QUANT           shift and go to state 49
+    SEQ             shift and go to state 50
+    GLOBAL          shift and go to state 51
+
+    statement                      shift and go to state 62
+    express_statement_error        shift and go to state 64
+    variable_declaration_error     shift and go to state 65
+    variable_declaration           shift and go to state 44
+    express_statement              shift and go to state 45
+
+state 40
+
+    (11) statements -> statement .
+
+    RBRACE          reduce using rule 11 (statements -> statement .)
+    COMMENT         reduce using rule 11 (statements -> statement .)
+    EXPRESS         reduce using rule 11 (statements -> statement .)
+    LOCAL           reduce using rule 11 (statements -> statement .)
+    DOSE            reduce using rule 11 (statements -> statement .)
+    QUANT           reduce using rule 11 (statements -> statement .)
+    SEQ             reduce using rule 11 (statements -> statement .)
+    GLOBAL          reduce using rule 11 (statements -> statement .)
+
+
+state 41
+
+    (13) statements -> COMMENT .
+    (22) statement -> COMMENT .
+
+  ! reduce/reduce conflict for RBRACE resolved using rule 13 (statements -> COMMENT .)
+  ! reduce/reduce conflict for COMMENT resolved using rule 13 (statements -> COMMENT .)
+  ! reduce/reduce conflict for EXPRESS resolved using rule 13 (statements -> COMMENT .)
+  ! reduce/reduce conflict for LOCAL resolved using rule 13 (statements -> COMMENT .)
+  ! reduce/reduce conflict for DOSE resolved using rule 13 (statements -> COMMENT .)
+  ! reduce/reduce conflict for QUANT resolved using rule 13 (statements -> COMMENT .)
+  ! reduce/reduce conflict for SEQ resolved using rule 13 (statements -> COMMENT .)
+  ! reduce/reduce conflict for GLOBAL resolved using rule 13 (statements -> COMMENT .)
+    RBRACE          reduce using rule 13 (statements -> COMMENT .)
+    COMMENT         reduce using rule 13 (statements -> COMMENT .)
+    EXPRESS         reduce using rule 13 (statements -> COMMENT .)
+    LOCAL           reduce using rule 13 (statements -> COMMENT .)
+    DOSE            reduce using rule 13 (statements -> COMMENT .)
+    QUANT           reduce using rule 13 (statements -> COMMENT .)
+    SEQ             reduce using rule 13 (statements -> COMMENT .)
+    GLOBAL          reduce using rule 13 (statements -> COMMENT .)
+
+  ! RBRACE          [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! COMMENT         [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! EXPRESS         [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! LOCAL           [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! DOSE            [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! QUANT           [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! SEQ             [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! GLOBAL          [ reduce using rule 22 (statement -> COMMENT .) ]
+
+
+state 42
+
+    (15) statements -> express_statement_error .
+
+    RBRACE          reduce using rule 15 (statements -> express_statement_error .)
+    COMMENT         reduce using rule 15 (statements -> express_statement_error .)
+    EXPRESS         reduce using rule 15 (statements -> express_statement_error .)
+    LOCAL           reduce using rule 15 (statements -> express_statement_error .)
+    DOSE            reduce using rule 15 (statements -> express_statement_error .)
+    QUANT           reduce using rule 15 (statements -> express_statement_error .)
+    SEQ             reduce using rule 15 (statements -> express_statement_error .)
+    GLOBAL          reduce using rule 15 (statements -> express_statement_error .)
+
+
+state 43
+
+    (17) statements -> variable_declaration_error .
+
+    RBRACE          reduce using rule 17 (statements -> variable_declaration_error .)
+    COMMENT         reduce using rule 17 (statements -> variable_declaration_error .)
+    EXPRESS         reduce using rule 17 (statements -> variable_declaration_error .)
+    LOCAL           reduce using rule 17 (statements -> variable_declaration_error .)
+    DOSE            reduce using rule 17 (statements -> variable_declaration_error .)
+    QUANT           reduce using rule 17 (statements -> variable_declaration_error .)
+    SEQ             reduce using rule 17 (statements -> variable_declaration_error .)
+    GLOBAL          reduce using rule 17 (statements -> variable_declaration_error .)
+
+
+state 44
+
+    (20) statement -> variable_declaration .
+
+    RBRACE          reduce using rule 20 (statement -> variable_declaration .)
+    COMMENT         reduce using rule 20 (statement -> variable_declaration .)
+    EXPRESS         reduce using rule 20 (statement -> variable_declaration .)
+    LOCAL           reduce using rule 20 (statement -> variable_declaration .)
+    DOSE            reduce using rule 20 (statement -> variable_declaration .)
+    QUANT           reduce using rule 20 (statement -> variable_declaration .)
+    SEQ             reduce using rule 20 (statement -> variable_declaration .)
+    GLOBAL          reduce using rule 20 (statement -> variable_declaration .)
+
+
+state 45
+
+    (21) statement -> express_statement .
+
+    RBRACE          reduce using rule 21 (statement -> express_statement .)
+    COMMENT         reduce using rule 21 (statement -> express_statement .)
+    EXPRESS         reduce using rule 21 (statement -> express_statement .)
+    LOCAL           reduce using rule 21 (statement -> express_statement .)
+    DOSE            reduce using rule 21 (statement -> express_statement .)
+    QUANT           reduce using rule 21 (statement -> express_statement .)
+    SEQ             reduce using rule 21 (statement -> express_statement .)
+    GLOBAL          reduce using rule 21 (statement -> express_statement .)
+
+
+state 46
+
+    (1) express_statement_error -> EXPRESS . LPAREN expression RPAREN
+    (23) express_statement -> EXPRESS . LPAREN expression RPAREN SEMICOLON
+
+    LPAREN          shift and go to state 66
+
+
+state 47
+
+    (24) variable_declaration_error -> LOCAL . DOSE SEMICOLON
+    (25) variable_declaration_error -> LOCAL . QUANT SEMICOLON
+    (26) variable_declaration_error -> LOCAL . SEQ SEMICOLON
+    (27) variable_declaration_error -> LOCAL . DOSE EQUALS expression SEMICOLON
+    (28) variable_declaration_error -> LOCAL . QUANT EQUALS expression SEMICOLON
+    (29) variable_declaration_error -> LOCAL . SEQ EQUALS expression SEMICOLON
+    (30) variable_declaration_error -> LOCAL . IDENTIFIER SEMICOLON
+    (31) variable_declaration_error -> LOCAL . IDENTIFIER EQUALS expression SEMICOLON
+    (35) variable_declaration_error -> LOCAL . DOSE IDENTIFIER
+    (36) variable_declaration_error -> LOCAL . QUANT IDENTIFIER
+    (37) variable_declaration_error -> LOCAL . SEQ IDENTIFIER
+    (58) variable_declaration -> LOCAL . DOSE IDENTIFIER EQUALS expression SEMICOLON
+    (59) variable_declaration -> LOCAL . DOSE IDENTIFIER SEMICOLON
+    (60) variable_declaration -> LOCAL . QUANT IDENTIFIER EQUALS expression SEMICOLON
+    (61) variable_declaration -> LOCAL . QUANT IDENTIFIER SEMICOLON
+    (62) variable_declaration -> LOCAL . SEQ IDENTIFIER EQUALS expression SEMICOLON
+    (63) variable_declaration -> LOCAL . SEQ IDENTIFIER SEMICOLON
+
+    DOSE            shift and go to state 67
+    QUANT           shift and go to state 68
+    SEQ             shift and go to state 69
+    IDENTIFIER      shift and go to state 70
+
+
+state 48
+
+    (32) variable_declaration_error -> DOSE . IDENTIFIER SEMICOLON
+
+    IDENTIFIER      shift and go to state 71
+
+
+state 49
+
+    (33) variable_declaration_error -> QUANT . IDENTIFIER SEMICOLON
+
+    IDENTIFIER      shift and go to state 72
+
+
+state 50
+
+    (34) variable_declaration_error -> SEQ . IDENTIFIER SEMICOLON
+
+    IDENTIFIER      shift and go to state 73
+
+
+state 51
+
+    (38) variable_declaration_error -> GLOBAL . DOSE SEMICOLON
+    (39) variable_declaration_error -> GLOBAL . QUANT SEMICOLON
+    (40) variable_declaration_error -> GLOBAL . SEQ SEMICOLON
+    (41) variable_declaration_error -> GLOBAL . DOSE EQUALS expression SEMICOLON
+    (42) variable_declaration_error -> GLOBAL . QUANT EQUALS expression SEMICOLON
+    (43) variable_declaration_error -> GLOBAL . SEQ EQUALS expression SEMICOLON
+    (44) variable_declaration_error -> GLOBAL . IDENTIFIER SEMICOLON
+    (45) variable_declaration_error -> GLOBAL . IDENTIFIER EQUALS expression SEMICOLON
+    (46) variable_declaration_error -> GLOBAL . DOSE IDENTIFIER
+    (47) variable_declaration_error -> GLOBAL . QUANT IDENTIFIER
+    (48) variable_declaration_error -> GLOBAL . SEQ IDENTIFIER
+
+    DOSE            shift and go to state 74
+    QUANT           shift and go to state 75
+    SEQ             shift and go to state 76
+    IDENTIFIER      shift and go to state 77
+
+
+state 52
+
+    (10) main_function -> ACT GENE LPAREN RPAREN LBRACE . statements RBRACE
+    (11) statements -> . statement
+    (12) statements -> . statements statement
+    (13) statements -> . COMMENT
+    (14) statements -> . statements COMMENT
+    (15) statements -> . express_statement_error
+    (16) statements -> . statements express_statement_error
+    (17) statements -> . variable_declaration_error
+    (18) statements -> . statements variable_declaration_error
+    (19) statements -> .
+    (20) statement -> . variable_declaration
+    (21) statement -> . express_statement
+    (22) statement -> . COMMENT
+    (1) express_statement_error -> . EXPRESS LPAREN expression RPAREN
+    (24) variable_declaration_error -> . LOCAL DOSE SEMICOLON
+    (25) variable_declaration_error -> . LOCAL QUANT SEMICOLON
+    (26) variable_declaration_error -> . LOCAL SEQ SEMICOLON
+    (27) variable_declaration_error -> . LOCAL DOSE EQUALS expression SEMICOLON
+    (28) variable_declaration_error -> . LOCAL QUANT EQUALS expression SEMICOLON
+    (29) variable_declaration_error -> . LOCAL SEQ EQUALS expression SEMICOLON
+    (30) variable_declaration_error -> . LOCAL IDENTIFIER SEMICOLON
+    (31) variable_declaration_error -> . LOCAL IDENTIFIER EQUALS expression SEMICOLON
+    (32) variable_declaration_error -> . DOSE IDENTIFIER SEMICOLON
+    (33) variable_declaration_error -> . QUANT IDENTIFIER SEMICOLON
+    (34) variable_declaration_error -> . SEQ IDENTIFIER SEMICOLON
+    (35) variable_declaration_error -> . LOCAL DOSE IDENTIFIER
+    (36) variable_declaration_error -> . LOCAL QUANT IDENTIFIER
+    (37) variable_declaration_error -> . LOCAL SEQ IDENTIFIER
+    (38) variable_declaration_error -> . GLOBAL DOSE SEMICOLON
+    (39) variable_declaration_error -> . GLOBAL QUANT SEMICOLON
+    (40) variable_declaration_error -> . GLOBAL SEQ SEMICOLON
+    (41) variable_declaration_error -> . GLOBAL DOSE EQUALS expression SEMICOLON
+    (42) variable_declaration_error -> . GLOBAL QUANT EQUALS expression SEMICOLON
+    (43) variable_declaration_error -> . GLOBAL SEQ EQUALS expression SEMICOLON
+    (44) variable_declaration_error -> . GLOBAL IDENTIFIER SEMICOLON
+    (45) variable_declaration_error -> . GLOBAL IDENTIFIER EQUALS expression SEMICOLON
+    (46) variable_declaration_error -> . GLOBAL DOSE IDENTIFIER
+    (47) variable_declaration_error -> . GLOBAL QUANT IDENTIFIER
+    (48) variable_declaration_error -> . GLOBAL SEQ IDENTIFIER
+    (58) variable_declaration -> . LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON
+    (59) variable_declaration -> . LOCAL DOSE IDENTIFIER SEMICOLON
+    (60) variable_declaration -> . LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON
+    (61) variable_declaration -> . LOCAL QUANT IDENTIFIER SEMICOLON
+    (62) variable_declaration -> . LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON
+    (63) variable_declaration -> . LOCAL SEQ IDENTIFIER SEMICOLON
+    (23) express_statement -> . EXPRESS LPAREN expression RPAREN SEMICOLON
+
+  ! shift/reduce conflict for COMMENT resolved as shift
+  ! shift/reduce conflict for EXPRESS resolved as shift
+  ! shift/reduce conflict for LOCAL resolved as shift
+  ! shift/reduce conflict for DOSE resolved as shift
+  ! shift/reduce conflict for QUANT resolved as shift
+  ! shift/reduce conflict for SEQ resolved as shift
+  ! shift/reduce conflict for GLOBAL resolved as shift
+    COMMENT         shift and go to state 41
+    RBRACE          reduce using rule 19 (statements -> .)
+    EXPRESS         shift and go to state 46
+    LOCAL           shift and go to state 47
+    DOSE            shift and go to state 48
+    QUANT           shift and go to state 49
+    SEQ             shift and go to state 50
+    GLOBAL          shift and go to state 51
+
+  ! COMMENT         [ reduce using rule 19 (statements -> .) ]
+  ! EXPRESS         [ reduce using rule 19 (statements -> .) ]
+  ! LOCAL           [ reduce using rule 19 (statements -> .) ]
+  ! DOSE            [ reduce using rule 19 (statements -> .) ]
+  ! QUANT           [ reduce using rule 19 (statements -> .) ]
+  ! SEQ             [ reduce using rule 19 (statements -> .) ]
+  ! GLOBAL          [ reduce using rule 19 (statements -> .) ]
+
+    statements                     shift and go to state 78
+    statement                      shift and go to state 40
+    express_statement_error        shift and go to state 42
+    variable_declaration_error     shift and go to state 43
+    variable_declaration           shift and go to state 44
+    express_statement              shift and go to state 45
+
+state 53
+
+    (64) expression -> IDENTIFIER .
+
+    SEMICOLON       reduce using rule 64 (expression -> IDENTIFIER .)
+    PLUS            reduce using rule 64 (expression -> IDENTIFIER .)
+    MINUS           reduce using rule 64 (expression -> IDENTIFIER .)
+    RPAREN          reduce using rule 64 (expression -> IDENTIFIER .)
+
+
+state 54
+
+    (52) global_variable_declaration -> GLOBAL DOSE IDENTIFIER EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 79
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 55
+
+    (65) expression -> NUMLIT .
+
+    SEMICOLON       reduce using rule 65 (expression -> NUMLIT .)
+    PLUS            reduce using rule 65 (expression -> NUMLIT .)
+    MINUS           reduce using rule 65 (expression -> NUMLIT .)
+    RPAREN          reduce using rule 65 (expression -> NUMLIT .)
+
+
+state 56
+
+    (66) expression -> QUANTLITERAL .
+
+    SEMICOLON       reduce using rule 66 (expression -> QUANTLITERAL .)
+    PLUS            reduce using rule 66 (expression -> QUANTLITERAL .)
+    MINUS           reduce using rule 66 (expression -> QUANTLITERAL .)
+    RPAREN          reduce using rule 66 (expression -> QUANTLITERAL .)
+
+
+state 57
+
+    (67) expression -> MINUS . NUMLIT
+
+    NUMLIT          shift and go to state 82
+
+
+state 58
+
+    (70) expression -> LPAREN . expression RPAREN
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 83
+
+state 59
+
+    (54) global_variable_declaration -> GLOBAL QUANT IDENTIFIER EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 84
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 60
+
+    (56) global_variable_declaration -> GLOBAL SEQ IDENTIFIER EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 85
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 61
+
+    (9) main_function -> GENE LPAREN RPAREN LBRACE statements RBRACE .
+
+    $end            reduce using rule 9 (main_function -> GENE LPAREN RPAREN LBRACE statements RBRACE .)
+
+
+state 62
+
+    (12) statements -> statements statement .
+
+    RBRACE          reduce using rule 12 (statements -> statements statement .)
+    COMMENT         reduce using rule 12 (statements -> statements statement .)
+    EXPRESS         reduce using rule 12 (statements -> statements statement .)
+    LOCAL           reduce using rule 12 (statements -> statements statement .)
+    DOSE            reduce using rule 12 (statements -> statements statement .)
+    QUANT           reduce using rule 12 (statements -> statements statement .)
+    SEQ             reduce using rule 12 (statements -> statements statement .)
+    GLOBAL          reduce using rule 12 (statements -> statements statement .)
+
+
+state 63
+
+    (14) statements -> statements COMMENT .
+    (22) statement -> COMMENT .
+
+  ! reduce/reduce conflict for RBRACE resolved using rule 14 (statements -> statements COMMENT .)
+  ! reduce/reduce conflict for COMMENT resolved using rule 14 (statements -> statements COMMENT .)
+  ! reduce/reduce conflict for EXPRESS resolved using rule 14 (statements -> statements COMMENT .)
+  ! reduce/reduce conflict for LOCAL resolved using rule 14 (statements -> statements COMMENT .)
+  ! reduce/reduce conflict for DOSE resolved using rule 14 (statements -> statements COMMENT .)
+  ! reduce/reduce conflict for QUANT resolved using rule 14 (statements -> statements COMMENT .)
+  ! reduce/reduce conflict for SEQ resolved using rule 14 (statements -> statements COMMENT .)
+  ! reduce/reduce conflict for GLOBAL resolved using rule 14 (statements -> statements COMMENT .)
+    RBRACE          reduce using rule 14 (statements -> statements COMMENT .)
+    COMMENT         reduce using rule 14 (statements -> statements COMMENT .)
+    EXPRESS         reduce using rule 14 (statements -> statements COMMENT .)
+    LOCAL           reduce using rule 14 (statements -> statements COMMENT .)
+    DOSE            reduce using rule 14 (statements -> statements COMMENT .)
+    QUANT           reduce using rule 14 (statements -> statements COMMENT .)
+    SEQ             reduce using rule 14 (statements -> statements COMMENT .)
+    GLOBAL          reduce using rule 14 (statements -> statements COMMENT .)
+
+  ! RBRACE          [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! COMMENT         [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! EXPRESS         [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! LOCAL           [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! DOSE            [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! QUANT           [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! SEQ             [ reduce using rule 22 (statement -> COMMENT .) ]
+  ! GLOBAL          [ reduce using rule 22 (statement -> COMMENT .) ]
+
+
+state 64
+
+    (16) statements -> statements express_statement_error .
+
+    RBRACE          reduce using rule 16 (statements -> statements express_statement_error .)
+    COMMENT         reduce using rule 16 (statements -> statements express_statement_error .)
+    EXPRESS         reduce using rule 16 (statements -> statements express_statement_error .)
+    LOCAL           reduce using rule 16 (statements -> statements express_statement_error .)
+    DOSE            reduce using rule 16 (statements -> statements express_statement_error .)
+    QUANT           reduce using rule 16 (statements -> statements express_statement_error .)
+    SEQ             reduce using rule 16 (statements -> statements express_statement_error .)
+    GLOBAL          reduce using rule 16 (statements -> statements express_statement_error .)
+
+
+state 65
+
+    (18) statements -> statements variable_declaration_error .
+
+    RBRACE          reduce using rule 18 (statements -> statements variable_declaration_error .)
+    COMMENT         reduce using rule 18 (statements -> statements variable_declaration_error .)
+    EXPRESS         reduce using rule 18 (statements -> statements variable_declaration_error .)
+    LOCAL           reduce using rule 18 (statements -> statements variable_declaration_error .)
+    DOSE            reduce using rule 18 (statements -> statements variable_declaration_error .)
+    QUANT           reduce using rule 18 (statements -> statements variable_declaration_error .)
+    SEQ             reduce using rule 18 (statements -> statements variable_declaration_error .)
+    GLOBAL          reduce using rule 18 (statements -> statements variable_declaration_error .)
+
+
+state 66
+
+    (1) express_statement_error -> EXPRESS LPAREN . expression RPAREN
+    (23) express_statement -> EXPRESS LPAREN . expression RPAREN SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 86
+
+state 67
+
+    (24) variable_declaration_error -> LOCAL DOSE . SEMICOLON
+    (27) variable_declaration_error -> LOCAL DOSE . EQUALS expression SEMICOLON
+    (35) variable_declaration_error -> LOCAL DOSE . IDENTIFIER
+    (58) variable_declaration -> LOCAL DOSE . IDENTIFIER EQUALS expression SEMICOLON
+    (59) variable_declaration -> LOCAL DOSE . IDENTIFIER SEMICOLON
+
+    SEMICOLON       shift and go to state 87
+    EQUALS          shift and go to state 88
+    IDENTIFIER      shift and go to state 89
+
+
+state 68
+
+    (25) variable_declaration_error -> LOCAL QUANT . SEMICOLON
+    (28) variable_declaration_error -> LOCAL QUANT . EQUALS expression SEMICOLON
+    (36) variable_declaration_error -> LOCAL QUANT . IDENTIFIER
+    (60) variable_declaration -> LOCAL QUANT . IDENTIFIER EQUALS expression SEMICOLON
+    (61) variable_declaration -> LOCAL QUANT . IDENTIFIER SEMICOLON
+
+    SEMICOLON       shift and go to state 90
+    EQUALS          shift and go to state 91
+    IDENTIFIER      shift and go to state 92
+
+
+state 69
+
+    (26) variable_declaration_error -> LOCAL SEQ . SEMICOLON
+    (29) variable_declaration_error -> LOCAL SEQ . EQUALS expression SEMICOLON
+    (37) variable_declaration_error -> LOCAL SEQ . IDENTIFIER
+    (62) variable_declaration -> LOCAL SEQ . IDENTIFIER EQUALS expression SEMICOLON
+    (63) variable_declaration -> LOCAL SEQ . IDENTIFIER SEMICOLON
+
+    SEMICOLON       shift and go to state 93
+    EQUALS          shift and go to state 94
+    IDENTIFIER      shift and go to state 95
+
+
+state 70
+
+    (30) variable_declaration_error -> LOCAL IDENTIFIER . SEMICOLON
+    (31) variable_declaration_error -> LOCAL IDENTIFIER . EQUALS expression SEMICOLON
+
+    SEMICOLON       shift and go to state 96
+    EQUALS          shift and go to state 97
+
+
+state 71
+
+    (32) variable_declaration_error -> DOSE IDENTIFIER . SEMICOLON
+
+    SEMICOLON       shift and go to state 98
+
+
+state 72
+
+    (33) variable_declaration_error -> QUANT IDENTIFIER . SEMICOLON
+
+    SEMICOLON       shift and go to state 99
+
+
+state 73
+
+    (34) variable_declaration_error -> SEQ IDENTIFIER . SEMICOLON
+
+    SEMICOLON       shift and go to state 100
+
+
+state 74
+
+    (38) variable_declaration_error -> GLOBAL DOSE . SEMICOLON
+    (41) variable_declaration_error -> GLOBAL DOSE . EQUALS expression SEMICOLON
+    (46) variable_declaration_error -> GLOBAL DOSE . IDENTIFIER
+
+    SEMICOLON       shift and go to state 101
+    EQUALS          shift and go to state 102
+    IDENTIFIER      shift and go to state 103
+
+
+state 75
+
+    (39) variable_declaration_error -> GLOBAL QUANT . SEMICOLON
+    (42) variable_declaration_error -> GLOBAL QUANT . EQUALS expression SEMICOLON
+    (47) variable_declaration_error -> GLOBAL QUANT . IDENTIFIER
+
+    SEMICOLON       shift and go to state 104
+    EQUALS          shift and go to state 105
+    IDENTIFIER      shift and go to state 106
+
+
+state 76
+
+    (40) variable_declaration_error -> GLOBAL SEQ . SEMICOLON
+    (43) variable_declaration_error -> GLOBAL SEQ . EQUALS expression SEMICOLON
+    (48) variable_declaration_error -> GLOBAL SEQ . IDENTIFIER
+
+    SEMICOLON       shift and go to state 107
+    EQUALS          shift and go to state 108
+    IDENTIFIER      shift and go to state 109
+
+
+state 77
+
+    (44) variable_declaration_error -> GLOBAL IDENTIFIER . SEMICOLON
+    (45) variable_declaration_error -> GLOBAL IDENTIFIER . EQUALS expression SEMICOLON
+
+    SEMICOLON       shift and go to state 110
+    EQUALS          shift and go to state 111
+
+
+state 78
+
+    (10) main_function -> ACT GENE LPAREN RPAREN LBRACE statements . RBRACE
+    (12) statements -> statements . statement
+    (14) statements -> statements . COMMENT
+    (16) statements -> statements . express_statement_error
+    (18) statements -> statements . variable_declaration_error
+    (20) statement -> . variable_declaration
+    (21) statement -> . express_statement
+    (22) statement -> . COMMENT
+    (1) express_statement_error -> . EXPRESS LPAREN expression RPAREN
+    (24) variable_declaration_error -> . LOCAL DOSE SEMICOLON
+    (25) variable_declaration_error -> . LOCAL QUANT SEMICOLON
+    (26) variable_declaration_error -> . LOCAL SEQ SEMICOLON
+    (27) variable_declaration_error -> . LOCAL DOSE EQUALS expression SEMICOLON
+    (28) variable_declaration_error -> . LOCAL QUANT EQUALS expression SEMICOLON
+    (29) variable_declaration_error -> . LOCAL SEQ EQUALS expression SEMICOLON
+    (30) variable_declaration_error -> . LOCAL IDENTIFIER SEMICOLON
+    (31) variable_declaration_error -> . LOCAL IDENTIFIER EQUALS expression SEMICOLON
+    (32) variable_declaration_error -> . DOSE IDENTIFIER SEMICOLON
+    (33) variable_declaration_error -> . QUANT IDENTIFIER SEMICOLON
+    (34) variable_declaration_error -> . SEQ IDENTIFIER SEMICOLON
+    (35) variable_declaration_error -> . LOCAL DOSE IDENTIFIER
+    (36) variable_declaration_error -> . LOCAL QUANT IDENTIFIER
+    (37) variable_declaration_error -> . LOCAL SEQ IDENTIFIER
+    (38) variable_declaration_error -> . GLOBAL DOSE SEMICOLON
+    (39) variable_declaration_error -> . GLOBAL QUANT SEMICOLON
+    (40) variable_declaration_error -> . GLOBAL SEQ SEMICOLON
+    (41) variable_declaration_error -> . GLOBAL DOSE EQUALS expression SEMICOLON
+    (42) variable_declaration_error -> . GLOBAL QUANT EQUALS expression SEMICOLON
+    (43) variable_declaration_error -> . GLOBAL SEQ EQUALS expression SEMICOLON
+    (44) variable_declaration_error -> . GLOBAL IDENTIFIER SEMICOLON
+    (45) variable_declaration_error -> . GLOBAL IDENTIFIER EQUALS expression SEMICOLON
+    (46) variable_declaration_error -> . GLOBAL DOSE IDENTIFIER
+    (47) variable_declaration_error -> . GLOBAL QUANT IDENTIFIER
+    (48) variable_declaration_error -> . GLOBAL SEQ IDENTIFIER
+    (58) variable_declaration -> . LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON
+    (59) variable_declaration -> . LOCAL DOSE IDENTIFIER SEMICOLON
+    (60) variable_declaration -> . LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON
+    (61) variable_declaration -> . LOCAL QUANT IDENTIFIER SEMICOLON
+    (62) variable_declaration -> . LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON
+    (63) variable_declaration -> . LOCAL SEQ IDENTIFIER SEMICOLON
+    (23) express_statement -> . EXPRESS LPAREN expression RPAREN SEMICOLON
+
+    RBRACE          shift and go to state 112
+    COMMENT         shift and go to state 63
+    EXPRESS         shift and go to state 46
+    LOCAL           shift and go to state 47
+    DOSE            shift and go to state 48
+    QUANT           shift and go to state 49
+    SEQ             shift and go to state 50
+    GLOBAL          shift and go to state 51
+
+    statement                      shift and go to state 62
+    express_statement_error        shift and go to state 64
+    variable_declaration_error     shift and go to state 65
+    variable_declaration           shift and go to state 44
+    express_statement              shift and go to state 45
+
+state 79
+
+    (52) global_variable_declaration -> GLOBAL DOSE IDENTIFIER EQUALS expression SEMICOLON .
+
+    GENE            reduce using rule 52 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+    ACT             reduce using rule 52 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 52 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 52 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 52 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 52 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+    $end            reduce using rule 52 (global_variable_declaration -> GLOBAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+
+
+state 80
+
+    (68) expression -> expression PLUS . expression
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 113
+
+state 81
+
+    (69) expression -> expression MINUS . expression
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 114
+
+state 82
+
+    (67) expression -> MINUS NUMLIT .
+
+    SEMICOLON       reduce using rule 67 (expression -> MINUS NUMLIT .)
+    PLUS            reduce using rule 67 (expression -> MINUS NUMLIT .)
+    MINUS           reduce using rule 67 (expression -> MINUS NUMLIT .)
+    RPAREN          reduce using rule 67 (expression -> MINUS NUMLIT .)
+
+
+state 83
+
+    (70) expression -> LPAREN expression . RPAREN
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    RPAREN          shift and go to state 115
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 84
+
+    (54) global_variable_declaration -> GLOBAL QUANT IDENTIFIER EQUALS expression SEMICOLON .
+
+    GENE            reduce using rule 54 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+    ACT             reduce using rule 54 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 54 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 54 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 54 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 54 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+    $end            reduce using rule 54 (global_variable_declaration -> GLOBAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+
+
+state 85
+
+    (56) global_variable_declaration -> GLOBAL SEQ IDENTIFIER EQUALS expression SEMICOLON .
+
+    GENE            reduce using rule 56 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+    ACT             reduce using rule 56 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 56 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 56 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 56 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 56 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+    $end            reduce using rule 56 (global_variable_declaration -> GLOBAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+
+
+state 86
+
+    (1) express_statement_error -> EXPRESS LPAREN expression . RPAREN
+    (23) express_statement -> EXPRESS LPAREN expression . RPAREN SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    RPAREN          shift and go to state 116
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 87
+
+    (24) variable_declaration_error -> LOCAL DOSE SEMICOLON .
+
+    RBRACE          reduce using rule 24 (variable_declaration_error -> LOCAL DOSE SEMICOLON .)
+    COMMENT         reduce using rule 24 (variable_declaration_error -> LOCAL DOSE SEMICOLON .)
+    EXPRESS         reduce using rule 24 (variable_declaration_error -> LOCAL DOSE SEMICOLON .)
+    LOCAL           reduce using rule 24 (variable_declaration_error -> LOCAL DOSE SEMICOLON .)
+    DOSE            reduce using rule 24 (variable_declaration_error -> LOCAL DOSE SEMICOLON .)
+    QUANT           reduce using rule 24 (variable_declaration_error -> LOCAL DOSE SEMICOLON .)
+    SEQ             reduce using rule 24 (variable_declaration_error -> LOCAL DOSE SEMICOLON .)
+    GLOBAL          reduce using rule 24 (variable_declaration_error -> LOCAL DOSE SEMICOLON .)
+
+
+state 88
+
+    (27) variable_declaration_error -> LOCAL DOSE EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 117
+
+state 89
+
+    (35) variable_declaration_error -> LOCAL DOSE IDENTIFIER .
+    (58) variable_declaration -> LOCAL DOSE IDENTIFIER . EQUALS expression SEMICOLON
+    (59) variable_declaration -> LOCAL DOSE IDENTIFIER . SEMICOLON
+
+    RBRACE          reduce using rule 35 (variable_declaration_error -> LOCAL DOSE IDENTIFIER .)
+    COMMENT         reduce using rule 35 (variable_declaration_error -> LOCAL DOSE IDENTIFIER .)
+    EXPRESS         reduce using rule 35 (variable_declaration_error -> LOCAL DOSE IDENTIFIER .)
+    LOCAL           reduce using rule 35 (variable_declaration_error -> LOCAL DOSE IDENTIFIER .)
+    DOSE            reduce using rule 35 (variable_declaration_error -> LOCAL DOSE IDENTIFIER .)
+    QUANT           reduce using rule 35 (variable_declaration_error -> LOCAL DOSE IDENTIFIER .)
+    SEQ             reduce using rule 35 (variable_declaration_error -> LOCAL DOSE IDENTIFIER .)
+    GLOBAL          reduce using rule 35 (variable_declaration_error -> LOCAL DOSE IDENTIFIER .)
+    EQUALS          shift and go to state 118
+    SEMICOLON       shift and go to state 119
+
+
+state 90
+
+    (25) variable_declaration_error -> LOCAL QUANT SEMICOLON .
+
+    RBRACE          reduce using rule 25 (variable_declaration_error -> LOCAL QUANT SEMICOLON .)
+    COMMENT         reduce using rule 25 (variable_declaration_error -> LOCAL QUANT SEMICOLON .)
+    EXPRESS         reduce using rule 25 (variable_declaration_error -> LOCAL QUANT SEMICOLON .)
+    LOCAL           reduce using rule 25 (variable_declaration_error -> LOCAL QUANT SEMICOLON .)
+    DOSE            reduce using rule 25 (variable_declaration_error -> LOCAL QUANT SEMICOLON .)
+    QUANT           reduce using rule 25 (variable_declaration_error -> LOCAL QUANT SEMICOLON .)
+    SEQ             reduce using rule 25 (variable_declaration_error -> LOCAL QUANT SEMICOLON .)
+    GLOBAL          reduce using rule 25 (variable_declaration_error -> LOCAL QUANT SEMICOLON .)
+
+
+state 91
+
+    (28) variable_declaration_error -> LOCAL QUANT EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 120
+
+state 92
+
+    (36) variable_declaration_error -> LOCAL QUANT IDENTIFIER .
+    (60) variable_declaration -> LOCAL QUANT IDENTIFIER . EQUALS expression SEMICOLON
+    (61) variable_declaration -> LOCAL QUANT IDENTIFIER . SEMICOLON
+
+    RBRACE          reduce using rule 36 (variable_declaration_error -> LOCAL QUANT IDENTIFIER .)
+    COMMENT         reduce using rule 36 (variable_declaration_error -> LOCAL QUANT IDENTIFIER .)
+    EXPRESS         reduce using rule 36 (variable_declaration_error -> LOCAL QUANT IDENTIFIER .)
+    LOCAL           reduce using rule 36 (variable_declaration_error -> LOCAL QUANT IDENTIFIER .)
+    DOSE            reduce using rule 36 (variable_declaration_error -> LOCAL QUANT IDENTIFIER .)
+    QUANT           reduce using rule 36 (variable_declaration_error -> LOCAL QUANT IDENTIFIER .)
+    SEQ             reduce using rule 36 (variable_declaration_error -> LOCAL QUANT IDENTIFIER .)
+    GLOBAL          reduce using rule 36 (variable_declaration_error -> LOCAL QUANT IDENTIFIER .)
+    EQUALS          shift and go to state 121
+    SEMICOLON       shift and go to state 122
+
+
+state 93
+
+    (26) variable_declaration_error -> LOCAL SEQ SEMICOLON .
+
+    RBRACE          reduce using rule 26 (variable_declaration_error -> LOCAL SEQ SEMICOLON .)
+    COMMENT         reduce using rule 26 (variable_declaration_error -> LOCAL SEQ SEMICOLON .)
+    EXPRESS         reduce using rule 26 (variable_declaration_error -> LOCAL SEQ SEMICOLON .)
+    LOCAL           reduce using rule 26 (variable_declaration_error -> LOCAL SEQ SEMICOLON .)
+    DOSE            reduce using rule 26 (variable_declaration_error -> LOCAL SEQ SEMICOLON .)
+    QUANT           reduce using rule 26 (variable_declaration_error -> LOCAL SEQ SEMICOLON .)
+    SEQ             reduce using rule 26 (variable_declaration_error -> LOCAL SEQ SEMICOLON .)
+    GLOBAL          reduce using rule 26 (variable_declaration_error -> LOCAL SEQ SEMICOLON .)
+
+
+state 94
+
+    (29) variable_declaration_error -> LOCAL SEQ EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 123
+
+state 95
+
+    (37) variable_declaration_error -> LOCAL SEQ IDENTIFIER .
+    (62) variable_declaration -> LOCAL SEQ IDENTIFIER . EQUALS expression SEMICOLON
+    (63) variable_declaration -> LOCAL SEQ IDENTIFIER . SEMICOLON
+
+    RBRACE          reduce using rule 37 (variable_declaration_error -> LOCAL SEQ IDENTIFIER .)
+    COMMENT         reduce using rule 37 (variable_declaration_error -> LOCAL SEQ IDENTIFIER .)
+    EXPRESS         reduce using rule 37 (variable_declaration_error -> LOCAL SEQ IDENTIFIER .)
+    LOCAL           reduce using rule 37 (variable_declaration_error -> LOCAL SEQ IDENTIFIER .)
+    DOSE            reduce using rule 37 (variable_declaration_error -> LOCAL SEQ IDENTIFIER .)
+    QUANT           reduce using rule 37 (variable_declaration_error -> LOCAL SEQ IDENTIFIER .)
+    SEQ             reduce using rule 37 (variable_declaration_error -> LOCAL SEQ IDENTIFIER .)
+    GLOBAL          reduce using rule 37 (variable_declaration_error -> LOCAL SEQ IDENTIFIER .)
+    EQUALS          shift and go to state 124
+    SEMICOLON       shift and go to state 125
+
+
+state 96
+
+    (30) variable_declaration_error -> LOCAL IDENTIFIER SEMICOLON .
+
+    RBRACE          reduce using rule 30 (variable_declaration_error -> LOCAL IDENTIFIER SEMICOLON .)
+    COMMENT         reduce using rule 30 (variable_declaration_error -> LOCAL IDENTIFIER SEMICOLON .)
+    EXPRESS         reduce using rule 30 (variable_declaration_error -> LOCAL IDENTIFIER SEMICOLON .)
+    LOCAL           reduce using rule 30 (variable_declaration_error -> LOCAL IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 30 (variable_declaration_error -> LOCAL IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 30 (variable_declaration_error -> LOCAL IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 30 (variable_declaration_error -> LOCAL IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 30 (variable_declaration_error -> LOCAL IDENTIFIER SEMICOLON .)
+
+
+state 97
+
+    (31) variable_declaration_error -> LOCAL IDENTIFIER EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 126
+
+state 98
+
+    (32) variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .
+
+    RBRACE          reduce using rule 32 (variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+    COMMENT         reduce using rule 32 (variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+    EXPRESS         reduce using rule 32 (variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+    LOCAL           reduce using rule 32 (variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 32 (variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 32 (variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 32 (variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 32 (variable_declaration_error -> DOSE IDENTIFIER SEMICOLON .)
+
+
+state 99
+
+    (33) variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .
+
+    RBRACE          reduce using rule 33 (variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+    COMMENT         reduce using rule 33 (variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+    EXPRESS         reduce using rule 33 (variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+    LOCAL           reduce using rule 33 (variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 33 (variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 33 (variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 33 (variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 33 (variable_declaration_error -> QUANT IDENTIFIER SEMICOLON .)
+
+
+state 100
+
+    (34) variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .
+
+    RBRACE          reduce using rule 34 (variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+    COMMENT         reduce using rule 34 (variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+    EXPRESS         reduce using rule 34 (variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+    LOCAL           reduce using rule 34 (variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 34 (variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 34 (variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 34 (variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 34 (variable_declaration_error -> SEQ IDENTIFIER SEMICOLON .)
+
+
+state 101
+
+    (38) variable_declaration_error -> GLOBAL DOSE SEMICOLON .
+
+    RBRACE          reduce using rule 38 (variable_declaration_error -> GLOBAL DOSE SEMICOLON .)
+    COMMENT         reduce using rule 38 (variable_declaration_error -> GLOBAL DOSE SEMICOLON .)
+    EXPRESS         reduce using rule 38 (variable_declaration_error -> GLOBAL DOSE SEMICOLON .)
+    LOCAL           reduce using rule 38 (variable_declaration_error -> GLOBAL DOSE SEMICOLON .)
+    DOSE            reduce using rule 38 (variable_declaration_error -> GLOBAL DOSE SEMICOLON .)
+    QUANT           reduce using rule 38 (variable_declaration_error -> GLOBAL DOSE SEMICOLON .)
+    SEQ             reduce using rule 38 (variable_declaration_error -> GLOBAL DOSE SEMICOLON .)
+    GLOBAL          reduce using rule 38 (variable_declaration_error -> GLOBAL DOSE SEMICOLON .)
+
+
+state 102
+
+    (41) variable_declaration_error -> GLOBAL DOSE EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 127
+
+state 103
+
+    (46) variable_declaration_error -> GLOBAL DOSE IDENTIFIER .
+
+    RBRACE          reduce using rule 46 (variable_declaration_error -> GLOBAL DOSE IDENTIFIER .)
+    COMMENT         reduce using rule 46 (variable_declaration_error -> GLOBAL DOSE IDENTIFIER .)
+    EXPRESS         reduce using rule 46 (variable_declaration_error -> GLOBAL DOSE IDENTIFIER .)
+    LOCAL           reduce using rule 46 (variable_declaration_error -> GLOBAL DOSE IDENTIFIER .)
+    DOSE            reduce using rule 46 (variable_declaration_error -> GLOBAL DOSE IDENTIFIER .)
+    QUANT           reduce using rule 46 (variable_declaration_error -> GLOBAL DOSE IDENTIFIER .)
+    SEQ             reduce using rule 46 (variable_declaration_error -> GLOBAL DOSE IDENTIFIER .)
+    GLOBAL          reduce using rule 46 (variable_declaration_error -> GLOBAL DOSE IDENTIFIER .)
+
+
+state 104
+
+    (39) variable_declaration_error -> GLOBAL QUANT SEMICOLON .
+
+    RBRACE          reduce using rule 39 (variable_declaration_error -> GLOBAL QUANT SEMICOLON .)
+    COMMENT         reduce using rule 39 (variable_declaration_error -> GLOBAL QUANT SEMICOLON .)
+    EXPRESS         reduce using rule 39 (variable_declaration_error -> GLOBAL QUANT SEMICOLON .)
+    LOCAL           reduce using rule 39 (variable_declaration_error -> GLOBAL QUANT SEMICOLON .)
+    DOSE            reduce using rule 39 (variable_declaration_error -> GLOBAL QUANT SEMICOLON .)
+    QUANT           reduce using rule 39 (variable_declaration_error -> GLOBAL QUANT SEMICOLON .)
+    SEQ             reduce using rule 39 (variable_declaration_error -> GLOBAL QUANT SEMICOLON .)
+    GLOBAL          reduce using rule 39 (variable_declaration_error -> GLOBAL QUANT SEMICOLON .)
+
+
+state 105
+
+    (42) variable_declaration_error -> GLOBAL QUANT EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 128
+
+state 106
+
+    (47) variable_declaration_error -> GLOBAL QUANT IDENTIFIER .
+
+    RBRACE          reduce using rule 47 (variable_declaration_error -> GLOBAL QUANT IDENTIFIER .)
+    COMMENT         reduce using rule 47 (variable_declaration_error -> GLOBAL QUANT IDENTIFIER .)
+    EXPRESS         reduce using rule 47 (variable_declaration_error -> GLOBAL QUANT IDENTIFIER .)
+    LOCAL           reduce using rule 47 (variable_declaration_error -> GLOBAL QUANT IDENTIFIER .)
+    DOSE            reduce using rule 47 (variable_declaration_error -> GLOBAL QUANT IDENTIFIER .)
+    QUANT           reduce using rule 47 (variable_declaration_error -> GLOBAL QUANT IDENTIFIER .)
+    SEQ             reduce using rule 47 (variable_declaration_error -> GLOBAL QUANT IDENTIFIER .)
+    GLOBAL          reduce using rule 47 (variable_declaration_error -> GLOBAL QUANT IDENTIFIER .)
+
+
+state 107
+
+    (40) variable_declaration_error -> GLOBAL SEQ SEMICOLON .
+
+    RBRACE          reduce using rule 40 (variable_declaration_error -> GLOBAL SEQ SEMICOLON .)
+    COMMENT         reduce using rule 40 (variable_declaration_error -> GLOBAL SEQ SEMICOLON .)
+    EXPRESS         reduce using rule 40 (variable_declaration_error -> GLOBAL SEQ SEMICOLON .)
+    LOCAL           reduce using rule 40 (variable_declaration_error -> GLOBAL SEQ SEMICOLON .)
+    DOSE            reduce using rule 40 (variable_declaration_error -> GLOBAL SEQ SEMICOLON .)
+    QUANT           reduce using rule 40 (variable_declaration_error -> GLOBAL SEQ SEMICOLON .)
+    SEQ             reduce using rule 40 (variable_declaration_error -> GLOBAL SEQ SEMICOLON .)
+    GLOBAL          reduce using rule 40 (variable_declaration_error -> GLOBAL SEQ SEMICOLON .)
+
+
+state 108
+
+    (43) variable_declaration_error -> GLOBAL SEQ EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 129
+
+state 109
+
+    (48) variable_declaration_error -> GLOBAL SEQ IDENTIFIER .
+
+    RBRACE          reduce using rule 48 (variable_declaration_error -> GLOBAL SEQ IDENTIFIER .)
+    COMMENT         reduce using rule 48 (variable_declaration_error -> GLOBAL SEQ IDENTIFIER .)
+    EXPRESS         reduce using rule 48 (variable_declaration_error -> GLOBAL SEQ IDENTIFIER .)
+    LOCAL           reduce using rule 48 (variable_declaration_error -> GLOBAL SEQ IDENTIFIER .)
+    DOSE            reduce using rule 48 (variable_declaration_error -> GLOBAL SEQ IDENTIFIER .)
+    QUANT           reduce using rule 48 (variable_declaration_error -> GLOBAL SEQ IDENTIFIER .)
+    SEQ             reduce using rule 48 (variable_declaration_error -> GLOBAL SEQ IDENTIFIER .)
+    GLOBAL          reduce using rule 48 (variable_declaration_error -> GLOBAL SEQ IDENTIFIER .)
+
+
+state 110
+
+    (44) variable_declaration_error -> GLOBAL IDENTIFIER SEMICOLON .
+
+    RBRACE          reduce using rule 44 (variable_declaration_error -> GLOBAL IDENTIFIER SEMICOLON .)
+    COMMENT         reduce using rule 44 (variable_declaration_error -> GLOBAL IDENTIFIER SEMICOLON .)
+    EXPRESS         reduce using rule 44 (variable_declaration_error -> GLOBAL IDENTIFIER SEMICOLON .)
+    LOCAL           reduce using rule 44 (variable_declaration_error -> GLOBAL IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 44 (variable_declaration_error -> GLOBAL IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 44 (variable_declaration_error -> GLOBAL IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 44 (variable_declaration_error -> GLOBAL IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 44 (variable_declaration_error -> GLOBAL IDENTIFIER SEMICOLON .)
+
+
+state 111
+
+    (45) variable_declaration_error -> GLOBAL IDENTIFIER EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 130
+
+state 112
+
+    (10) main_function -> ACT GENE LPAREN RPAREN LBRACE statements RBRACE .
+
+    $end            reduce using rule 10 (main_function -> ACT GENE LPAREN RPAREN LBRACE statements RBRACE .)
+
+
+state 113
+
+    (68) expression -> expression PLUS expression .
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       reduce using rule 68 (expression -> expression PLUS expression .)
+    PLUS            reduce using rule 68 (expression -> expression PLUS expression .)
+    MINUS           reduce using rule 68 (expression -> expression PLUS expression .)
+    RPAREN          reduce using rule 68 (expression -> expression PLUS expression .)
+
+  ! PLUS            [ shift and go to state 80 ]
+  ! MINUS           [ shift and go to state 81 ]
+
+
+state 114
+
+    (69) expression -> expression MINUS expression .
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       reduce using rule 69 (expression -> expression MINUS expression .)
+    PLUS            reduce using rule 69 (expression -> expression MINUS expression .)
+    MINUS           reduce using rule 69 (expression -> expression MINUS expression .)
+    RPAREN          reduce using rule 69 (expression -> expression MINUS expression .)
+
+  ! PLUS            [ shift and go to state 80 ]
+  ! MINUS           [ shift and go to state 81 ]
+
+
+state 115
+
+    (70) expression -> LPAREN expression RPAREN .
+
+    SEMICOLON       reduce using rule 70 (expression -> LPAREN expression RPAREN .)
+    PLUS            reduce using rule 70 (expression -> LPAREN expression RPAREN .)
+    MINUS           reduce using rule 70 (expression -> LPAREN expression RPAREN .)
+    RPAREN          reduce using rule 70 (expression -> LPAREN expression RPAREN .)
+
+
+state 116
+
+    (1) express_statement_error -> EXPRESS LPAREN expression RPAREN .
+    (23) express_statement -> EXPRESS LPAREN expression RPAREN . SEMICOLON
+
+    RBRACE          reduce using rule 1 (express_statement_error -> EXPRESS LPAREN expression RPAREN .)
+    COMMENT         reduce using rule 1 (express_statement_error -> EXPRESS LPAREN expression RPAREN .)
+    EXPRESS         reduce using rule 1 (express_statement_error -> EXPRESS LPAREN expression RPAREN .)
+    LOCAL           reduce using rule 1 (express_statement_error -> EXPRESS LPAREN expression RPAREN .)
+    DOSE            reduce using rule 1 (express_statement_error -> EXPRESS LPAREN expression RPAREN .)
+    QUANT           reduce using rule 1 (express_statement_error -> EXPRESS LPAREN expression RPAREN .)
+    SEQ             reduce using rule 1 (express_statement_error -> EXPRESS LPAREN expression RPAREN .)
+    GLOBAL          reduce using rule 1 (express_statement_error -> EXPRESS LPAREN expression RPAREN .)
+    SEMICOLON       shift and go to state 131
+
+
+state 117
+
+    (27) variable_declaration_error -> LOCAL DOSE EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 132
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 118
+
+    (58) variable_declaration -> LOCAL DOSE IDENTIFIER EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 133
+
+state 119
+
+    (59) variable_declaration -> LOCAL DOSE IDENTIFIER SEMICOLON .
+
+    RBRACE          reduce using rule 59 (variable_declaration -> LOCAL DOSE IDENTIFIER SEMICOLON .)
+    COMMENT         reduce using rule 59 (variable_declaration -> LOCAL DOSE IDENTIFIER SEMICOLON .)
+    EXPRESS         reduce using rule 59 (variable_declaration -> LOCAL DOSE IDENTIFIER SEMICOLON .)
+    LOCAL           reduce using rule 59 (variable_declaration -> LOCAL DOSE IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 59 (variable_declaration -> LOCAL DOSE IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 59 (variable_declaration -> LOCAL DOSE IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 59 (variable_declaration -> LOCAL DOSE IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 59 (variable_declaration -> LOCAL DOSE IDENTIFIER SEMICOLON .)
+
+
+state 120
+
+    (28) variable_declaration_error -> LOCAL QUANT EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 134
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 121
+
+    (60) variable_declaration -> LOCAL QUANT IDENTIFIER EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 135
+
+state 122
+
+    (61) variable_declaration -> LOCAL QUANT IDENTIFIER SEMICOLON .
+
+    RBRACE          reduce using rule 61 (variable_declaration -> LOCAL QUANT IDENTIFIER SEMICOLON .)
+    COMMENT         reduce using rule 61 (variable_declaration -> LOCAL QUANT IDENTIFIER SEMICOLON .)
+    EXPRESS         reduce using rule 61 (variable_declaration -> LOCAL QUANT IDENTIFIER SEMICOLON .)
+    LOCAL           reduce using rule 61 (variable_declaration -> LOCAL QUANT IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 61 (variable_declaration -> LOCAL QUANT IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 61 (variable_declaration -> LOCAL QUANT IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 61 (variable_declaration -> LOCAL QUANT IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 61 (variable_declaration -> LOCAL QUANT IDENTIFIER SEMICOLON .)
+
+
+state 123
+
+    (29) variable_declaration_error -> LOCAL SEQ EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 136
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 124
+
+    (62) variable_declaration -> LOCAL SEQ IDENTIFIER EQUALS . expression SEMICOLON
+    (64) expression -> . IDENTIFIER
+    (65) expression -> . NUMLIT
+    (66) expression -> . QUANTLITERAL
+    (67) expression -> . MINUS NUMLIT
+    (68) expression -> . expression PLUS expression
+    (69) expression -> . expression MINUS expression
+    (70) expression -> . LPAREN expression RPAREN
+
+    IDENTIFIER      shift and go to state 53
+    NUMLIT          shift and go to state 55
+    QUANTLITERAL    shift and go to state 56
+    MINUS           shift and go to state 57
+    LPAREN          shift and go to state 58
+
+    expression                     shift and go to state 137
+
+state 125
+
+    (63) variable_declaration -> LOCAL SEQ IDENTIFIER SEMICOLON .
+
+    RBRACE          reduce using rule 63 (variable_declaration -> LOCAL SEQ IDENTIFIER SEMICOLON .)
+    COMMENT         reduce using rule 63 (variable_declaration -> LOCAL SEQ IDENTIFIER SEMICOLON .)
+    EXPRESS         reduce using rule 63 (variable_declaration -> LOCAL SEQ IDENTIFIER SEMICOLON .)
+    LOCAL           reduce using rule 63 (variable_declaration -> LOCAL SEQ IDENTIFIER SEMICOLON .)
+    DOSE            reduce using rule 63 (variable_declaration -> LOCAL SEQ IDENTIFIER SEMICOLON .)
+    QUANT           reduce using rule 63 (variable_declaration -> LOCAL SEQ IDENTIFIER SEMICOLON .)
+    SEQ             reduce using rule 63 (variable_declaration -> LOCAL SEQ IDENTIFIER SEMICOLON .)
+    GLOBAL          reduce using rule 63 (variable_declaration -> LOCAL SEQ IDENTIFIER SEMICOLON .)
+
+
+state 126
+
+    (31) variable_declaration_error -> LOCAL IDENTIFIER EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 138
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 127
+
+    (41) variable_declaration_error -> GLOBAL DOSE EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 139
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 128
+
+    (42) variable_declaration_error -> GLOBAL QUANT EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 140
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 129
+
+    (43) variable_declaration_error -> GLOBAL SEQ EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 141
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 130
+
+    (45) variable_declaration_error -> GLOBAL IDENTIFIER EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 142
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 131
+
+    (23) express_statement -> EXPRESS LPAREN expression RPAREN SEMICOLON .
+
+    RBRACE          reduce using rule 23 (express_statement -> EXPRESS LPAREN expression RPAREN SEMICOLON .)
+    COMMENT         reduce using rule 23 (express_statement -> EXPRESS LPAREN expression RPAREN SEMICOLON .)
+    EXPRESS         reduce using rule 23 (express_statement -> EXPRESS LPAREN expression RPAREN SEMICOLON .)
+    LOCAL           reduce using rule 23 (express_statement -> EXPRESS LPAREN expression RPAREN SEMICOLON .)
+    DOSE            reduce using rule 23 (express_statement -> EXPRESS LPAREN expression RPAREN SEMICOLON .)
+    QUANT           reduce using rule 23 (express_statement -> EXPRESS LPAREN expression RPAREN SEMICOLON .)
+    SEQ             reduce using rule 23 (express_statement -> EXPRESS LPAREN expression RPAREN SEMICOLON .)
+    GLOBAL          reduce using rule 23 (express_statement -> EXPRESS LPAREN expression RPAREN SEMICOLON .)
+
+
+state 132
+
+    (27) variable_declaration_error -> LOCAL DOSE EQUALS expression SEMICOLON .
+
+    RBRACE          reduce using rule 27 (variable_declaration_error -> LOCAL DOSE EQUALS expression SEMICOLON .)
+    COMMENT         reduce using rule 27 (variable_declaration_error -> LOCAL DOSE EQUALS expression SEMICOLON .)
+    EXPRESS         reduce using rule 27 (variable_declaration_error -> LOCAL DOSE EQUALS expression SEMICOLON .)
+    LOCAL           reduce using rule 27 (variable_declaration_error -> LOCAL DOSE EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 27 (variable_declaration_error -> LOCAL DOSE EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 27 (variable_declaration_error -> LOCAL DOSE EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 27 (variable_declaration_error -> LOCAL DOSE EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 27 (variable_declaration_error -> LOCAL DOSE EQUALS expression SEMICOLON .)
+
+
+state 133
+
+    (58) variable_declaration -> LOCAL DOSE IDENTIFIER EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 143
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 134
+
+    (28) variable_declaration_error -> LOCAL QUANT EQUALS expression SEMICOLON .
+
+    RBRACE          reduce using rule 28 (variable_declaration_error -> LOCAL QUANT EQUALS expression SEMICOLON .)
+    COMMENT         reduce using rule 28 (variable_declaration_error -> LOCAL QUANT EQUALS expression SEMICOLON .)
+    EXPRESS         reduce using rule 28 (variable_declaration_error -> LOCAL QUANT EQUALS expression SEMICOLON .)
+    LOCAL           reduce using rule 28 (variable_declaration_error -> LOCAL QUANT EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 28 (variable_declaration_error -> LOCAL QUANT EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 28 (variable_declaration_error -> LOCAL QUANT EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 28 (variable_declaration_error -> LOCAL QUANT EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 28 (variable_declaration_error -> LOCAL QUANT EQUALS expression SEMICOLON .)
+
+
+state 135
+
+    (60) variable_declaration -> LOCAL QUANT IDENTIFIER EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 144
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 136
+
+    (29) variable_declaration_error -> LOCAL SEQ EQUALS expression SEMICOLON .
+
+    RBRACE          reduce using rule 29 (variable_declaration_error -> LOCAL SEQ EQUALS expression SEMICOLON .)
+    COMMENT         reduce using rule 29 (variable_declaration_error -> LOCAL SEQ EQUALS expression SEMICOLON .)
+    EXPRESS         reduce using rule 29 (variable_declaration_error -> LOCAL SEQ EQUALS expression SEMICOLON .)
+    LOCAL           reduce using rule 29 (variable_declaration_error -> LOCAL SEQ EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 29 (variable_declaration_error -> LOCAL SEQ EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 29 (variable_declaration_error -> LOCAL SEQ EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 29 (variable_declaration_error -> LOCAL SEQ EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 29 (variable_declaration_error -> LOCAL SEQ EQUALS expression SEMICOLON .)
+
+
+state 137
+
+    (62) variable_declaration -> LOCAL SEQ IDENTIFIER EQUALS expression . SEMICOLON
+    (68) expression -> expression . PLUS expression
+    (69) expression -> expression . MINUS expression
+
+    SEMICOLON       shift and go to state 145
+    PLUS            shift and go to state 80
+    MINUS           shift and go to state 81
+
+
+state 138
+
+    (31) variable_declaration_error -> LOCAL IDENTIFIER EQUALS expression SEMICOLON .
+
+    RBRACE          reduce using rule 31 (variable_declaration_error -> LOCAL IDENTIFIER EQUALS expression SEMICOLON .)
+    COMMENT         reduce using rule 31 (variable_declaration_error -> LOCAL IDENTIFIER EQUALS expression SEMICOLON .)
+    EXPRESS         reduce using rule 31 (variable_declaration_error -> LOCAL IDENTIFIER EQUALS expression SEMICOLON .)
+    LOCAL           reduce using rule 31 (variable_declaration_error -> LOCAL IDENTIFIER EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 31 (variable_declaration_error -> LOCAL IDENTIFIER EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 31 (variable_declaration_error -> LOCAL IDENTIFIER EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 31 (variable_declaration_error -> LOCAL IDENTIFIER EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 31 (variable_declaration_error -> LOCAL IDENTIFIER EQUALS expression SEMICOLON .)
+
+
+state 139
+
+    (41) variable_declaration_error -> GLOBAL DOSE EQUALS expression SEMICOLON .
+
+    RBRACE          reduce using rule 41 (variable_declaration_error -> GLOBAL DOSE EQUALS expression SEMICOLON .)
+    COMMENT         reduce using rule 41 (variable_declaration_error -> GLOBAL DOSE EQUALS expression SEMICOLON .)
+    EXPRESS         reduce using rule 41 (variable_declaration_error -> GLOBAL DOSE EQUALS expression SEMICOLON .)
+    LOCAL           reduce using rule 41 (variable_declaration_error -> GLOBAL DOSE EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 41 (variable_declaration_error -> GLOBAL DOSE EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 41 (variable_declaration_error -> GLOBAL DOSE EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 41 (variable_declaration_error -> GLOBAL DOSE EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 41 (variable_declaration_error -> GLOBAL DOSE EQUALS expression SEMICOLON .)
+
+
+state 140
+
+    (42) variable_declaration_error -> GLOBAL QUANT EQUALS expression SEMICOLON .
+
+    RBRACE          reduce using rule 42 (variable_declaration_error -> GLOBAL QUANT EQUALS expression SEMICOLON .)
+    COMMENT         reduce using rule 42 (variable_declaration_error -> GLOBAL QUANT EQUALS expression SEMICOLON .)
+    EXPRESS         reduce using rule 42 (variable_declaration_error -> GLOBAL QUANT EQUALS expression SEMICOLON .)
+    LOCAL           reduce using rule 42 (variable_declaration_error -> GLOBAL QUANT EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 42 (variable_declaration_error -> GLOBAL QUANT EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 42 (variable_declaration_error -> GLOBAL QUANT EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 42 (variable_declaration_error -> GLOBAL QUANT EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 42 (variable_declaration_error -> GLOBAL QUANT EQUALS expression SEMICOLON .)
+
+
+state 141
+
+    (43) variable_declaration_error -> GLOBAL SEQ EQUALS expression SEMICOLON .
+
+    RBRACE          reduce using rule 43 (variable_declaration_error -> GLOBAL SEQ EQUALS expression SEMICOLON .)
+    COMMENT         reduce using rule 43 (variable_declaration_error -> GLOBAL SEQ EQUALS expression SEMICOLON .)
+    EXPRESS         reduce using rule 43 (variable_declaration_error -> GLOBAL SEQ EQUALS expression SEMICOLON .)
+    LOCAL           reduce using rule 43 (variable_declaration_error -> GLOBAL SEQ EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 43 (variable_declaration_error -> GLOBAL SEQ EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 43 (variable_declaration_error -> GLOBAL SEQ EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 43 (variable_declaration_error -> GLOBAL SEQ EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 43 (variable_declaration_error -> GLOBAL SEQ EQUALS expression SEMICOLON .)
+
+
+state 142
+
+    (45) variable_declaration_error -> GLOBAL IDENTIFIER EQUALS expression SEMICOLON .
+
+    RBRACE          reduce using rule 45 (variable_declaration_error -> GLOBAL IDENTIFIER EQUALS expression SEMICOLON .)
+    COMMENT         reduce using rule 45 (variable_declaration_error -> GLOBAL IDENTIFIER EQUALS expression SEMICOLON .)
+    EXPRESS         reduce using rule 45 (variable_declaration_error -> GLOBAL IDENTIFIER EQUALS expression SEMICOLON .)
+    LOCAL           reduce using rule 45 (variable_declaration_error -> GLOBAL IDENTIFIER EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 45 (variable_declaration_error -> GLOBAL IDENTIFIER EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 45 (variable_declaration_error -> GLOBAL IDENTIFIER EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 45 (variable_declaration_error -> GLOBAL IDENTIFIER EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 45 (variable_declaration_error -> GLOBAL IDENTIFIER EQUALS expression SEMICOLON .)
+
+
+state 143
+
+    (58) variable_declaration -> LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON .
+
+    RBRACE          reduce using rule 58 (variable_declaration -> LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+    COMMENT         reduce using rule 58 (variable_declaration -> LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+    EXPRESS         reduce using rule 58 (variable_declaration -> LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+    LOCAL           reduce using rule 58 (variable_declaration -> LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 58 (variable_declaration -> LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 58 (variable_declaration -> LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 58 (variable_declaration -> LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 58 (variable_declaration -> LOCAL DOSE IDENTIFIER EQUALS expression SEMICOLON .)
+
+
+state 144
+
+    (60) variable_declaration -> LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON .
+
+    RBRACE          reduce using rule 60 (variable_declaration -> LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+    COMMENT         reduce using rule 60 (variable_declaration -> LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+    EXPRESS         reduce using rule 60 (variable_declaration -> LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+    LOCAL           reduce using rule 60 (variable_declaration -> LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 60 (variable_declaration -> LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 60 (variable_declaration -> LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 60 (variable_declaration -> LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 60 (variable_declaration -> LOCAL QUANT IDENTIFIER EQUALS expression SEMICOLON .)
+
+
+state 145
+
+    (62) variable_declaration -> LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON .
+
+    RBRACE          reduce using rule 62 (variable_declaration -> LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+    COMMENT         reduce using rule 62 (variable_declaration -> LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+    EXPRESS         reduce using rule 62 (variable_declaration -> LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+    LOCAL           reduce using rule 62 (variable_declaration -> LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+    DOSE            reduce using rule 62 (variable_declaration -> LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+    QUANT           reduce using rule 62 (variable_declaration -> LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+    SEQ             reduce using rule 62 (variable_declaration -> LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+    GLOBAL          reduce using rule 62 (variable_declaration -> LOCAL SEQ IDENTIFIER EQUALS expression SEMICOLON .)
+
+WARNING: 
+WARNING: Conflicts:
+WARNING: 
+WARNING: shift/reduce conflict for COMMENT in state 31 resolved as shift
+WARNING: shift/reduce conflict for EXPRESS in state 31 resolved as shift
+WARNING: shift/reduce conflict for LOCAL in state 31 resolved as shift
+WARNING: shift/reduce conflict for DOSE in state 31 resolved as shift
+WARNING: shift/reduce conflict for QUANT in state 31 resolved as shift
+WARNING: shift/reduce conflict for SEQ in state 31 resolved as shift
+WARNING: shift/reduce conflict for GLOBAL in state 31 resolved as shift
+WARNING: shift/reduce conflict for COMMENT in state 52 resolved as shift
+WARNING: shift/reduce conflict for EXPRESS in state 52 resolved as shift
+WARNING: shift/reduce conflict for LOCAL in state 52 resolved as shift
+WARNING: shift/reduce conflict for DOSE in state 52 resolved as shift
+WARNING: shift/reduce conflict for QUANT in state 52 resolved as shift
+WARNING: shift/reduce conflict for SEQ in state 52 resolved as shift
+WARNING: shift/reduce conflict for GLOBAL in state 52 resolved as shift
+WARNING: reduce/reduce conflict in state 41 resolved using rule (statements -> COMMENT)
+WARNING: rejected rule (statement -> COMMENT) in state 41
+WARNING: reduce/reduce conflict in state 63 resolved using rule (statements -> statements COMMENT)
+WARNING: rejected rule (statement -> COMMENT) in state 63
+WARNING: Rule (statement -> COMMENT) is never reduced

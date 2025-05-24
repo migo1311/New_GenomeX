@@ -1,0 +1,86 @@
+_G dose Num;
+act Factorial(dose Num){
+    _L dose Result = 1;
+
+    for(dose I = 1; I <= Num; I ++){
+        Result = Result * I;
+    }
+
+    express("Factorial is: ");
+    express(Result);
+}
+act Fibonacci(){
+  _L dose Limit, Count, First, Second, Next;
+
+    Limit = stimuli("How many Fibonacci terms do you want? ");
+    
+    First = 0;
+    Second = 1;
+    Count = 0;
+
+    while (Count < Limit) {
+        express(seq(First));
+        Next = First + Second;
+        First = Second;
+        Second = Next;
+        Count = Count + 1;
+    }
+}
+
+act IsPrime(dose N){
+    _L dose IsPrime = 1;  // 1 means prime, 0 means not prime
+    
+    if(N <= 1){
+        IsPrime = 0;
+    }
+
+    for(dose I = 2; I < N; I ++){
+        if(0 == N % I){
+            IsPrime = 0;
+        }
+    }
+
+    if(IsPrime == 1){
+        express(N + " is a prime number.");
+    }
+    else{
+        express(N + " is not a prime number.");
+    }
+}
+
+act gene(){
+    _L dose Choice, Input;
+
+    express("MENU:");
+    express("1. Calculate Factorial");
+    express("2. Generate Fibonacci Sequence");
+    express("3. Check if a number is Prime");
+    express("4. Exit");
+    
+    Choice = stimuli("Enter your choice (1-4): ");
+    
+    if(Choice == 1){
+        Input = 0;
+        while(Input < 1 || Input > 20){
+            Input = stimuli("Enter a number for factorial (1-20): ");
+            
+            if(Input < 1 || Input > 20){
+                express("Invalid input, try again.");
+            }
+        }
+        func Factorial(Input);
+    }
+    elif(Choice == 2){
+        func Fibonacci();
+    }
+    elif(Choice == 3){
+        Input = stimuli("Enter a number to check if it's prime: ");
+        func IsPrime(Input);
+    }
+    elif(Choice == 4){
+        express("Exiting program. Goodbye!");
+    }
+    else{
+        express("Invalid choice. Please run the program again.");
+    }
+} 
