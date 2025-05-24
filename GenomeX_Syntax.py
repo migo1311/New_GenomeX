@@ -12,14 +12,14 @@ def parseSyntax(tokens, output_text):
     
     def get_line_number(tokens, index):
         """
-        Determine the line number for a token at the given index by counting newlines.
+        Determine the line numlit for a token at the given index by counting newlines.
         
         Args:
             tokens: The list of tokens
-            index: The index of the token to find the line number for
+            index: The index of the token to find the line numlit for
         
         Returns:
-            The line number (1-based)
+            The line numlit (1-based)
         """
         if index < 0 or index >= len(tokens):
             return -1  
@@ -60,7 +60,7 @@ def parseSyntax(tokens, output_text):
             
             # Try to find the last non-empty line in the file
             if display_lines:
-                # Sort by line number and find the last non-empty line
+                # Sort by line numlit and find the last non-empty line
                 sorted_lines = sorted(display_lines, key=lambda line: line["line_number"])
                 last_line = sorted_lines[-1]  # Default to absolute last line
                 
@@ -185,7 +185,7 @@ def parseSyntax(tokens, output_text):
                     'express': statements.express_statement,
                     'if': statements.if_statement,
                     'prod': statements.prod_statement,
-                    'Identifier': statements.stimuli_statement,
+                    'Identifier': statements.assignment_statement,
                     'for': statements.for_loop_statement,
                     'while': statements.while_statement,
                     'func': statements.func_calling,
@@ -274,7 +274,7 @@ def parseSyntax(tokens, output_text):
                             if not any(is_token(tokens, start_idx, clust_type) for clust_type in clust_parse):
                                 print("Invalid *clust type")
                                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                                display_error(line_number, line_text, f"Expected valid clust datatype but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                                display_error(line_number, line_text, f"Expected 'dose', 'quant', 'seq' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                                 return False, None
                                 
                             for clust_type, parser_func in clust_parse.items():
@@ -298,7 +298,7 @@ def parseSyntax(tokens, output_text):
                         if not any(is_token(tokens, start_idx, L_type) for L_type in local_parse):
                             print("Invalid *L perms type")
                             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                            display_error(line_number, line_text, f"Expected valid datatype but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                            display_error(line_number, line_text, f"Expected 'perms', 'dose', 'quant', 'seq', 'allele', 'clust' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                             return False, None  
 
                         for L_type, parser_func in local_parse.items():
@@ -387,7 +387,7 @@ def parseSyntax(tokens, output_text):
                     if not any(is_token(tokens, start_idx, perms_type) for perms_type in perms_parsers):
                         print("[global_handling] Invalid perms type at idx", start_idx)
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        display_error(line_number, line_text, f"Expected an valid datatype but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}")
+                        display_error(line_number, line_text, f"Expected 'dose', 'quant', 'seq' but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}")
                         return False, None
                         
                     for perms_type, parser_func in perms_parsers.items():
@@ -415,7 +415,7 @@ def parseSyntax(tokens, output_text):
                     if not any(is_token(tokens, start_idx, clust_type) for clust_type in clust_parse):
                         print("[global_handling] Invalid clust type at idx", start_idx)
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        display_error(line_number, line_text, f"Expected an valid datatype but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}")
+                        display_error(line_number, line_text, f"Expected 'dose', 'quant', 'seq' but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}")
                         return False, None
                         
                     for clust_type, parser_func in clust_parse.items():
@@ -475,8 +475,8 @@ def parseSyntax(tokens, output_text):
                 # Check for function name
                 if not (start_idx < len(tokens) and tokens[start_idx][1] == "Identifier"):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    print(f"Error: Expected function name (Identifier) at index {start_idx}")
-                    if display_error(line_number, line_text, f"Expected function name (Identifier) at index {start_idx} but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    print(f"Error: Expected function name (Identifier) ")
+                    if display_error(line_number, line_text, f"Expected function name (Identifier)  but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                     program.user_defined_function_error = True  
 
@@ -489,8 +489,8 @@ def parseSyntax(tokens, output_text):
                 # Check for opening parenthesis
                 if not is_token(tokens, start_idx, '('):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    print(f"Error: Expected '(' after function name at index {start_idx}")
-                    if display_error(line_number, line_text, f"Expected '(' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    print(f"Error: Expected '(' after function name ")
+                    if display_error(line_number, line_text, f"Expected '(' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                     program.user_defined_function_error = True  
                     
@@ -510,8 +510,8 @@ def parseSyntax(tokens, output_text):
                 # Check for closing parenthesis
                 if not is_token(tokens, start_idx, ')'):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}")
-                    if display_error(line_number, line_text, f"Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    print(f"Error: Expected ')' , but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}")
+                    if display_error(line_number, line_text, f"Expected ')' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                     program.user_defined_function_error = True  
                     
@@ -523,7 +523,7 @@ def parseSyntax(tokens, output_text):
                 if not is_token(tokens, start_idx, '{'):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                     print("Missing opening brace for function block")
-                    if display_error(line_number, line_text, f"Expected '{{' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected '{{' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                     program.user_defined_function_error = True  
                     
@@ -550,7 +550,7 @@ def parseSyntax(tokens, output_text):
                     if not check_statements:
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                         print(f"Error: No statements found in {func_name} function")
-                        if display_error(line_number, line_text, f"Expected '}}' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected '}}' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                             return False, None
                         program.user_defined_function_error = True  
                         
@@ -559,7 +559,7 @@ def parseSyntax(tokens, output_text):
                 else:
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                     print("Missing closing brace for user defined function")
-                    if display_error(line_number, line_text, f"Expected '}}' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected '}}' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                     program.user_defined_function_error = True  
                    
@@ -584,9 +584,9 @@ def parseSyntax(tokens, output_text):
                     
                     # Check if there's 'gene' after 'act'
                     if not is_token(tokens, start_idx, 'gene'):
-                        print(f"[main_function] Error: Expected 'gene' after 'act' at index {start_idx}")
+                        print(f"[main_function] Error: Expected 'gene' after 'act' ")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected gene at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected gene , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                 
                 # Continue with normal main function parsing
@@ -613,9 +613,9 @@ def parseSyntax(tokens, output_text):
                     
                     # Check for opening parenthesis
                     if not is_token(tokens, start_idx, '('):
-                        print(f"[main_function] Error: Expected '(' after 'gene' at index {start_idx}")
+                        print(f"[main_function] Error: Expected '(' after 'gene' ")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected '(' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected '(' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
 
                     start_idx += 1  # Skip '(' token
@@ -623,9 +623,9 @@ def parseSyntax(tokens, output_text):
 
                     # Check for closing parenthesis
                     if not is_token(tokens, start_idx, ')'):
-                        print(f"[main_function] Error: Expected ')' at index {start_idx}, but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}")
+                        print(f"[main_function] Error: Expected ')' , but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected ')' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                     
                     start_idx += 1  # Skip ')' token
@@ -635,7 +635,7 @@ def parseSyntax(tokens, output_text):
                     if not is_token(tokens, start_idx, '{'):
                         print("[main_function] Missing opening brace for main function block")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected '{{' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected '{{' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                     
                     start_idx += 1  # Skip '{' token
@@ -648,7 +648,7 @@ def parseSyntax(tokens, output_text):
                     if new_idx is None:
                         print("[main_function] Error in main function body statements")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected _L, express, if, prod, Identifier, for, while, func at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected _L, express, if, prod, Identifier, for, while, func , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                         
                     start_idx = new_idx
@@ -661,14 +661,14 @@ def parseSyntax(tokens, output_text):
                         if not check_statements:
                             print("[main_function] Error: No statements found in main function")
                             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                            if display_error(line_number, line_text, f"Expected _L, express, if, prod, Identifier, for, while, func at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                            if display_error(line_number, line_text, f"Expected _L, express, if, prod, Identifier, for, while, func , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                                 return False, None
                             
                         return True, start_idx + 1
                     else:
                         print("[main_function] Missing closing brace for main function")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected ' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected '}}', _L, express, if, prod, Identifier, for, while, func , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                 
                 # Handle user-defined functions
@@ -690,8 +690,15 @@ def parseSyntax(tokens, output_text):
             @staticmethod
             def conditional_block(tokens, start_idx):
                 print("<conditional_block>")
+                print(f"DEBUG CONDITIONAL: Starting conditional block at index {start_idx}")
+                if start_idx < len(tokens):
+                    print(f"DEBUG CONDITIONAL: Current token = '{tokens[start_idx][0]}' (type: {tokens[start_idx][1]})")
+                else:
+                    print(f"DEBUG CONDITIONAL: At end of tokens")
 
                 start_idx = skip_spaces(tokens, start_idx)
+                if start_idx < len(tokens):
+                    print(f"DEBUG CONDITIONAL: After skipping spaces, token = '{tokens[start_idx][0]}' (type: {tokens[start_idx][1]})")
                 
                 
                 is_valid, new_idx = conditional.conditions_base(tokens, start_idx)
@@ -701,7 +708,7 @@ def parseSyntax(tokens, output_text):
                     
                     
                     
-                    print(f"Error: Invalid conditions_base at index {start_idx}")
+                    print(f"Error: Invalid conditions_base ")
                     return False, None
                 return True, new_idx
             
@@ -709,23 +716,36 @@ def parseSyntax(tokens, output_text):
             def conditions_base(tokens, start_idx):
                 
                 print("<conditions_base>")
+                print(f"DEBUG CONDITIONAL: Starting conditions_base at index {start_idx}")
+                if start_idx < len(tokens):
+                    print(f"DEBUG CONDITIONAL: Current token = '{tokens[start_idx][0]}' (type: {tokens[start_idx][1]})")
+                    print(f"DEBUG CONDITIONAL: Expecting possible negation operator or condition value")
+                else:
+                    print(f"DEBUG CONDITIONAL: At end of tokens, expected condition")
+                
                 start_idx = skip_spaces(tokens, start_idx)
+                if start_idx < len(tokens):
+                    print(f"DEBUG CONDITIONAL: After skipping spaces, token = '{tokens[start_idx][0]}' (type: {tokens[start_idx][1]})")
                 
                 
                 has_negation = False
                 if start_idx < len(tokens) and tokens[start_idx][0] == '!':
-                    print(f"Found negation operator '!' at index {start_idx}")
+                    print(f"Found negation operator '!' ")
+                    print(f"DEBUG CONDITIONAL: Processing negation operator at index {start_idx}")
                     has_negation = True
                     start_idx += 1  
                     start_idx = skip_spaces(tokens, start_idx)
+                    print(f"DEBUG CONDITIONAL: After negation, expecting condition value")
+                    if start_idx < len(tokens):
+                        print(f"DEBUG CONDITIONAL: Next token = '{tokens[start_idx][0]}' (type: {tokens[start_idx][1]})")
                 
                 
                 is_valid, new_idx = conditional.condition_value(tokens, start_idx)
                 if not is_valid:
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected literals or Identifier at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected 'stimuli', 'seq', 'dom', 'rec', 'numlit', 'string literal' or Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
-                    print(f"Error: Invalid first condition_value at index {start_idx}")
+                    print(f"Error: Invalid first condition_value ")
                     
 
                 start_idx = new_idx
@@ -748,9 +768,9 @@ def parseSyntax(tokens, output_text):
                     
                     
                     if not is_token(tokens, start_idx, ']'):
-                        print(f"Error: Expected closing bracket ']' at index {start_idx} (line {line_number})")
+                        print(f"Error: Expected closing bracket ']'  (line {line_number})")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected  ']' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected  ']' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                     
                     start_idx += 1  
@@ -760,24 +780,25 @@ def parseSyntax(tokens, output_text):
                 
                 relational_operators = {'<', '>', '<=', '>=', '==', '!='}
                 mathematical_operators = {'+', '-', '*', '/', '%', '**', '//'}
-                logical_operators = {'&&', '||'}
+                logical_operators = { }
+                close_parenthesis = {')'}
 
                 
-                if start_idx >= len(tokens) or not any(tokens[start_idx][0] in op_set for op_set in [logical_operators, relational_operators] for op in op_set):
+                if start_idx >= len(tokens) or not any(tokens[start_idx][0] in op_set for op_set in [')', '&&', '||', '+', '-', '*', '/', '%', '**', '//', '<', '>', '<=', '>=', '==', '!='] for op in op_set):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    print(f"Error: Expected relational operator at index {start_idx}, found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}")
-                    if display_error(line_number, line_text, f"Expected '>', '<', '>=', '<=', '==', '!=' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    print(f"Error: Expected relational operator , found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}")
+                    if display_error(line_number, line_text, f"Expected ')''>', '<', '>=', '<=', '==', '!=' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                 
                 
-                print(f"Found relational operator '{tokens[start_idx][0]}' at index {start_idx}")
+                print(f"Found relational operator '{tokens[start_idx][0]}' ")
                 start_idx += 1  
                 start_idx = skip_spaces(tokens, start_idx)
                 
                 
                 has_negation = False
                 if start_idx < len(tokens) and tokens[start_idx][0] == '!':
-                    print(f"Found negation operator '!' at index {start_idx}")
+                    print(f"Found negation operator '!' ")
                     has_negation = True
                     start_idx += 1  
                     start_idx = skip_spaces(tokens, start_idx)
@@ -785,10 +806,10 @@ def parseSyntax(tokens, output_text):
                 
                 is_valid, new_idx = conditional.condition_value(tokens, start_idx)
                 if not is_valid:
-                    print(f"Error: Invalid second condition_value at index {start_idx}")
+                    print(f"Error: Invalid second condition_value ")
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected literals, or Identifiers at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                     return False, None
+                    if display_error(line_number, line_text, f"Expected 'dom', 'rec', 'string literal', 'numlit' or Identifiers , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        return False, None
                     
                 
                 start_idx = new_idx
@@ -811,8 +832,8 @@ def parseSyntax(tokens, output_text):
                     
                     if not is_token(tokens, start_idx, ']'):
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        print(f"Error: Expected closing bracket ']' at index {start_idx} (line {line_number})")
-                        if display_error(line_number, line_text, f"Expected ']' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        print(f"Error: Expected closing bracket ']'  (line {line_number})")
+                        if display_error(line_number, line_text, f"Expected ']' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
 
                     
@@ -825,7 +846,7 @@ def parseSyntax(tokens, output_text):
                 if not is_valid:
                     if display_error(line_number, line_text, f"Invalid condition at line {line_number}"):
                          return False, None
-                    print(f"Error: Invalid condition_value_tail at index {start_idx}")
+                    print(f"Error: Invalid condition_value_tail ")
                 
                 return True, new_idx
                     
@@ -834,22 +855,51 @@ def parseSyntax(tokens, output_text):
                 
 
                 print("<condition_value>")
+                print(f"DEBUG CONDITIONAL: Starting condition_value at index {start_idx}")
+                if start_idx < len(tokens):
+                    print(f"DEBUG CONDITIONAL: Current token = '{tokens[start_idx][0]}' (type: {tokens[start_idx][1]})")
+                    print(f"DEBUG CONDITIONAL: Expecting '(', Identifier, or literal value")
+                else:
+                    print(f"DEBUG CONDITIONAL: At end of tokens, expected condition value")
+                
                 start_idx = skip_spaces(tokens, start_idx)
+                if start_idx < len(tokens):
+                    print(f"DEBUG CONDITIONAL: After skipping spaces, token = '{tokens[start_idx][0]}' (type: {tokens[start_idx][1]})")
                 
                 
                 if start_idx < len(tokens) and tokens[start_idx][0] == '(':
-                    print(f"Found opening parenthesis at index {start_idx}")
-                    start_idx += 1  
+                    print(f"Found opening parenthesis")
+                    opening_idx = start_idx  # Remember where the opening paren is
+                    start_idx += 1
                     start_idx = skip_spaces(tokens, start_idx)
                     
+                    # First try to parse as an arithmetic expression
+                    if start_idx < len(tokens) and (tokens[start_idx][1] == 'numlit' or tokens[start_idx][1] == 'Identifier'):
+                        # Look ahead to check if this might be an arithmetic expression
+                        next_idx = start_idx + 1
+                        next_idx = skip_spaces(tokens, next_idx)
+                        if next_idx < len(tokens) and tokens[next_idx][0] in math_operator:
+                            # This appears to be an arithmetic expression
+                            is_valid, new_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
+                            if is_valid:
+                                # Successfully parsed arithmetic, now expect closing parenthesis
+                                start_idx = new_idx
+                                start_idx = skip_spaces(tokens, start_idx)
+                                
+                                if not is_token(tokens, start_idx, ')'):
+                                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                                    print(f"Error: Expected closing parenthesis after arithmetic expression")
+                                    if display_error(line_number, line_text, f"Expected ')' '+' '-' '/' '*' '**' '//' '%' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                                        return False, None
+                                
+                                print(f"Found closing parenthesis after arithmetic")
+                                return True, start_idx + 1  # Skip past the closing parenthesis
                     
+                    # If not an arithmetic expression, try as a conditions_base
                     is_valid, new_idx = conditional.conditions_base(tokens, start_idx)
                     if not is_valid:
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                        print(f"Error: Invalid condition inside parentheses at index {start_idx}")
-                        # output_text.insert(tk.END, f"Syntax Error: Invalid condition inside parentheses at index {start_idx} but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}\n")
-                        # output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
+                        print(f"Error: Invalid expression inside parentheses")
                         return False, None
                     
                     start_idx = new_idx
@@ -857,28 +907,33 @@ def parseSyntax(tokens, output_text):
                     
                     if not is_token(tokens, start_idx, ')'):
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        print(f"Error: Expected closing parenthesis at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                        if display_error(line_number, line_text, f"Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                         return False, None
+                        print(f"Error: Expected closing parenthesis")
+                        if display_error(line_number, line_text, f"Expected ')' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                            return False, None
                     
-                    print(f"Found closing parenthesis at index {start_idx}")
-                    return True, start_idx + 1  
+                    print(f"Found closing parenthesis")
+                    return True, start_idx + 1
                 
                 
                 if start_idx < len(tokens) and tokens[start_idx][1] == 'Identifier':
-                    print(f"Found Identifier '{tokens[start_idx][0]}' at index {start_idx}")
+                    print(f"Found Identifier '{tokens[start_idx][0]}' ")
+                    print(f"DEBUG CONDITIONAL: Processing Identifier '{tokens[start_idx][0]}' at index {start_idx}")
                     current_idx = start_idx
                     start_idx += 1  
                     start_idx = skip_spaces(tokens, start_idx)
+                    print(f"DEBUG CONDITIONAL: After identifier, looking for possible array access")
                     
                     
                     while start_idx < len(tokens) and tokens[start_idx][0] == '[':
+                        print(f"DEBUG CONDITIONAL: Found array access at index {start_idx}")
                         start_idx += 1  
                         start_idx = skip_spaces(tokens, start_idx)
+                        print(f"DEBUG CONDITIONAL: Looking for array index")
                         
                         
                         if not (start_idx < len(tokens) and (tokens[start_idx][1] == "Identifier" or tokens[start_idx][1] == "numlit")):
                             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                            print(f"DEBUG CONDITIONAL: Invalid array index at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                             if display_error(line_number, line_text, f"Invalid array index, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                                 return False, None
                         
@@ -888,7 +943,7 @@ def parseSyntax(tokens, output_text):
                         
                         if not (start_idx < len(tokens) and tokens[start_idx][0] == ']'):
                             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                            if display_error(line_number, line_text, f"Expected ']' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                            if display_error(line_number, line_text, f"Expected ']' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                                 return False, None
                         
                         start_idx += 1  
@@ -899,7 +954,9 @@ def parseSyntax(tokens, output_text):
                         is_valid, new_idx = arithmetic.arithmetic_sequence(tokens, current_idx)
                         if is_valid:
                             return True, new_idx
-                    
+                        else:
+                            print(f"Error: Invalid arithmetic sequence ")
+                            return False, None
                     return True, start_idx
                 
                 
@@ -909,19 +966,19 @@ def parseSyntax(tokens, output_text):
                     if next_idx < len(tokens) and tokens[next_idx][0] in math_operator:
                         is_valid, new_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
                         if is_valid:
-                            print(f"Found valid arithmetic sequence at index {start_idx}")
+                            print(f"Found valid arithmetic sequence ")
                             return True, new_idx
                 
                 
                 conliterals = {'numlit', 'string literal', 'dom', 'rec'}
                 if start_idx < len(tokens) and tokens[start_idx][1] in conliterals:
-                    print(f"Found literal '{tokens[start_idx][0]}' of type {tokens[start_idx][1]} at index {start_idx}")
+                    print(f"Found literal '{tokens[start_idx][0]}' of type {tokens[start_idx][1]} ")
                     return True, start_idx + 1  
                 
                 # line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                 # output_text.insert(tk.END, f"Syntax Error at line {line_number}: Expected a condition value but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}\n")
                 # output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-                print(f"Error: Expected condition value at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"Error: Expected condition value , found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 return False, None
 
             @staticmethod
@@ -932,7 +989,16 @@ def parseSyntax(tokens, output_text):
                 <condition_value_tail> → λ
                 """
                 print("<condition_value_tail>")
+                print(f"DEBUG CONDITIONAL: Starting condition_value_tail at index {start_idx}")
+                if start_idx < len(tokens):
+                    print(f"DEBUG CONDITIONAL: Current token = '{tokens[start_idx][0]}' (type: {tokens[start_idx][1]})")
+                    print(f"DEBUG CONDITIONAL: Checking for logical operator ('&&', '||') or end of expression")
+                else:
+                    print(f"DEBUG CONDITIONAL: At end of tokens in condition_value_tail")
+                
                 start_idx = skip_spaces(tokens, start_idx)
+                if start_idx < len(tokens):
+                    print(f"DEBUG CONDITIONAL: After skipping spaces, token = '{tokens[start_idx][0]}' (type: {tokens[start_idx][1]})")
                 
                 
                 logical_operators = {'&&', '||'}
@@ -940,29 +1006,34 @@ def parseSyntax(tokens, output_text):
 
                 
                 if start_idx >= len(tokens) or not any(tokens[start_idx][0] in op_set for op_set in logical_operators for op in op_set):
-                    
+                    print(f"DEBUG CONDITIONAL: No logical operator found at index {start_idx}")
                     
                     if start_idx < len(tokens) and tokens[start_idx][0] == ';':
-                        print(f"Found semicolon at index {start_idx}")
+                        print(f"Found semicolon ")
+                        print(f"DEBUG CONDITIONAL: Found semicolon at index {start_idx}, condition expression complete")
                         return True, start_idx + 1  
                     
+                    print(f"DEBUG CONDITIONAL: Condition expression complete without logical operator")
                     return True, start_idx  
                 
                 
-                print(f"Found logical operator '{tokens[start_idx][0]}' at index {start_idx}")
+                print(f"Found logical operator '{tokens[start_idx][0]}' ")
+                print(f"DEBUG CONDITIONAL: Processing logical operator '{tokens[start_idx][0]}' at index {start_idx}")
                 start_idx += 1  
                 start_idx = skip_spaces(tokens, start_idx)
-                
-                
+                print(f"DEBUG CONDITIONAL: After logical operator, expecting another condition")
+        
                 is_valid, new_idx = conditional.conditions_base(tokens, start_idx)
                 if not is_valid:
+                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                     if display_error(line_number, line_text, f"Invalid condition after logical operator at line {line_number}"):
                          return False, None
-                    print(f"Error: Invalid conditions_base after logical operator at index {start_idx}")
-        
+                    print(f"Error: Invalid conditions_base after logical operator ")
+                    print(f"DEBUG CONDITIONAL: Failed to parse condition after logical operator")
                 
                 start_idx = new_idx
                 start_idx = skip_spaces(tokens, start_idx)
+                print(f"DEBUG CONDITIONAL: Successfully parsed condition after logical operator, recursing to check for more logical operators")
                 
                 
                 return conditional.condition_value_tail(tokens, start_idx)
@@ -970,15 +1041,15 @@ def parseSyntax(tokens, output_text):
     class statements:
         @staticmethod
         def func_calling(tokens, start_idx):
-            print(f"DEBUG SYNTAX: Starting function_calling at index {start_idx}")
+            print(f"DEBUG SYNTAX: Starting function_calling ")
             
             start_idx = skip_spaces(tokens, start_idx)
 
             # Check for function identifier
             if not (start_idx < len(tokens) and is_token(tokens, start_idx, "Identifier")):
-                print(f"Error: Expected identifier after 'func' at index {start_idx}")
+                print(f"Error: Expected identifier after 'func' ")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected Identifier after 'func' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected Identifier after 'func' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
 
             func_name = tokens[start_idx]  
@@ -995,7 +1066,7 @@ def parseSyntax(tokens, output_text):
                 # Parse parameters
                 is_valid, new_idx = parameters.func_params(tokens, start_idx)
                 if not is_valid:
-                    print(f"Error: Invalid parameters in function definition at index {start_idx}")
+                    print(f"Error: Invalid parameters in function definition ")
                     return False, None
                 
                 start_idx = new_idx  
@@ -1003,18 +1074,18 @@ def parseSyntax(tokens, output_text):
 
                 # Expect closing parenthesis
                 if not (start_idx < len(tokens) and is_token(tokens, start_idx, ")")):
-                    print(f"Error: Expected ')' or ',' at index {start_idx}")
+                    print(f"Error: Expected ')' or ',' ")
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected ')' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                 
                 start_idx += 1  
                 start_idx = skip_spaces(tokens, start_idx)
             else:
                 # No '(' found after identifier — invalid
-                print(f"Error: Expected '(' after function name at index {start_idx}")
+                print(f"Error: Expected '(' after function name ")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected '(' after function name at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected '(' after function name , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
 
             # Optional assignment
@@ -1024,7 +1095,7 @@ def parseSyntax(tokens, output_text):
                 start_idx = skip_spaces(tokens, start_idx)
 
                 if not (start_idx < len(tokens) and is_token(tokens, start_idx, "Identifier")):
-                    print(f"Error: Expected identifier after '=' at index {start_idx}")
+                    print(f"Error: Expected identifier after '=' ")
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                     if display_error(line_number, line_text, f"Expected Identifier after =, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
@@ -1038,9 +1109,9 @@ def parseSyntax(tokens, output_text):
 
             # Expect semicolon at the end
             if not (start_idx < len(tokens) and is_token(tokens, start_idx, ";")):
-                print(f"Error: Expected ';' or '=' at index {start_idx}")
+                print(f"Error: Expected ';' or '=' ")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected ';' or '=' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected ';' or '=' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
 
             print(f"Valid function statement: {func_name}")
@@ -1052,9 +1123,9 @@ def parseSyntax(tokens, output_text):
         def if_statement(tokens, start_idx):
             
             if not is_token(tokens, start_idx, '('):
-                print(f"Error: Expected '(' after 'if' at index {start_idx}")
+                print(f"Error: Expected '(' after 'if' ")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected '('  at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected '('  , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
         
             start_idx += 1  
@@ -1063,7 +1134,7 @@ def parseSyntax(tokens, output_text):
             
             is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
             if not is_valid:
-                print(f"Error: Invalid condition in if statement at index {start_idx}")
+                print(f"Error: Invalid condition in if statement ")
                 
                 
                 return False, None
@@ -1072,18 +1143,18 @@ def parseSyntax(tokens, output_text):
             start_idx = skip_spaces(tokens, start_idx)
 
             if not is_token(tokens, start_idx, ')'):
-                print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in if statement")
+                print(f"Error: Expected ')' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in if statement")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected ')' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
 
             start_idx += 1  
             start_idx = skip_spaces(tokens, start_idx)
 
             if not is_token(tokens, start_idx, '{'):
-                print(f"Error: Expected '{{' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"Error: Expected '{{' , found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected '{{' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected '{{' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
 
             start_idx += 1  
@@ -1097,7 +1168,7 @@ def parseSyntax(tokens, output_text):
             if empty_body_check < len(tokens) and tokens[empty_body_check][0] == '}':
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                 # Output the error message
-                if display_error(line_number, line_text, f"Empty if statement body is not allowed"):
+                if display_error(line_number, line_text, f"_L, express, if, prod, Identifier, for, while, func but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                 print(f"EMPTY IF STATEMENT DETECTED at line {line_number}")
             
@@ -1110,7 +1181,7 @@ def parseSyntax(tokens, output_text):
             if check_idx < len(tokens) and any(tokens[check_idx][0] == token for token in invalid_direct_tokens):
                 invalid_token = tokens[check_idx][0]
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, check_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected express, if, Identifier, prod, func, for, while, or if at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected express, if, Identifier, prod, func, for, while, or if , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
             
             # If it's not empty, proceed with normal parsing
@@ -1130,9 +1201,9 @@ def parseSyntax(tokens, output_text):
             
             
             if not is_token(tokens, start_idx, '}'):
-                print(f"Error: Expected '}}' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"Error: Expected '}}' , found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected '}}' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected '}}' ,  but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                     return False, None
             
             start_idx += 1  
@@ -1147,9 +1218,9 @@ def parseSyntax(tokens, output_text):
                     start_idx = skip_spaces(tokens, start_idx)
                     
                     if not is_token(tokens, start_idx, '('):
-                        print(f"Error: Expected '(' after 'elif' at index {start_idx}")
+                        print(f"Error: Expected '(' after 'elif' ")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected '(' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected '(' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                     
                     start_idx += 1  
@@ -1157,7 +1228,7 @@ def parseSyntax(tokens, output_text):
 
                     is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
                     if not is_valid:
-                        print(f"Error: Invalid condition in if statement at index {start_idx}")
+                        print(f"Error: Invalid condition in if statement ")
                         return False, None
                     
                     
@@ -1165,18 +1236,18 @@ def parseSyntax(tokens, output_text):
                     start_idx = skip_spaces(tokens, start_idx)
 
                     if not is_token(tokens, start_idx, ')'):
-                        print(f"Error: Expected ')' at index {start_idx} in elif statement")
+                        print(f"Error: Expected ')'  in elif statement")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected ')' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                     
                     start_idx += 1  
                     start_idx = skip_spaces(tokens, start_idx)
 
                     if not is_token(tokens, start_idx, '{'):
-                        print(f"Error: Expected '{{' after elif condition at index {start_idx}")
+                        print(f"Error: Expected '{{' after elif condition ")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected '{{' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected '{{' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                         
                     
@@ -1192,8 +1263,8 @@ def parseSyntax(tokens, output_text):
                         # We found an empty elif statement body!
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                         # Output the error message
-                        if display_error(line_number, line_text, f"Empty elif statement body is not allowed"):
-                         return False, None
+                        if display_error(line_number, line_text, f"_L, express, if, prod, Identifier, for, while, func but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                            return False, None
                         print(f"EMPTY ELIF STATEMENT DETECTED at line {line_number}")
                         
                     
@@ -1206,7 +1277,7 @@ def parseSyntax(tokens, output_text):
                     if check_idx < len(tokens) and any(tokens[check_idx][0] == token for token in invalid_direct_tokens):
                         invalid_token = tokens[check_idx][0]
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, check_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected express, if, Identifier, prod, func, for, while, or if at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected express, if, Identifier, prod, func, for, while, or if , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                         
                     
@@ -1227,14 +1298,13 @@ def parseSyntax(tokens, output_text):
                     start_idx = skip_spaces(tokens, start_idx)
 
                     if not is_token(tokens, start_idx, '}'):
-                        print(f"Error: Expected '}}' at index {start_idx}")
+                        print(f"Error: Expected '}}' ")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected '}}' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected '}}' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                     
                     start_idx += 1  
                     start_idx = skip_spaces(tokens, start_idx)
-                    
                     
                     
 
@@ -1248,9 +1318,9 @@ def parseSyntax(tokens, output_text):
                     start_idx = skip_spaces(tokens, start_idx)
 
                     if not is_token(tokens, start_idx, '{'):
-                        print(f"Error: Expected '{{' after 'else' at index {start_idx}")
+                        print(f"Error: Expected '{{' after 'else' ")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected '{{' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected '{{' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                     
                     start_idx += 1  
@@ -1265,8 +1335,8 @@ def parseSyntax(tokens, output_text):
                         # We found an empty else statement body!
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                         # Output the error message
-                        if display_error(line_number, line_text, f"Empty else statement body is not allowed"):
-                         return False, None
+                        if display_error(line_number, line_text, f"_L, express, if, prod, Identifier, for, while, func but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                            return False, None
                         print(f"EMPTY ELSE STATEMENT DETECTED at line {line_number}")
                     
                     # Check for invalid else statement body statements BEFORE parsing the body
@@ -1278,7 +1348,7 @@ def parseSyntax(tokens, output_text):
                     if check_idx < len(tokens) and any(tokens[check_idx][0] == token for token in invalid_direct_tokens):
                         invalid_token = tokens[check_idx][0]
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, check_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected express, if, Identifier, prod, func, for, while, or if at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected express, if, Identifier, prod, func, for, while, or if , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                     
                     # If it's not empty, proceed with normal parsing
@@ -1290,9 +1360,9 @@ def parseSyntax(tokens, output_text):
                     start_idx = skip_spaces(tokens, start_idx)
 
                     if not is_token(tokens, start_idx, '}'):
-                        print(f"Error: Expected '}}' at index {start_idx}")
+                        print(f"Error: Expected '}}' ")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected '}}' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected '}}' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                     
                     start_idx += 1  
@@ -1309,7 +1379,7 @@ def parseSyntax(tokens, output_text):
 
         @staticmethod
         def inside_loop_statement(tokens, start_idx):
-            print(f"DEBUG SYNTAX: Starting inside_loop_statement at index {start_idx}")
+            print(f"DEBUG SYNTAX: Starting inside_loop_statement ")
             start_idx = skip_spaces(tokens, start_idx)
             
             
@@ -1320,7 +1390,7 @@ def parseSyntax(tokens, output_text):
                 
                 
                 if not is_token(tokens, start_idx, ";"):
-                    print(f"Error: Expected ';' after 'contig' at index {start_idx}")
+                    print(f"Error: Expected ';' after 'contig' ")
                     return False, None
                 
                 start_idx += 1  
@@ -1334,7 +1404,7 @@ def parseSyntax(tokens, output_text):
                 
                 
                 if not is_token(tokens, start_idx, ";"):
-                    print(f"Error: Expected ';' after 'destroy' at index {start_idx}")
+                    print(f"Error: Expected ';' after 'destroy' ")
                     return False, None
                 
                 start_idx += 1  
@@ -1352,7 +1422,7 @@ def parseSyntax(tokens, output_text):
             start_idx = skip_spaces(tokens, start_idx)
 
             if not is_token(tokens, start_idx, '('):
-                print(f"Error: Expected '(' at index {start_idx}")
+                print(f"Error: Expected '(' ")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                 if display_error(line_number, line_text, f"Expected '(' in express statement but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                     return False, None
@@ -1362,17 +1432,22 @@ def parseSyntax(tokens, output_text):
 
             print(f"Before calling express_value: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
+            # Check if the first express value is a string literal
+            is_first_value_string_literal = start_idx < len(tokens) and tokens[start_idx][1] == 'string literal'
+            
             # Check if we have a valid arithmetic value after the opening parenthesis
             if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier') or 
-                    is_token(tokens, start_idx, 'seq') or tokens[start_idx][0] in {'(', '!', '+', '-'} or 
-                    tokens[start_idx][1] == 'string literal'):
+                    is_token(tokens, start_idx, 'seq') or tokens[start_idx][0] in {'(', '!'} or 
+                    tokens[start_idx][1] == 'string literal'  or 
+                    is_token(tokens, start_idx, 'dom') or  
+                    is_token(tokens, start_idx, 'rec')):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected valid arithmetic value but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected numlit, Identifier, string literal, 'dom', 'rec' 'seq' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                     return False, None
 
             is_valid, new_idx = express.express_value(tokens, start_idx)
             if not is_valid:
-                print(f"Error: Invalid expression at index {start_idx}")
+                print(f"Error: Invalid expression ")
                 return False, None
 
             print(f"After express_value, new index: {new_idx}, token: {tokens[new_idx] if new_idx < len(tokens) else 'EOF'}")
@@ -1396,7 +1471,7 @@ def parseSyntax(tokens, output_text):
                 # Check for closing bracket
                 if not is_token(tokens, start_idx, ']'):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected ']' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected ']' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                 
                 start_idx += 1
@@ -1404,9 +1479,14 @@ def parseSyntax(tokens, output_text):
                 
             if not is_token(tokens, start_idx, ')'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in express statement")
-                if display_error(line_number, line_text, f"Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                         return False, None
+                print(f"Error: Expected ')' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in express statement")
+                # Only display this error if the first express value is a string literal
+                if is_first_value_string_literal:
+                    if display_error(line_number, line_text, f"Expected ')', '+', ','  but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        return False, None
+                else:
+                    # Silently continue for non-string literals
+                    pass
                 
             start_idx += 1 
             start_idx = skip_spaces(tokens, start_idx)
@@ -1416,11 +1496,9 @@ def parseSyntax(tokens, output_text):
                 return True, start_idx + 1
             else:
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                found_token = tokens[start_idx] if start_idx < len(tokens) else ('EOF', 'EOF')
-                print(f"Error: Expected ';' at index {start_idx} (line {line_number})")
-                if display_error(line_number, line_text, f"Expected ';' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                         return False, None
+                print(f"Error: Expected ';'  (line {line_number})")
+                if display_error(line_number, line_text, f"Expected ';' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    return False, None
 
         @staticmethod
         def stimuli_statement(tokens, start_idx):
@@ -1457,7 +1535,7 @@ def parseSyntax(tokens, output_text):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                     found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                    if display_error(line_number, line_text, f"Expected array index at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected array index , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                 
                 start_idx += 1  
@@ -1468,7 +1546,7 @@ def parseSyntax(tokens, output_text):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                     found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                    if display_error(line_number, line_text, f"Expected ']' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected ']' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                 
                 start_idx += 1  
@@ -1484,7 +1562,7 @@ def parseSyntax(tokens, output_text):
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                         found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                        if display_error(line_number, line_text, f"Expected second array index at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected second array index , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                     
                     start_idx += 1  
@@ -1495,7 +1573,7 @@ def parseSyntax(tokens, output_text):
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                         found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                        if display_error(line_number, line_text, f"Expected ']' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected ']' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                     start_idx += 1  
             
@@ -1504,9 +1582,8 @@ def parseSyntax(tokens, output_text):
 
             
             if not any(is_token(tokens, start_idx, op) for op in assignment_op):
-
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected an assignment operator at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected an assignment operator , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
             
             
@@ -1519,9 +1596,9 @@ def parseSyntax(tokens, output_text):
                 start_idx = skip_spaces(tokens, start_idx)
                 return statements.parse_stimuli_call(tokens, start_idx)
             else:
-                
+                start_idx += 1  
                 start_idx = skip_spaces(tokens, start_idx)
-                return statements.assignment_statement(tokens, start_idx - 2)
+                return statements.assignment_statement(tokens, start_idx)
 
         @staticmethod
         def parse_stimuli_call(tokens, start_idx):
@@ -1533,9 +1610,10 @@ def parseSyntax(tokens, output_text):
             if not is_token(tokens, start_idx, '('):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                print(f"Error: Expected '(' at index {start_idx} (line {line_number})")
-                if display_error(line_number, line_text, f"Expected '()' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                print(f"Error: Expected '('  (line {line_number})")
+                if display_error(line_number, line_text, f"Expected '(' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
+                
             start_idx += 1  
             start_idx = skip_spaces(tokens, start_idx)
             
@@ -1543,8 +1621,8 @@ def parseSyntax(tokens, output_text):
             if not is_token(tokens, start_idx, 'string literal'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                print(f"Error: Expected string literal at index {start_idx} (line {line_number})")
-                if display_error(line_number, line_text, f"Expected string literal at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                print(f"Error: Expected string literal  (line {line_number})")
+                if display_error(line_number, line_text, f"Expected string literal , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
             start_idx += 1  
             start_idx = skip_spaces(tokens, start_idx)
@@ -1553,8 +1631,8 @@ def parseSyntax(tokens, output_text):
             if not is_token(tokens, start_idx, ')'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                print(f"Error: Expected ')' at index {start_idx} (line {line_number}) in stimuli call")
-                if display_error(line_number, line_text, f"Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                print(f"Error: Expected ')'  (line {line_number}) in stimuli call")
+                if display_error(line_number, line_text, f"Expected ')' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
             
             start_idx += 1  
@@ -1562,9 +1640,9 @@ def parseSyntax(tokens, output_text):
             
             
             if not is_token(tokens, start_idx, ';'):
-                print(f"Error: Expected ';' at index {start_idx} )")
+                print(f"Error: Expected ';'  )")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected ';' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected ';' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None 
 
             start_idx += 1  
@@ -1576,7 +1654,7 @@ def parseSyntax(tokens, output_text):
             
 
 
-            print(f"DEBUG SYNTAX: Starting assignment_statement at index {start_idx}")
+            print(f"DEBUG SYNTAX: Starting assignment_statement ")
             
             
             start_idx = skip_spaces(tokens, start_idx)
@@ -1584,27 +1662,26 @@ def parseSyntax(tokens, output_text):
             
             if not any(is_token(tokens, start_idx, op) for op in assignment_op):
                 # Check if the token itself is an equals sign (for no space case)
-                if start_idx < len(tokens) and tokens[start_idx][0] == '=':
-                    # Handle the case with no spaces - we found the equals sign token
-                    pass  # Continue processing normally
-                else:
-                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                    found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                    if display_error(line_number, line_text, f"Expected an assignment operator at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                         return False, None
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
+                if display_error(line_number, line_text, f"Expected '=', '+=', '-=', '*=', '/=', '%=', but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        return False, None
 
             
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
-            new_idx = start_idx
+            
+            if is_token(tokens, start_idx, 'stimuli'):
+                start_idx += 1
+                start_idx = skip_spaces(tokens, start_idx)
+                return statements.parse_stimuli_call(tokens, start_idx)
             
             is_valid, new_idx = statements.assignment_value(tokens, start_idx)
             if not is_valid:
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected a valid assignment value or stimuli at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected a valid assignment value or stimuli , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
             
             start_idx = new_idx  
@@ -1619,7 +1696,7 @@ def parseSyntax(tokens, output_text):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                     found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                    if display_error(line_number, line_text, f"Expected and Identifier at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected and Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
 
                 start_idx += 1  
@@ -1642,7 +1719,7 @@ def parseSyntax(tokens, output_text):
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                         found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                        if display_error(line_number, line_text, f"Expected ']' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected ']' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                     
                     start_idx += 1  
@@ -1657,7 +1734,7 @@ def parseSyntax(tokens, output_text):
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                         found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                        if display_error(line_number, line_text, f"Expected an assigmnent operator at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected an assigmnent operator , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                          return False, None
                 
                 start_idx += 1  
@@ -1669,7 +1746,7 @@ def parseSyntax(tokens, output_text):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                     found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                    if display_error(line_number, line_text, f"Expected a valid assignment value at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected a valid assignment value , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                 
                 start_idx = new_idx
@@ -1681,22 +1758,28 @@ def parseSyntax(tokens, output_text):
                 has_array_stimuli = True
                 start_idx += 1  
                 start_idx = skip_spaces(tokens, start_idx)
-                
-                
+
                 if start_idx < len(tokens):
-                    
-                    if is_token(tokens, start_idx, '::'):
+
+                    if is_token(tokens, start_idx, '::') or is_token(tokens, start_idx, ':'):
                         start_idx += 1  
                         start_idx = skip_spaces(tokens, start_idx)
-                        
-                        
-                        if start_idx < len(tokens) and tokens[start_idx][1] == "numlit":
-                            start_idx += 1  
+
+                        # After skipping :: or :, we must now expect Identifier or numlit
+                        if not is_token(tokens, start_idx, ["numlit"]):
+                            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                            if display_error(line_number, line_text, f"Expected numlit , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                                return False, None
+                    elif not is_token(tokens, start_idx, ["Identifier", "numlit"]):
+                        # Handles case like: [Identifier] with no colon
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                        if display_error(line_number, line_text, f"Expected Identifier or numlit , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                            return False, None
                     
                     elif not is_token(tokens, start_idx, ["Identifier", "numlit"]):
                         start_idx += 1  
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected Identifier or numlit at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected Identifier or numlit , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                             return False, None
                     
                 start_idx += 1    
@@ -1706,7 +1789,7 @@ def parseSyntax(tokens, output_text):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                     found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                    if display_error(line_number, line_text, f"Expected ']' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected ']' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                 
                 start_idx += 1  
@@ -1717,7 +1800,7 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected ';' or arithmetic operator at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected ';' '+' '-' '/' '*' '**' '//' '%' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             
             start_idx += 1  
@@ -1725,7 +1808,7 @@ def parseSyntax(tokens, output_text):
                             
         @staticmethod
         def for_loop_statement(tokens, start_idx):
-            print(f"DEBUG SYNTAX: Starting for_loop_statement at index {start_idx}")
+            print(f"DEBUG SYNTAX: Starting for_loop_statement ")
             print(f"DEBUG SYNTAX: Current tokens: {tokens[start_idx:start_idx+5]}")
             
             # Immediately add an empty for loop check
@@ -1739,8 +1822,8 @@ def parseSyntax(tokens, output_text):
                     if next_index < len(tokens) and tokens[next_index][0] == '}':
                         # Empty for loop found!
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        output_text.insert(tk.END, f" Syntax Error at line {line_number}: Empty for loop body is not allowed\n")
-                        return False, None
+                        if display_error(line_number, line_text, f"Expected _L, express, if, prod, Identifier, for, while, func but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                                return False, None
                     break
 
             # ... rest of the code
@@ -1751,11 +1834,11 @@ def parseSyntax(tokens, output_text):
 
             
             if not (start_idx < len(tokens) and tokens[start_idx][0] == '('):
-                print(f"ERROR: Expected '(' at index {start_idx}")
+                print(f"ERROR: Expected '(' ")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected '(' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected '(' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             start_idx += 1  
 
@@ -1763,11 +1846,11 @@ def parseSyntax(tokens, output_text):
 
             
             if not (start_idx < len(tokens) and tokens[start_idx][0] == 'dose'):
-                print(f"ERROR: Expected 'dose' for initialization at index {start_idx}")
+                print(f"ERROR: Expected 'dose' for initialization ")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected dose keyword for initialization at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected dose keyword for initialization , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             start_idx += 1  
 
@@ -1778,7 +1861,7 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected an Identifier at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected an Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             start_idx += 1  
 
@@ -1789,7 +1872,7 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected an equal sign at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected an equal sign , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             start_idx += 1  
 
@@ -1800,7 +1883,7 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected an Identifier or numlit at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected an Identifier or numlit , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                     return False, None
             start_idx += 1  
 
@@ -1811,7 +1894,7 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected ';' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected ';' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             start_idx += 1  
 
@@ -1822,7 +1905,7 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected an Identifier at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected an Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             start_idx += 1  
 
@@ -1833,7 +1916,7 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected a conditional operator (<, >, <=, >=, !=, ==) at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected a conditional operator (<, >, <=, >=, !=, ==) , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             start_idx += 1  
 
@@ -1845,7 +1928,7 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected an Identifier or numlit at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected an Identifier or numlit , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
 
             start_idx = new_idx
@@ -1856,7 +1939,7 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected ';' in for loop at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected ';' in for loop , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
 
             start_idx += 1  
@@ -1867,7 +1950,7 @@ def parseSyntax(tokens, output_text):
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                if display_error(line_number, line_text, f"Expected Identifier or unary operator (++, --) at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected Identifier or unary operator (++, --) , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
 
             
@@ -1896,7 +1979,7 @@ def parseSyntax(tokens, output_text):
                     found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                    if display_error(line_number, line_text, f"Expected increment or decrement operator (++, --) at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected increment or decrement operator (++, --) , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                 start_idx += 1
             else:
@@ -1924,7 +2007,7 @@ def parseSyntax(tokens, output_text):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                     found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                    if display_error(identifier_line_number, identifier_line_text, f"Expected an Identifier but found {found_token}"):
+                    if display_error(line_number, line_text, f"Expected an Identifier but found {found_token}"):
                         return False, None
                 start_idx += 1
 
@@ -1935,7 +2018,7 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected ')' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
 
             start_idx += 1  
@@ -1975,7 +2058,7 @@ def parseSyntax(tokens, output_text):
             if check_idx < len(tokens) and any(tokens[check_idx][0] == token for token in invalid_direct_tokens):
                 invalid_token = tokens[check_idx][0]
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, check_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected express, Identifier, stimuli, if, prod, while, func, contig, destroy at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected express, Identifier, stimuli, if, prod, while, func, contig, destroy , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             
             # If it's not empty, proceed with normal parsing
@@ -1989,7 +2072,7 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
-                if display_error(line_number, line_text, f"Expected '}}' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected '}}' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             
             start_idx += 1  
@@ -2013,7 +2096,7 @@ def parseSyntax(tokens, output_text):
             # Now check for the required semicolon
             if not is_token(tokens, start_idx, ';'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected ';' after prod value at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected ';' after prod value , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             
             # Return success and the index after the semicolon
@@ -2047,7 +2130,7 @@ def parseSyntax(tokens, output_text):
             
             # Simple literals check
             if is_token(tokens, start_idx, literals) or is_token(tokens, start_idx, ''):
-                print(f"Simple literal or identifier at index {start_idx}")
+                print(f"Simple literal or identifier ")
                 return True, start_idx + 1  
             
             # Try general arithmetic sequence
@@ -2061,20 +2144,20 @@ def parseSyntax(tokens, output_text):
             
             # Literals again (double check)
             if is_token(tokens, start_idx, literals):
-                print(f"Simple literal at index {start_idx}")
+                print(f"Simple literal ")
                 return True, start_idx + 1  
             
             # Try valid tokens
             for token in valid_tokens:
                 if is_token(tokens, start_idx, token):
-                    print(f"{token} token at index {start_idx}")
+                    print(f"{token} token ")
                     return True, start_idx + 1  
             
             # If we get here, the token is invalid
-            print(f"Invalid token at index {start_idx}: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+            print(f"Invalid token : {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
             # Add specific error message for invalid prod value
             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-            if display_error(line_number, line_text, f"Expected prod value, or ';' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+            if display_error(line_number, line_text, f"Expected prod value, or ';' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
 
         @staticmethod
@@ -2084,7 +2167,7 @@ def parseSyntax(tokens, output_text):
             # Check for negation operator at the beginning
             has_negation = False
             if start_idx < len(tokens) and tokens[start_idx][0] == '!':
-                print(f"Found negation operator '!' in assignment value at index {start_idx}")
+                print(f"Found negation operator '!' in assignment value ")
                 has_negation = True
                 start_idx += 1  
                 start_idx = skip_spaces(tokens, start_idx)
@@ -2138,34 +2221,34 @@ def parseSyntax(tokens, output_text):
             start_idx = skip_spaces(tokens, start_idx)
 
             if not is_token(tokens, start_idx, '('):
-                print(f"Error: Expected '(' after 'while' at index {start_idx}")
+                print(f"Error: Expected '(' after 'while' ")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected '(' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected '(' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             start_idx += 1  
             
             
             is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
             if not is_valid:
-                print(f"Error: Invalid condition in while statement at index {start_idx}")
+                print(f"Error: Invalid condition in while statement ")
                 return False, None
 
             start_idx = new_idx  
             start_idx = skip_spaces(tokens, start_idx)
 
             if not is_token(tokens, start_idx, ')'):
-                print(f"Error: Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in while statement")
+                print(f"Error: Expected ')' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'} in while statement")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected ')' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected ')' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
 
             start_idx += 1  
             start_idx = skip_spaces(tokens, start_idx)
 
             if not is_token(tokens, start_idx, '{'):
-                print(f"Error: Expected '{{' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"Error: Expected '{{' , found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected '{{' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected '{{' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
 
             start_idx += 1  
@@ -2193,7 +2276,7 @@ def parseSyntax(tokens, output_text):
             if check_idx < len(tokens) and any(tokens[check_idx][0] == token for token in invalid_direct_tokens):
                 invalid_token = tokens[check_idx][0]
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, check_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected express, if, prod, Identifier, for, while, func, contig, destroy at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected express, if, prod, Identifier, for, while, func, contig, destroy , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             
             # If it's not empty, proceed with normal parsing
@@ -2205,9 +2288,9 @@ def parseSyntax(tokens, output_text):
             
             
             if not is_token(tokens, start_idx, '}'):
-                print(f"Error: Expected '}}' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"Error: Expected '}}' , found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected '}}' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected '}}' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             
             return True, start_idx + 1
@@ -2220,7 +2303,7 @@ def parseSyntax(tokens, output_text):
             # Check for semicolon after contig
             if not is_token(tokens, start_idx, ';'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected ';' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected ';' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                 
             # Move past the semicolon
@@ -2238,7 +2321,7 @@ def parseSyntax(tokens, output_text):
             if not is_token(tokens, start_idx, 'Identifier'):
                 # Include both token info and line index in error message
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected an Identifier at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected an Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
 
             start_idx += 1
@@ -2253,14 +2336,14 @@ def parseSyntax(tokens, output_text):
                         number_sign = check_number_sign(tokens[start_idx])
                         if number_sign in {"quantval", "nequantliteral"}:
                             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                            if display_error(line_number, line_text, f"Expected a dose value at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                            if display_error(line_number, line_text, f"Expected a dose value , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                                 return False, None
                         start_idx += 1
                     elif is_token(tokens, start_idx, 'Identifier'):
                         start_idx += 1
                     else:
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected a dose value at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected a dose value , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                             return False, None
                     
                     start_idx = skip_spaces(tokens, start_idx)
@@ -2272,7 +2355,7 @@ def parseSyntax(tokens, output_text):
                     # Get updated line information for error
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                     
-                    if display_error(line_number, line_text, f"Expected a ',', '=', or ';' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected a ',', '=', or ';' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                 
                 start_idx += 1
@@ -2282,7 +2365,7 @@ def parseSyntax(tokens, output_text):
                     # Get updated line information for error
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                     
-                    if display_error(line_number, line_text, f"Expected an Identifier at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected an Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                 start_idx += 1
                 
@@ -2296,7 +2379,7 @@ def parseSyntax(tokens, output_text):
             
             if not is_token(tokens, start_idx, 'Identifier'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected an Identifier at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected an Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                     return False, None
 
             start_idx += 1
@@ -2325,7 +2408,7 @@ def parseSyntax(tokens, output_text):
                 
                 if not is_token(tokens, start_idx, ','):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected a ',', '=', or ';' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected a ',', '=', or ';' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                 
                 
@@ -2335,7 +2418,7 @@ def parseSyntax(tokens, output_text):
                 
                 if not is_token(tokens, start_idx, 'Identifier'):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected an Identifier at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected an Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                 start_idx += 1
                 
@@ -2349,7 +2432,7 @@ def parseSyntax(tokens, output_text):
             
             if not is_token(tokens, start_idx, 'Identifier'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected an Identifier at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected an Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                     return False, None
 
             start_idx += 1
@@ -2372,7 +2455,7 @@ def parseSyntax(tokens, output_text):
                         start_idx += 1
                     else:
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected dom, rec, Identifier, or numlit at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected dom, rec, Identifier, or numlit , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                             return False, None
                                         
                     start_idx = skip_spaces(tokens, start_idx)
@@ -2383,7 +2466,7 @@ def parseSyntax(tokens, output_text):
                 
                 if not is_token(tokens, start_idx, ','):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected ',', '=', or ';' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected ',', '=', or ';' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                 
                 
@@ -2393,7 +2476,7 @@ def parseSyntax(tokens, output_text):
                 
                 if not is_token(tokens, start_idx, 'Identifier'):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected Identifier at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                 start_idx += 1
                 
@@ -2405,7 +2488,7 @@ def parseSyntax(tokens, output_text):
 
             if not is_token(tokens, start_idx, 'Identifier'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected an Identifier at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected an Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                  return False, None
             
             start_idx += 1
@@ -2422,14 +2505,14 @@ def parseSyntax(tokens, output_text):
                         number_sign = check_number_sign(tokens[start_idx])
                         if number_sign in {"doseliteral", "neliteral"}:
                             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                            if display_error(line_number, line_text, f"Expected a quant value at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                            if display_error(line_number, line_text, f"Expected a quant value , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                                 return False, None
                         start_idx += 1
                     elif is_token(tokens, start_idx, 'Identifier'):
                         start_idx += 1
                     else:
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected quant value at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected quant value , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                             return False, None
                     
                     start_idx = skip_spaces(tokens, start_idx)
@@ -2439,7 +2522,7 @@ def parseSyntax(tokens, output_text):
                 
                 if not is_token(tokens, start_idx, ','):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected ',', '=', or ';' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected ',', '=', or ';' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                 
                 start_idx += 1
@@ -2463,7 +2546,7 @@ def parseSyntax(tokens, output_text):
             if not is_token(tokens, start_idx, 'Identifier'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                if display_error(line_number, line_text, f"Expected an Identifier  at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected an Identifier  , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                     return False, None
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
@@ -2472,7 +2555,7 @@ def parseSyntax(tokens, output_text):
             if not is_token(tokens, start_idx, '['):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                if display_error(line_number, line_text, f"Expected '[' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected '[' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                     return False, None
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
@@ -2480,7 +2563,7 @@ def parseSyntax(tokens, output_text):
                         
             if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier')):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected a number or Identifier  at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected a numlit or Identifier  , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                     return False, None
 
             # Only check number_sign if it's a numlit
@@ -2488,7 +2571,7 @@ def parseSyntax(tokens, output_text):
                 number_sign = check_number_sign(tokens[start_idx])
                 if number_sign in {"quantval", "nequantliteral"}:
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected quant value at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected quant value , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
 
             start_idx += 1
@@ -2498,7 +2581,7 @@ def parseSyntax(tokens, output_text):
             if not is_token(tokens, start_idx, ']'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                if display_error(line_number, line_text, f"Expected ']' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected ']' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                     return False, None
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
@@ -2511,7 +2594,7 @@ def parseSyntax(tokens, output_text):
 
                 if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier')):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected a number or Identifier at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected a numlit or Identifier , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
 
                 # Only check number_sign if it's a numlit
@@ -2519,7 +2602,7 @@ def parseSyntax(tokens, output_text):
                     number_sign = check_number_sign(tokens[start_idx])
                     if number_sign in {"quantval", "nequantliteral"}:
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        if display_error(line_number, line_text, f"Expected a quant value at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        if display_error(line_number, line_text, f"Expected a quant value , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                             return False, None
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
@@ -2527,7 +2610,7 @@ def parseSyntax(tokens, output_text):
                 if not is_token(tokens, start_idx, ']'):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                    if display_error(line_number, line_text, f"Expected ']' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected ']' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
@@ -2541,7 +2624,7 @@ def parseSyntax(tokens, output_text):
                 if not is_token(tokens, start_idx, '{'):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                    if display_error(line_number, line_text, f"Expected '{{' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    if display_error(line_number, line_text, f"Expected '{{' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
@@ -2569,7 +2652,7 @@ def parseSyntax(tokens, output_text):
                             if not is_token(tokens, start_idx, 'numlit'):
                                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                                if display_error(line_number, line_text, f"Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
+                                if display_error(line_number, line_text, f"Expected a numlit but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                                     return False, None
 
                             
@@ -2614,7 +2697,7 @@ def parseSyntax(tokens, output_text):
                         if not is_token(tokens, start_idx, 'numlit'):
                             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                            if display_error(line_number, line_text, f"Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
+                            if display_error(line_number, line_text, f"Expected a numlit but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                                 return False, None
                         
                         
@@ -2675,7 +2758,7 @@ def parseSyntax(tokens, output_text):
             if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier')):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                if display_error(line_number, line_text, f"Expected a number or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
+                if display_error(line_number, line_text, f"Expected a numlit or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                     return False, None
 
             # Only check number_sign if it's a numlit
@@ -2709,7 +2792,7 @@ def parseSyntax(tokens, output_text):
                 if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier')):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                    if display_error(line_number, line_text, f"Expected a number or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
+                    if display_error(line_number, line_text, f"Expected a numlit or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                         return False, None
 
                 # Only check number_sign if it's a numlit
@@ -2769,7 +2852,7 @@ def parseSyntax(tokens, output_text):
                             if not is_token(tokens, start_idx, 'numlit'):
                                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                                if display_error(line_number, line_text, f"Expected a number but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
+                                if display_error(line_number, line_text, f"Expected a numlit but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                                     return False, None
 
                             
@@ -2858,7 +2941,7 @@ def parseSyntax(tokens, output_text):
             if not is_token(tokens, start_idx, 'Identifier'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                print(f"DEBUG SYNTAX: Expected Identifier at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: Expected Identifier , found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 if display_error(line_number, line_text, f"Expected an identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                     return False, None
             print(f"DEBUG SYNTAX: Found Identifier: {tokens[start_idx]}")
@@ -2871,7 +2954,7 @@ def parseSyntax(tokens, output_text):
             if not is_token(tokens, start_idx, '['):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                print(f"DEBUG SYNTAX: Expected '[' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: Expected '[' , found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 if display_error(line_number, line_text, f"Expected an open bracket but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                     return False, None
             print(f"DEBUG SYNTAX: Found opening bracket")
@@ -2883,7 +2966,7 @@ def parseSyntax(tokens, output_text):
             
             if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier')):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected a number or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
+                if display_error(line_number, line_text, f"Expected a numlit or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                     return False, None
 
             # Only check number_sign if it's a numlit
@@ -2902,7 +2985,7 @@ def parseSyntax(tokens, output_text):
             if not is_token(tokens, start_idx, ']'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                print(f"DEBUG SYNTAX: Expected ']' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: Expected ']' , found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 if display_error(line_number, line_text, f"Expected a closing bracket\n"):
                     return False, None
             print(f"DEBUG SYNTAX: Found closing bracket")
@@ -2921,7 +3004,7 @@ def parseSyntax(tokens, output_text):
 
                 if not (is_token(tokens, start_idx, 'numlit') or is_token(tokens, start_idx, 'Identifier')):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected a number or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
+                    if display_error(line_number, line_text, f"Expected a numlit or identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                         return False, None
 
                 # Only check number_sign if it's a numlit
@@ -2940,7 +3023,7 @@ def parseSyntax(tokens, output_text):
                 if not is_token(tokens, start_idx, ']'):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                    print(f"DEBUG SYNTAX: Expected ']' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                    print(f"DEBUG SYNTAX: Expected ']' , found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                     if display_error(line_number, line_text, f"Expected a closing bracket\n"):
                         return False, None
                 print(f"DEBUG SYNTAX: Found second dimension closing bracket")
@@ -2959,7 +3042,7 @@ def parseSyntax(tokens, output_text):
                 if not is_token(tokens, start_idx, '{'):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                    print(f"DEBUG SYNTAX: Expected '{{' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                    print(f"DEBUG SYNTAX: Expected '{{' , found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                     if display_error(line_number, line_text, f"Expected an opening brace but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                      return False, None
                 print(f"DEBUG SYNTAX: Found opening brace")
@@ -3023,7 +3106,7 @@ def parseSyntax(tokens, output_text):
                         else:
                             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                            if display_error(line_number, line_text, f"Expected a closing brace at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                            if display_error(line_number, line_text, f"Expected a closing brace , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                                 return False, None
                 else:
                     print(f"DEBUG SYNTAX: Detected 1D array (direct values)")
@@ -3032,7 +3115,7 @@ def parseSyntax(tokens, output_text):
                         if not is_token(tokens, start_idx, 'string literal') :
                             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                            print(f"DEBUG SYNTAX: Expected string literal or Identifier at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                            print(f"DEBUG SYNTAX: Expected string literal or Identifier , found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                             if display_error(line_number, line_text, f"Expected a string literal but found {tokens[start_idx][0]}\n"):
                                 return False, None
 
@@ -3053,7 +3136,7 @@ def parseSyntax(tokens, output_text):
                         else:
                             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                            print(f"DEBUG SYNTAX: Expected ',' or '}}' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                            print(f"DEBUG SYNTAX: Expected ',' or '}}' , found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                             if display_error(line_number, line_text, f"Expected a comma or closing brace but found {tokens[start_idx][0]}\n"):
                                 return False, None
 
@@ -3061,7 +3144,7 @@ def parseSyntax(tokens, output_text):
             if not is_token(tokens, start_idx, ';'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                print(f"DEBUG SYNTAX: Expected ';' at index {start_idx}, found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"DEBUG SYNTAX: Expected ';' , found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 if display_error(line_number, line_text, f"Expected a semicolon but found {tokens[start_idx][0]}\n"):
                     return False, None
             print(f"DEBUG SYNTAX: Found semicolon, array declaration complete")
@@ -3082,11 +3165,11 @@ def parseSyntax(tokens, output_text):
 
             
             if start_idx >= len(tokens) or tokens[start_idx][0] not in param_types:
-                print(f"No parameters found at index {start_idx}.")
+                print(f"No parameters found .")
                 return True, [], start_idx
 
             if tokens[start_idx][0] == ")":
-                print(f"No parameters found at index {start_idx}.")
+                print(f"No parameters found .")
                 return True, [], start_idx
             
             while start_idx < len(tokens):
@@ -3094,8 +3177,8 @@ def parseSyntax(tokens, output_text):
                 if tokens[start_idx][0] not in param_types:
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                    print(f"Error: Expected parameter type at index {start_idx}, found {tokens[start_idx]}")
-                    if display_error(line_number, line_text, f"Expected an data type\n"):
+                    print(f"Error: Expected parameter type , found {tokens[start_idx]}")
+                    if display_error(line_number, line_text, f"Expected a 'dose', 'quant', 'seq', or 'allele' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                         return False, None, start_idx
 
                 param_type = tokens[start_idx][0]
@@ -3106,7 +3189,7 @@ def parseSyntax(tokens, output_text):
                 if start_idx >= len(tokens) or tokens[start_idx][1] != "Identifier":
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                    print(f"Error: Expected Identifier after parameter type '{param_type}' at index {start_idx}")
+                    print(f"Error: Expected Identifier after parameter type '{param_type}' ")
                     if display_error(line_number, line_text, f"Expected an Identifier but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                         return False, None, start_idx
 
@@ -3141,7 +3224,7 @@ def parseSyntax(tokens, output_text):
                 return True, start_idx
             
             if start_idx >= len(tokens):
-                print(f">> No parameters found at index {start_idx}.")
+                print(f">> No parameters found .")
                 return True, start_idx
 
             while start_idx < len(tokens):
@@ -3156,7 +3239,7 @@ def parseSyntax(tokens, output_text):
                 else:
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                    print(f">> ERROR: Expected identifier or number at index {start_idx}")
+                    print(f">> ERROR: Expected identifier or numlit ")
                     if display_error(line_number, line_text, f"Expected an identifier or numlit but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                         return False, None
 
@@ -3173,24 +3256,20 @@ def parseSyntax(tokens, output_text):
     class arithmetic:
         @staticmethod
         def arithmetic_sequence(tokens, start_idx):
-
-
             print("In arithmetic sequence")
-            
             
             is_valid, new_idx = arithmetic.arithmetic_value(tokens, start_idx)
             if not is_valid:    
                 return False, None
             
             start_idx = new_idx
-            
+            start_idx = skip_spaces(tokens, start_idx)
             
             is_valid, new_idx = arithmetic.arithmetic_sequence_tail(tokens, start_idx)
             if not is_valid:
-                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected valid arithmetic value but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                    return False, None
-                
+                # The error is already reported in arithmetic_sequence_tail
+                return False, None
+            
             return True, new_idx
 
         @staticmethod
@@ -3200,7 +3279,7 @@ def parseSyntax(tokens, output_text):
             start_idx = skip_spaces(tokens, start_idx)
             
             if start_idx >= len(tokens):
-                print(f"ERROR: Expected token at index {start_idx}, but reached end of input")
+                print(f"ERROR: Expected token , but reached end of input")
                 return False, None
             
             
@@ -3220,9 +3299,9 @@ def parseSyntax(tokens, output_text):
                 if is_token(tokens, start_idx, ')'):
                     return True, start_idx + 1
                 else:
+                    #FIXXXXXXX
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                    if display_error(line_number, line_text, f"Expected a closing parenthesis or math operator\n"):
+                    if display_error(line_number, line_text, f"Expected a ')' '+' '-' '/' '*' '**' '//' '% but found {tokens[start_idx][0]}\n"):
                         return False, None
             
             
@@ -3244,310 +3323,385 @@ def parseSyntax(tokens, output_text):
         @staticmethod
         def arithmetic_sequence_tail(tokens, start_idx):
             start_idx = skip_spaces(tokens, start_idx)
-
             
+            # If we're at the end or found a closing parenthesis, we're done
             if start_idx >= len(tokens) or is_token(tokens, start_idx, ')'):
                 return True, start_idx
-
             
+            # If we found an operator, we expect another value after it
             if start_idx < len(tokens) and any(is_token(tokens, start_idx, op) for op in (math_operator | conditional_op)):
                 operator = tokens[start_idx][0]
                 operator_idx = start_idx + 1
                 operator_idx = skip_spaces(tokens, operator_idx)
-
                 
+                # Check if there's a value after the operator
+                if operator_idx >= len(tokens) or tokens[operator_idx][0] == '}' or tokens[operator_idx][0] == ')':
+                    # If not, report the specific error with the actual token found
+                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, operator_idx, display_lines, get_line_number)
+                    found_token = tokens[operator_idx][0] if operator_idx < len(tokens) else 'EOF'
+                    if display_error(line_number, line_text, f"Expected numlit, '(' or Identifier after '{operator}' but found {found_token}"):
+                        return False, None
+                
+                # Otherwise, parse the value after the operator
                 is_valid, new_idx = arithmetic.arithmetic_value(tokens, operator_idx)
                 if not is_valid:
                     return False, None
-
-                start_idx = new_idx
-
                 
+                start_idx = new_idx
+                
+                # Recursively check for more operators
                 return arithmetic.arithmetic_sequence_tail(tokens, start_idx)
-
             
             return True, start_idx
+
     class express:
         @staticmethod
         def express_value(tokens, start_idx):
-            print("<express_value>")
-            exp_literals = {'string literal', 'numlit', 'Identifier', 'dom', 'rec'}
-            values = []  
-            print(f"Initial start_idx: {start_idx}")
-            start_idx = skip_spaces(tokens, start_idx)
-            print(f"After skipping spaces, start_idx: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                    print("<express_value>")
+                    exp_literals = {'string literal', 'numlit', 'Identifier', 'dom', 'rec'}
+                    values = []  
+                    print(f"Initial start_idx: {start_idx}")
+                    start_idx = skip_spaces(tokens, start_idx)
+                    print(f"After skipping spaces, start_idx: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
 
-            if start_idx < len(tokens) and tokens[start_idx][1] == 'Identifier':
-                identifier = tokens[start_idx][0]
-                print(f"Found identifier: {identifier}")
-                
-                # Use lookahead to determine what kind of expression we're parsing
-                lookahead_idx = skip_spaces(tokens, start_idx + 1)
-                
-                # Case 1: Array reference (identifier followed by '[')
-                if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == '[':
-                    print("Found '[', parsing as express_value_id_tail")
-                    is_valid, id_tail_value, next_idx = express.express_value_id_tail(tokens, start_idx + 1, identifier)
-                    if not is_valid:
-                        print("Failed to parse express_value_id_tail")
-                        print("Syntax Error: Expected valid array index")
-                        return False, None
-                    
-                    values.append(id_tail_value)
-                    start_idx = next_idx
-                
-                # Case 2: Part of arithmetic (followed by arithmetic operators)
-                elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] in {'+', '-', '*', '/', '%', '='}:
-                    print("Identifier followed by arithmetic operator, parsing as arithmetic_sequence")
-                    is_valid, new_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
-                    if is_valid:
-                        print("Parsed arithmetic sequence in express_value.")
-                        return True, new_idx
-                    else:
-                        print("Failed to parse as arithmetic, falling back to simple identifier")
-                        values.append(identifier)
-                        start_idx = lookahead_idx
-                
-                # Case 3: Part of conditional expression
-                elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] in {'==', '!=', '<', '>', '<=', '>=', '&&', '||'}:
-                    print("Identifier followed by conditional operator, parsing as conditional_block")
-                    is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
-                    if is_valid:
-                        print("Parsed conditional block in express_value.")
-                        return True, new_idx
-                    else:
-                        print("Failed to parse as conditional, falling back to simple identifier")
-                        values.append(identifier)
-                        start_idx = lookahead_idx
-                
-                # Case 4: Simple identifier
-                else:
-                    values.append(identifier)
-                    start_idx = lookahead_idx
-            
-            # Only try parsing conditional/arithmetic if we haven't already handled the token
-            elif start_idx < len(tokens) and (
-                tokens[start_idx][0] in {'(', '!', '+', '-'} or 
-                tokens[start_idx][1] == 'numlit'
-            ):
-                # Try conditional block first
-                cond_start_tokens = {'(', '!', 'numlit'}
-                if tokens[start_idx][0] in cond_start_tokens or tokens[start_idx][1] in cond_start_tokens:
-                    print("Trying conditional_block from express_value...")
-                    is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
-                    if is_valid:
-                        print("Parsed conditional block in express_value.")
-                        return True, new_idx
-                    
-                # Try arithmetic sequence if conditional didn't succeed
-                print("Trying arithmetic_sequence from express_value...")
-                is_valid, new_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
-                if is_valid:
-                    print("Parsed arithmetic sequence in express_value.")
-                    return True, new_idx
-                else:
-                    print("Not a valid arithmetic/conditional, will try literal/seq/concat.")
-            
-            # Existing logic for seq, identifier, numlit, string literal, etc.
-            elif start_idx < len(tokens) and is_token(tokens, start_idx, 'seq'):
-                print("Found 'seq' keyword, parsing as seq_type_cast")
-                is_valid, cast_value, next_idx = express.seq_type_cast(tokens, start_idx)
-                if is_valid and cast_value:  
-                    print(f"Successfully parsed seq_type_cast: {cast_value}")
-                    lookahead_idx = skip_spaces(tokens, next_idx)
-                    if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == "+":
-                        print("Found 'seq' followed by '+', parsing as seq_concat")
-                        start_idx = skip_spaces(tokens, start_idx)
-                        is_valid, concat_value, next_idx = express.seq_concat(tokens, start_idx)
-                        if not is_valid:
-                            print("Failed to parse seq_concat")
-                            return False, None
-                        values.append(concat_value)
-                        start_idx = next_idx
-                    else:
-                        values.append(cast_value)
-                        start_idx = next_idx
-                else:
-                    print("Failed to parse seq_type_cast")
-                    print("Syntax Error: Expected valid sequence type")
-  
-            elif start_idx < len(tokens) and is_token(tokens, start_idx, 'numlit'):
-                lookahead_idx = skip_spaces(tokens, start_idx + 1)
-                if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] in ('+', '-', '*', '/', '%', '='):  
-                    print("Found 'numlit' followed by '+', trying to parse as arithmetic sequence")
-                    is_valid, next_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
-                    if is_valid:
-                        print("Successfully parsed arithmetic sequence")
-                        start_idx = next_idx
-                    else:
-                        print("Failed to parse arithmetic sequence, trying seq_concat")
-                        is_valid, concat_value, next_idx = express.seq_concat(tokens, start_idx)
-                        if not is_valid:
-                            print("Failed to parse seq_concat")
-                            return False, None
-                        values.append(concat_value)
-                        start_idx = next_idx
-                else:
-                    values.append(tokens[start_idx][0])  
-                    print(f"Added '{tokens[start_idx][0]}' to values: {values}")
-                    start_idx += 1  
-            
-            elif start_idx < len(tokens) and is_token(tokens, start_idx, 'string literal'):
-                lookahead_idx = skip_spaces(tokens, start_idx + 1)
-                if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == "+":
-                    print("Found 'string literal' followed by '+', parsing as seq_concat")
-                    is_valid, concat_value, next_idx = express.seq_concat(tokens, start_idx)
-                    if not is_valid:
-                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                        print("Failed to parse seq_concat")
-                        print("Syntax Error: Expected plus sign")
-                        if display_error(line_number, line_text, f"Expected a plus sign but found {tokens[start_idx][0]}\n"):
-                            return False, None
-                    values.append(concat_value)
-                    start_idx = next_idx
-                else:
-                    values.append(tokens[start_idx][0])  
-                    print(f"Added '{tokens[start_idx][0]}' to values: {values}")
-                    start_idx += 1  
-            
-            elif start_idx < len(tokens) and tokens[start_idx][1] in exp_literals:
-                
-                values.append(tokens[start_idx][0])  
-                print(f"Added '{tokens[start_idx][0]}' to values: {values}")
-                start_idx += 1  
-            else:
-                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                    if start_idx < len(tokens) and tokens[start_idx][1] == 'Identifier':
 
-                print(f"Error: Expected a literal or seq type cast at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                print("Syntax Error: Expected a literal or sequence type")
-                if display_error(line_number, line_text, f"Expected a literal but found {tokens[start_idx][0]}\n"):
-                    return False, None  
-            
-            
-            start_idx = skip_spaces(tokens, start_idx)
-            
-            
-            while start_idx < len(tokens) and (is_token(tokens, start_idx, ',') or is_token(tokens, start_idx, '+')):               
-                
-                start_idx += 1  
-                print(f"Moved past comma, new start_idx: {start_idx}")
-                
-                start_idx = skip_spaces(tokens, start_idx)
-                print(f"After skipping spaces, start_idx: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                
-                
-                if start_idx < len(tokens) and is_token(tokens, start_idx, 'seq'):
-                    print("Found 'seq' keyword after comma, parsing as seq_type_cast")
-                    is_valid, cast_value, next_idx = express.seq_type_cast(tokens, start_idx)
-                    if is_valid and cast_value:  
-                        print(f"Successfully parsed seq_type_cast after comma: {cast_value}")
                         
+                        # Use lookahead to determine what kind of expression we're parsing
+                        lookahead_idx = skip_spaces(tokens, start_idx + 1)
                         
-                        lookahead_idx = skip_spaces(tokens, next_idx)
-                        if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == "+":
-                            print("Found 'seq' followed by '+' after comma, parsing as seq_concat")
+                        # Case 1: Array reference (identifier followed by '[')
+                        if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == '[':
+                            print("Found '[', parsing as express_value_id_tail")
+                            is_valid, next_idx = express.express_value_id_tail(tokens, start_idx + 1)
+                            if not is_valid:
+                                print("Failed to parse express_value_id_tail")
+                                print("Syntax Error: Expected valid array index")
+                                return False, None
                             
+                            start_idx = next_idx
+                        
+                        # Case 2: Part of arithmetic (followed by arithmetic operators)
+                        elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] in {'+', '-', '*', '/', '%', '//' ,'**'}:
+                            print("Identifier followed by arithmetic operator, parsing as arithmetic_sequence")
+                            is_valid, new_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
+                            if is_valid:
+                                print("Parsed arithmetic sequence in express_value.")
+                                return True, new_idx
+                            else:
+                                print("Failed to parse as arithmetic, falling back to simple identifier")
+                                values.append(identifier)
+                                start_idx = lookahead_idx
+                        
+                        # Case 3: Part of conditional expression
+                        elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] in {'==', '!=', '<', '>', '<=', '>=', '&&', '||'}:
+                            print("Identifier followed by conditional operator, parsing as conditional_block")
+                            is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
+                            if is_valid:
+                                print("Parsed conditional block in express_value.")
+                                return True, new_idx
+                            else:
+                                print("Failed to parse as conditional, falling back to simple identifier")
+                                values.append(identifier)
+                                start_idx = lookahead_idx
+                        
+                        # Case 4: Simple identifier
+                        elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == ")":
+                            start_idx = lookahead_idx
                             
+                        else:
+                            start_idx += 1  
                             start_idx = skip_spaces(tokens, start_idx)
-                            is_valid, concat_value, next_idx = express.seq_concat(tokens, start_idx)
-                            if not is_valid:
-                                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                            
+                            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
-                                print("Failed to parse seq_concat after comma")
-                                print("Syntax Error: Expected plus sign")
-                                if display_error(line_number, line_text, f"Expected a plus sign but found {tokens[start_idx][0]}\n"):
-                                    return False, None
+                            if display_error(line_number, line_text, f"Expected ')', '==', '!=', '<', '>', '<=', '>=', '&&', '||' ,'+', '-', '*', '/', '%', '//' ,'**' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
+                                return False, None
+                    
+                    
+                    # Only try parsing conditional/arithmetic if we haven't already handled the token
+                    elif start_idx < len(tokens) and (
+                        tokens[start_idx][0] in {'(', '!'} or 
+                        tokens[start_idx][1] == 'numlit'
+                        ):
+
+                        if tokens[start_idx][0] in {'('}:
+                            is_valid, new_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
+                            if is_valid:
+                                print("Parsed arithmetic sequence in express_value.")
+                                return True, new_idx      
+                            else:
+                                # Handle invalid arithmetic sequence case
+                                return False, None
                             
                             
-                            values.append(concat_value)
-                            start_idx = next_idx
-                            continue
-                        else:
-                            
-                            values.append(cast_value)
-                            start_idx = next_idx
-                            continue
-                    else:
-                        print("Failed to parse seq_type_cast after comma")
-                        print("Syntax Error: Expected valid sequence type")
-                        return False, None
-                
-                
-                elif start_idx < len(tokens) and is_token(tokens, start_idx, 'numlit'):
-                    lookahead_idx = skip_spaces(tokens, start_idx + 1)
-                    if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == "+":  
-                        print("Found 'numlit' followed by '+' after comma, trying to parse as arithmetic sequence")
+                        # Use lookahead to determine what kind of expression we're parsing
+                        lookahead_idx = skip_spaces(tokens, start_idx + 1)
+                    
+                                  
+                        # Case 2: Part of arithmetic (followed by arithmetic operators)
+                        if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] in {'+', '-', '*', '/', '%', '//' ,'**'}:
+                            print("Identifier followed by arithmetic operator, parsing as arithmetic_sequence")
+                            is_valid, new_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
+                            if is_valid:
+                                print("Parsed arithmetic sequence in express_value.")
+                                return True, new_idx
+                            else:
+                                print("Failed to parse as arithmetic, falling back to simple identifier")
+                                values.append(identifier)
+                                start_idx = lookahead_idx
                         
-                        is_valid, next_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
-                        if is_valid:
-                            print("Successfully parsed arithmetic sequence after comma")
-                            
-                            
-                            start_idx = next_idx
-                            continue
+                        # Case 3: Part of conditional expression
+                        elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] in {'==', '!=', '<', '>', '<=', '>=', '&&', '||'}:
+                            print("Identifier followed by conditional operator, parsing as conditional_block")
+                            is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
+                            if is_valid:
+                                print("Parsed conditional block in express_value.")
+                                return True, new_idx
+                            else:
+                                print("Failed to parse as conditional, falling back to simple identifier")
+                                values.append(identifier)
+                                start_idx = lookahead_idx
+                        
+                        # Case 4: Simple identifier
+                        elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == ")":
+                            start_idx = lookahead_idx
+
                         else:
+                            start_idx += 1  
+                            start_idx = skip_spaces(tokens, start_idx)
                             
-                            print("Failed to parse arithmetic sequence after comma, trying seq_concat")
+                            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+
+                            if display_error(line_number, line_text, f"Expected ')''==', '!=', '<', '>', '<=', '>=', '&&', '||' ,'+', '-', '*', '/', '%', '//' ,'**' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
+                                return False, None
+
+
+                    elif start_idx < len(tokens) and is_token(tokens, start_idx, 'seq'):
+                        print("Found 'seq' keyword, parsing as seq_type_cast")
+                        is_valid, cast_value, next_idx = express.seq_type_cast(tokens, start_idx)
+                        if is_valid and cast_value:  
+                            print(f"Successfully parsed seq_type_cast: {cast_value}")
+                            lookahead_idx = skip_spaces(tokens, next_idx)
+                            if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == "+":
+                                print("Found 'seq' followed by '+', parsing as seq_concat")
+                                start_idx = skip_spaces(tokens, start_idx)
+                                is_valid, concat_value, next_idx = express.seq_concat(tokens, start_idx)
+                                if not is_valid:
+                                    print("Failed to parse seq_concat")
+                                    return False, None
+                                values.append(concat_value)
+                                start_idx = next_idx
+                            else:
+                                values.append(cast_value)
+                                start_idx = next_idx
+                        else:
+                            print("Failed to parse seq_type_cast")
+                            print("Syntax Error: Expected valid sequence type")
+
+                    elif start_idx < len(tokens) and is_token(tokens, start_idx, 'string literal'):
+                        lookahead_idx = skip_spaces(tokens, start_idx + 1)
+                        if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == "+":
+                            print("Found 'string literal' followed by '+', parsing as seq_concat")
                             is_valid, concat_value, next_idx = express.seq_concat(tokens, start_idx)
                             if not is_valid:
                                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                                print("Failed to parse seq_concat after comma")
+                                print("Failed to parse seq_concat")
                                 print("Syntax Error: Expected plus sign")
                                 if display_error(line_number, line_text, f"Expected a plus sign but found {tokens[start_idx][0]}\n"):
                                     return False, None
-                                
-                            
                             values.append(concat_value)
                             start_idx = next_idx
-                            continue
-                    else:
+                        else:
+                            values.append(tokens[start_idx][0])  
+                            print(f"Added '{tokens[start_idx][0]}' to values: {values}")
+                            start_idx += 1  
+                    
+                    elif start_idx < len(tokens) and tokens[start_idx][1] in exp_literals:
                         
                         values.append(tokens[start_idx][0])  
                         print(f"Added '{tokens[start_idx][0]}' to values: {values}")
                         start_idx += 1  
-                        continue
-                
-                
-                elif start_idx < len(tokens) and is_token(tokens, start_idx, 'string literal'):
-                    lookahead_idx = skip_spaces(tokens, start_idx + 1)
-                    if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == "+":
-                        print("Found 'string literal' followed by '+' after comma, parsing as seq_concat")
-                        is_valid, concat_value, next_idx = express.seq_concat(tokens, start_idx)
-                        if not is_valid:
-                            print("Failed to parse seq_concat after comma")
-                            print("Syntax Error: Expected plus sign")
+
+                    else:
+                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+
+                        print(f"Error: Expected a literal or seq type cast at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                        print("Syntax Error: Expected a literal or sequence type")
+                        if display_error(line_number, line_text, f"Expected a literal but found {tokens[start_idx][0]}\n"):
                             return False, None
-                            
+                    
+
+
+                    
+                    start_idx = skip_spaces(tokens, start_idx)
+                    
+                    
+                    while start_idx < len(tokens) and (is_token(tokens, start_idx, ',') or is_token(tokens, start_idx, '+')):               
                         
-                        values.append(concat_value)
-                        start_idx = next_idx
-                        continue
-                    else:
+                        start_idx += 1  
+                        print(f"Moved past comma, new start_idx: {start_idx}")
+                        
+                        start_idx = skip_spaces(tokens, start_idx)
+                        print(f"After skipping spaces, start_idx: {start_idx}, token: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                        
+                        
+                        if start_idx < len(tokens) and is_token(tokens, start_idx, 'seq'):
+                            print("Found 'seq' keyword after comma, parsing as seq_type_cast")
+                            is_valid, cast_value, next_idx = express.seq_type_cast(tokens, start_idx)
+                            if is_valid and cast_value:  
+                                print(f"Successfully parsed seq_type_cast after comma: {cast_value}")
+                                
+                                
+                                lookahead_idx = skip_spaces(tokens, next_idx)
+                                if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == "+":
+                                    print("Found 'seq' followed by '+' after comma, parsing as seq_concat")
+                                    
+                                    
+                                    start_idx = skip_spaces(tokens, start_idx)
+                                    is_valid, concat_value, next_idx = express.seq_concat(tokens, start_idx)
+                                    if not is_valid:
+                                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+
+                                        print("Failed to parse seq_concat after comma")
+                                        print("Syntax Error: Expected plus sign")
+                                        if display_error(line_number, line_text, f"Expected a plus sign but found {tokens[start_idx][0]}\n"):
+                                            return False, None
+                                    
+                                    
+                                    values.append(concat_value)
+                                    start_idx = next_idx
+                                    continue
+                                else:
+                                    
+                                    values.append(cast_value)
+                                    start_idx = next_idx
+                                    continue
+                            else:
+                                print("Failed to parse seq_type_cast after comma")
+                                print("Syntax Error: Expected valid sequence type")
+                                return False, None
+                        
+                        # Modified: Handle Identifier after comma the same way as numlit
+                        elif start_idx < len(tokens) and tokens[start_idx][1] == 'Identifier':
+                            identifier = tokens[start_idx][0]
+                            print(f"Found identifier after comma: {identifier}")
+                            
+                            lookahead_idx = skip_spaces(tokens, start_idx + 1)
+                            
+                            # Check for operators after identifier (same as numlit behavior)
+                            if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] in ('+', '-', '*', '/', '%', '='):  
+                                print("Found 'Identifier' followed by operator after comma, trying to parse as arithmetic sequence")
+                                
+                                is_valid, next_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
+                                if is_valid:
+                                    print("Successfully parsed arithmetic sequence after comma")
+                                    start_idx = next_idx
+                                    continue
+                                else:
+                                    print("Failed to parse arithmetic sequence after comma, trying seq_concat")
+                                    is_valid, concat_value, next_idx = express.seq_concat(tokens, start_idx)
+                                    if not is_valid:
+                                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                                        print("Failed to parse seq_concat after comma")
+                                        print("Syntax Error: Expected plus sign")
+                                        if display_error(line_number, line_text, f"Expected a plus sign but found {tokens[start_idx][0]}\n"):
+                                            return False, None
+                                    values.append(concat_value)
+                                    start_idx = next_idx
+                                    continue
+                            # Check for array reference
+                            elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == '[':
+                                print("Found '[' after comma, parsing as express_value_id_tail")
+                                is_valid, id_tail_value, next_idx = express.express_value_id_tail(tokens, start_idx + 1, identifier)
+                                if not is_valid:
+                                    print("Failed to parse express_value_id_tail after comma")
+                                    print("Syntax Error: Expected valid array index")
+                                    return False, None
+                                values.append(id_tail_value)
+                                start_idx = next_idx
+                                continue
+                            else:
+                                # Simple identifier (same as numlit behavior)
+                                values.append(tokens[start_idx][0])  
+                                print(f"Added '{tokens[start_idx][0]}' to values: {values}")
+                                start_idx += 1  
+                                continue
+                        
+                        elif start_idx < len(tokens) and is_token(tokens, start_idx, 'numlit'):
+                            lookahead_idx = skip_spaces(tokens, start_idx + 1)
+                            if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == "+":  
+                                print("Found 'numlit' followed by '+' after comma, trying to parse as arithmetic sequence")
+                                
+                                is_valid, next_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
+                                if is_valid:
+                                    print("Successfully parsed arithmetic sequence after comma")
+                                    
+                                    
+                                    start_idx = next_idx
+                                    continue
+                                else:
+                                    
+                                    print("Failed to parse arithmetic sequence after comma, trying seq_concat")
+                                    is_valid, concat_value, next_idx = express.seq_concat(tokens, start_idx)
+                                    if not is_valid:
+                                        line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+
+                                        print("Failed to parse seq_concat after comma")
+                                        print("Syntax Error: Expected plus sign")
+                                        if display_error(line_number, line_text, f"Expected a plus sign but found {tokens[start_idx][0]}\n"):
+                                            return False, None
+                                        
+                                    
+                                    values.append(concat_value)
+                                    start_idx = next_idx
+                                    continue
+                            else:
+                                
+                                values.append(tokens[start_idx][0])  
+                                print(f"Added '{tokens[start_idx][0]}' to values: {values}")
+                                start_idx += 1  
+                                continue
+                        
+                        
+                        elif start_idx < len(tokens) and is_token(tokens, start_idx, 'string literal'):
+                            lookahead_idx = skip_spaces(tokens, start_idx + 1)
+                            if lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == "+":
+                                print("Found 'string literal' followed by '+' after comma, parsing as seq_concat")
+                                is_valid, concat_value, next_idx = express.seq_concat(tokens, start_idx)
+                                if not is_valid:
+                                    print("Failed to parse seq_concat after comma")
+                                    print("Syntax Error: Expected plus sign")
+                                    return False, None
+                                    
+                                
+                                values.append(concat_value)
+                                start_idx = next_idx
+                                continue
+                            else:
+                                
+                                values.append(tokens[start_idx][0])  
+                                print(f"Added '{tokens[start_idx][0]}' to values: {values}")
+                                start_idx += 1  
+                                continue
+                        
+                        
+                        
+                        if start_idx >= len(tokens) or tokens[start_idx][1] not in exp_literals:
+                            print(f"Error: Expected a literal or seq type cast after ',' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                            print("Syntax Error: Expected a literal or sequence type after comma")
+                            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                            if display_error(line_number, line_text, f"Expected a literal but found {tokens[start_idx][0]}\n"):
+                                return False, None
                         
                         values.append(tokens[start_idx][0])  
                         print(f"Added '{tokens[start_idx][0]}' to values: {values}")
+                        
                         start_idx += 1  
-                        continue
-                
-                
-                
-                if start_idx >= len(tokens) or tokens[start_idx][1] not in exp_literals:
-                    print(f"Error: Expected a literal or seq type cast after ',' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                    print("Syntax Error: Expected a literal or sequence type after comma")
-                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                    if display_error(line_number, line_text, f"Expected a literal but found {tokens[start_idx][0]}\n"):
-                        return False, None  
-                
-                values.append(tokens[start_idx][0])  
-                print(f"Added '{tokens[start_idx][0]}' to values: {values}")
-                
-                start_idx += 1  
-                start_idx = skip_spaces(tokens, start_idx)  
-            
-            print("Parsing successful:", values)
-            return True, start_idx  
+                        start_idx = skip_spaces(tokens, start_idx)  
+                    
+                    print("Parsing successful:", values)
+                    return True, start_idx
 
         @staticmethod
         def seq_concat(tokens, start_idx):
@@ -3582,8 +3736,8 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 print(f"Error: Expected string literal, identifier, or seq_type_cast at index {start_idx}")
-                if display_error(line_number, line_text, f"Expected a string literal, identifier, or seq type cast but found {tokens[start_idx][0]}\n"):
-                    return False, None, start_idx
+                if display_error(line_number, line_text, f"Expected a string literal, Identifier or seq but found {tokens[start_idx][0]}\n"):
+                    return False, None
             
             start_idx = skip_spaces(tokens, start_idx)
             
@@ -3623,8 +3777,8 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 print(f"Error: Expected string literal, identifier, or seq_type_cast at index {start_idx}")
-                if display_error(line_number, line_text, f"Expected a string literal, identifier, or seq type cast but found {tokens[start_idx][0]}\n"):
-                    return False, None, start_idx
+                if display_error(line_number, line_text, f"Expected a string literal, Identifier or seq but found {tokens[start_idx][0]}\n"):
+                    return False, None
             
             
             result = f"{first_value} + {second_value}"  
@@ -3674,8 +3828,8 @@ def parseSyntax(tokens, output_text):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                     print(f"Error: Invalid seq function call at index {start_idx}")
-                    if display_error(line_number, line_text, f"Expected a seq but found {tokens[start_idx][0]}\n"):
-                        return False, None, start_idx
+                    if display_error(line_number, line_text, f"Expected 'seq' but found {tokens[start_idx][0]}\n"):
+                        return False, None
                 next_value = cast_value
                 print(f"Next value is a seq function call: {next_value}")
                 start_idx = next_idx
@@ -3683,8 +3837,8 @@ def parseSyntax(tokens, output_text):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
 
                 print(f"Error: Expected string literal or seq function call at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                if display_error(line_number, line_text, f"Expected a string literal or seq type cast but found {tokens[start_idx][0]}\n"):
-                    return False, None, start_idx
+                if display_error(line_number, line_text, f"Expected a string literal or seq but found {tokens[start_idx][0]}\n"):
+                    return False, None
             
             
             updated_value = current_value + next_value
@@ -3706,27 +3860,18 @@ def parseSyntax(tokens, output_text):
             
             if start_idx >= len(tokens) or tokens[start_idx][0] != '(':
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected '(' after 'seq' but found {tokens[start_idx][0]}\n"):
+                if display_error(line_number, line_text, f"Expected '(' but found {tokens[start_idx][0]}\n"):
                     return False, None
 
             start_idx += 1  
             start_idx = skip_spaces(tokens, start_idx)
-            
 
             
-            # Check if the token is either an identifier or a numeric literal
-            if start_idx >= len(tokens):
+            if is_token(tokens, start_idx, '::') or is_token(tokens, start_idx, ':'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected Identifier or numeric literal inside 'seq()' but reached end of file\n"):
+                if display_error(line_number, line_text, f"Expected an Identifier or numlit but found {tokens[start_idx][0]}\n"):
                     return False, None
 
-            # Check if the token is a valid identifier or numlit
-            if tokens[start_idx][1] != "Identifier" and tokens[start_idx][1] != "numlit":
-                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected Identifier or numeric literal inside 'seq()' but found {tokens[start_idx][0]}\n"):
-                    return False, None
-
-            # Allow any identifier name for seq function parameters
             identifier = tokens[start_idx][0]
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
@@ -3741,8 +3886,8 @@ def parseSyntax(tokens, output_text):
                 
                 if start_idx >= len(tokens) or (tokens[start_idx][1] != "Identifier" and tokens[start_idx][1] != "numlit"):
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected Identifier or numlit inside 'seq()' but found {tokens[start_idx][0]}\n"):
-                     return False,  start_idx
+                    if display_error(line_number, line_text, f"Expected Identifier or numlit but found {tokens[start_idx][0]}\n"):
+                        return False, None
 
                 array_expr += tokens[start_idx][0]
                 start_idx += 1
@@ -3751,8 +3896,8 @@ def parseSyntax(tokens, output_text):
                 
                 if start_idx >= len(tokens) or tokens[start_idx][0] != ']':
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                    if display_error(line_number, line_text, f"Expected ']' after array index but found {tokens[start_idx][0]}\n"):
-                     return False,  start_idx
+                    if display_error(line_number, line_text, f"Expected ']' but found {tokens[start_idx][0]}\n"):
+                        return False, None
 
                 array_expr += ']'
                 start_idx += 1
@@ -3761,39 +3906,39 @@ def parseSyntax(tokens, output_text):
             
             if start_idx >= len(tokens) or tokens[start_idx][0] != ')':
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected an Identifier or numlit inside 'seq at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                        return False, None
-
+                if display_error(line_number, line_text, f"Expected a ')' but found {tokens[start_idx][0]}\n"):
+                    return False, None
             result = f"seq({identifier}{array_expr})"
             return True, result, start_idx + 1  
 
 
 
         @staticmethod
-        def express_value_id_tail(tokens, start_idx, identifier):
+        def express_value_id_tail(tokens, start_idx):
             print("<express_value_id_tail>")
             start_idx = skip_spaces(tokens, start_idx)
             
             
             if start_idx < len(tokens) and tokens[start_idx][0] == '[':
                 print("Found '[', parsing as express_array_value")
-                is_valid, array_value, next_idx = express.express_array_value(tokens, start_idx, identifier)
+                is_valid,  next_idx = express.express_array_value(tokens, start_idx)
                 if not is_valid:
                     print("Failed to parse express_array_value")
-                    return False, identifier, start_idx
+                    return False,  start_idx
                 
-                return True, array_value, next_idx
+                return True,  next_idx
             
             
             print("No array access, returning original identifier")
-            return True, identifier, start_idx
+            return True,  start_idx
 
+        
         @staticmethod
-        def express_array_value(tokens, start_idx, identifier, dimension=0):
+        def express_array_value(tokens, start_idx, dimension=0):
             print(f"<express_array_value> dimension={dimension}")
 
             if start_idx >= len(tokens) or tokens[start_idx][0] != '[':
-                print(f"Error: Expected '[' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"Error: Expected '[' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 return False, None, start_idx
 
             start_idx += 1
@@ -3803,77 +3948,40 @@ def parseSyntax(tokens, output_text):
             end_index = None
             step_value = None
             has_slice = False
+            found_content = False  # Track if we found at least one numlit or Identifier
 
             # Special case: Check for a slice that starts with ':' or '::' directly
             if start_idx < len(tokens) and tokens[start_idx][0] in (':', '::'):
                 has_slice = True
                 
-                # Handle the case where the token is '::'
-                if tokens[start_idx][0] == '::':
-                    print("Found '::' token for start of slice with step")
-                    start_idx += 1  # Skip the '::' token
-                    start_idx = skip_spaces(tokens, start_idx)
-                    
-                    # Parse step value if present
-                    if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
-                        step_value = tokens[start_idx][0]
-                        print(f"Found step value: {step_value}")
-                        start_idx += 1
-                        start_idx = skip_spaces(tokens, start_idx)
+                print("Found '::' token for start of slice with step")
+                start_idx += 1  # Skip the '::' token
+                start_idx = skip_spaces(tokens, start_idx)
                 
-                # Handle the case where the token is ':'
-                else:
-                    start_idx += 1  # Skip the ':' token
+                # Parse step value if present
+                if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
+                    step_value = tokens[start_idx][0]
+                    found_content = True  # Mark that we found content
+                    print(f"Found step value: {step_value}")
+                    start_idx += 1
                     start_idx = skip_spaces(tokens, start_idx)
-                    
-                    # Parse end index if present
-                    if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
-                        end_index = tokens[start_idx][0]
-                        print(f"Found end index: {end_index}")
-                        start_idx += 1
-                        start_idx = skip_spaces(tokens, start_idx)
-                    
-                    # Check if the next token is another colon (for step)
-                    if start_idx < len(tokens) and tokens[start_idx][0] == ':':
-                        start_idx += 1
-                        start_idx = skip_spaces(tokens, start_idx)
-                        
-                        # Parse step value if present
-                        if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
-                            step_value = tokens[start_idx][0]
-                            print(f"Found step value: {step_value}")
-                            start_idx += 1
-                            start_idx = skip_spaces(tokens, start_idx)
-                    else:
-                    # Parse end index if present
-                        if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
-                            end_index = tokens[start_idx][0]
-                            print(f"Found end index: {end_index}")
-                            start_idx += 1
-                            start_idx = skip_spaces(tokens, start_idx)
-
-                            # Check for second colon for step
-                            if start_idx < len(tokens) and tokens[start_idx][0] == ':':
-                                start_idx += 1
-                                start_idx = skip_spaces(tokens, start_idx)
-
-                                # Parse step value if present
-                                if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
-                                    step_value = tokens[start_idx][0]
-                                    print(f"Found step value: {step_value}")
-                                    start_idx += 1
-                                    start_idx = skip_spaces(tokens, start_idx)
+                else:
+                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                    if display_error(line_number, line_text, f"Expected 'numlit' or 'Identifier' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        return False, None
+                
             else:
                 # Standard case: starts with an index or is empty
                 # Parse start index (could be empty)
                 if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
                     start_index = tokens[start_idx][0]
+                    found_content = True  # Mark that we found content
                     print(f"Found start index: {start_index}")
                     start_idx += 1
                     start_idx = skip_spaces(tokens, start_idx)
 
                 # Check if it's a slice
-                if start_idx < len(tokens) and tokens[start_idx][0] == ':':
+                if is_token(tokens, start_idx, '::') or is_token(tokens, start_idx, ':'):
                     has_slice = True
                     start_idx += 1
                     start_idx = skip_spaces(tokens, start_idx)
@@ -3881,6 +3989,7 @@ def parseSyntax(tokens, output_text):
                     # Parse end index
                     if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
                         end_index = tokens[start_idx][0]
+                        found_content = True  # Mark that we found content
                         print(f"Found end index: {end_index}")
                         start_idx += 1
                         start_idx = skip_spaces(tokens, start_idx)
@@ -3892,75 +4001,70 @@ def parseSyntax(tokens, output_text):
 
                         if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
                             step_value = tokens[start_idx][0]
+                            found_content = True  # Mark that we found content
                             print(f"Found step value: {step_value}")
                             start_idx += 1
                             start_idx = skip_spaces(tokens, start_idx)
 
+            # Check if we found at least one numlit or Identifier
+            if not found_content:
+                print("Error: Array access requires at least one 'numlit' or 'Identifier'")
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                if display_error(line_number, line_text, f"Expected ':', '::', 'numlit' or 'Identifier' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    return False, None
+
             # Check for closing bracket
             if start_idx >= len(tokens) or tokens[start_idx][0] != ']':
-                print(f"Error: Expected ']' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                print(f"Error: Expected ']' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected ']' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected ']' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
 
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
 
-            # Build the array access expression
-            array_expr = f"{identifier if dimension == 0 else ''}["
-            if has_slice:
-                array_expr += (start_index if start_index is not None else '') + ":"
-                array_expr += (end_index if end_index is not None else '')
-                if step_value is not None:
-                    array_expr += f":{step_value}"
-            else:
-                if start_index is not None:
-                    array_expr += start_index
-            array_expr += "]"
-
-            print(f"Constructed array expression: {array_expr}")
-            return True, array_expr, start_idx
+            return True, start_idx
 
 
         @staticmethod
         def express_array_splice(tokens, start_idx):
             print("<express_array_splice>")
-            
+
             # Check for first colon
             if start_idx >= len(tokens) or tokens[start_idx][0] not in (':', '::'):
-                print(f"Error: Expected ':' or '::' at index {start_idx}, but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
-                return False, [], start_idx
-            
-            # Skip the first colon
+                print(f"Error: Expected ':' or '::' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}")
+                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                if display_error(line_number, line_text, f"Expected ':' or '::' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                    return False, [], start_idx
+
+            # Save the initial colon
+            splice_ops = [tokens[start_idx][0]]  # either ':' or '::'
             start_idx += 1
             start_idx = skip_spaces(tokens, start_idx)
-            
-            # Initialize with just the first colon
-            splice_ops = [':']
-            
-            # Check for double colon (step indicator)
-            if start_idx < len(tokens) and tokens[start_idx][0] == ':':
+
+            # Check for optional second colon (for step)
+            if start_idx < len(tokens) and tokens[start_idx][0] in (':', '::'):
                 print("Found double colon '::' for step value")
-                # Skip the second colon
+                splice_ops[0] = '::'  # Replace ':' with '::' to reflect full slice notation
                 start_idx += 1
                 start_idx = skip_spaces(tokens, start_idx)
-                
-                # Check for step value
-                step_value = None
-                if start_idx < len(tokens) and (tokens[start_idx][1] == 'numlit' or tokens[start_idx][1] == 'Identifier'):
+
+                # Check for step value (must be numlit or Identifier)
+                if start_idx < len(tokens) and tokens[start_idx][1] in ('numlit', 'Identifier'):
                     step_value = tokens[start_idx][0]
                     print(f"Found step value: {step_value}")
+                    splice_ops.append(f":{step_value}")
                     start_idx += 1
                     start_idx = skip_spaces(tokens, start_idx)
-                
-                # Add the step part to splice operations
-                splice_ops.append(f":{step_value if step_value else ''}")
-                
-                return True, splice_ops, start_idx
-            
-            # If no double colon, check for end value in the next token
-            # This is handled in express_array_value, so we just return the current state
-            return True, splice_ops, start_idx        @staticmethod
+                else:
+                    # Step value is expected but not found
+                    line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                    if display_error(line_number, line_text, f"Expected step value after '::' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                        return False, [], start_idx
+
+            return True, splice_ops, start_idx
+
+        @staticmethod
         def express_array_splice_tail(tokens, start_idx):
             print("<express_array_splice_tail>")
             
@@ -3968,7 +4072,7 @@ def parseSyntax(tokens, output_text):
             # Keeping it for compatibility but it just returns empty
             print("No further splices")
             return True, [], start_idx
-    
+
     def process_tokens(tokens):
         print("\n========== PROCESS TOKENS ==========")  
 
@@ -4169,7 +4273,7 @@ def parseSyntax(tokens, output_text):
                     if next_line and next_line[0][1] == 'act':
                         # Found act without semicolon - report error
                         line_text = ' '.join([t[0] for t in line_tokens])
-                        # Use line_num directly instead of find_matching_line since we already know the line number
+                        # Use line_num directly instead of find_matching_line since we already know the line numlit
                         output_text.insert(tk.END, f"Syntax error at line {line_num}: Expected a semicolon but found '{next_line[0][0]}'\n")
                         output_text.insert(tk.END, f"Line {line_num}: {line_text}\n")
                         valid_syntax = False

@@ -1587,7 +1587,7 @@ class SemanticAnalyzer:
             except Exception as e:
                 # In case of any exception, try to recover by skipping to next semicolon or closing brace
                 line_number = self.get_current_line_number()
-                self.errors.append(f"Semantic Error: Exception in parsing: {str(e)} at line {line_number}")
+                # self.errors.append(f"Semantic Error: Exception in parsing: {str(e)} at line {line_number}")
                 while (self.current_token is not None and 
                        self.current_token[0] != ';' and 
                        self.current_token[0] != '}'):
@@ -2609,7 +2609,8 @@ class SemanticAnalyzer:
                     # Display error if string operands were found in arithmetic operation
                     if has_string_operands:
                         target_name = f"{var_name}[index]" if is_array_element else var_name
-                        self.errors.append(f"Semantic Error: Cannot use string operands in arithmetic expression for {check_type} variable '{target_name}'")
+                        line_number = self.get_current_line_number()
+                        self.errors.append(f"Semantic Error: Cannot use string operands in arithmetic expression for {check_type} variable '{target_name}' at line {line_number}")
                         if self.current_token is not None and self.current_token[0] == ';':
                             self.next_token()  # Move past semicolon
                         return
@@ -3521,28 +3522,7 @@ class SemanticAnalyzer:
                 # Skip the array index expression
                 self.next_token()  # Move past '['
                 
-                # Before skipping the index expression, check if it's a splicing operation with negative float
-                # Look for splicing pattern: [: ^1.1] - splicing uses colons
-                is_splicing = False
-                if self.current_token is not None and self.current_token[0] == ':':
-                    is_splicing = True
-                    
-                bracket_count = 1
-                while self.current_token is not None and bracket_count > 0:
-                    # Check for negative float value in splicing operation
-                    if is_splicing and self.current_token is not None and self.current_token[1] == 'numlit':
-                        # Check if it's a negative float (starts with ^ and has a decimal point)
-                        value = self.current_token[0]
-                        if value.startswith('^') and '.' in value:
-                            line_number = self.get_current_line_number()
-                            self.errors.append(f"Semantic Error: negative quant values are not allowed in array splicing at line {line_number}")
-                    
-                    if self.current_token[0] == '[':
-                        bracket_count += 1
-                    elif self.current_token[0] == ']':
-                        bracket_count -= 1
-                    if bracket_count > 0:  # Only advance if we're still inside brackets
-                        self.next_token()
+                                # Before skipping the index expression, check if it's a splicing operation with negative float                # Look for splicing pattern: [: ^1.1] - splicing uses colons                is_splicing = False                if self.current_token is not None and self.current_token[0] == ':':                    is_splicing = True                                    bracket_count = 1                while self.current_token is not None and bracket_count > 0:                    # Check for splice values - only numerical literals are allowed                    if is_splicing and self.current_token is not None:                        # First, check for negative float values                        if self.current_token[1] == 'numlit':                            value = self.current_token[0]                            if value.startswith('^') and '.' in value:                                line_number = self.get_current_line_number()                                self.errors.append(f"Semantic Error: negative quant values are not allowed in array splicing at line {line_number}")                        # Then validate that only numlit tokens are allowed in splicing                        elif self.current_token[0] != ':' and self.current_token[0] != ']':                            if self.current_token[1] != 'numlit':                                line_number = self.get_current_line_number()                                self.errors.append(f"Semantic Error: only numerical literals are allowed in array splicing at line {line_number}. Found '{self.current_token[1]}' instead.")                                        if self.current_token[0] == '[':                        bracket_count += 1                    elif self.current_token[0] == ']':                        bracket_count -= 1                    if bracket_count > 0:  # Only advance if we're still inside brackets                        self.next_token()
                 self.next_token()  # Move past closing ']'
                 
                 # Handle potential second dimension for 2D arrays
@@ -4279,10 +4259,10 @@ class SemanticAnalyzer:
                                 param_count = len(self.functions[var_name].get('parameters', []))
                                 values_to_print.append(f"Function {var_name} (returns {func_return_type}, takes {param_count} parameters)")
                         # Regular variable - check in current scope first, then global
-                        elif var_name not in self.symbol_table and var_name not in self.global_symbol_table:
-                            line_number = self.get_current_line_number()
-                            self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement is not declared in current scope at line {line_number}")
-                            values_to_print.append(f"undefined({var_name})")
+                        # elif var_name not in self.symbol_table and var_name not in self.global_symbol_table:
+                        #     line_number = self.get_current_line_number()
+                        #     self.errors.append(f"Semantic Error: Variable '{var_name}' used in express statement is not declared in current scope at line {line_number}")
+                        #     values_to_print.append(f"undefined({var_name})")
                         else:
                             # Get the value from the symbol table for printing
                             if var_name in self.symbol_table:

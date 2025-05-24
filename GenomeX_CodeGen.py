@@ -416,8 +416,13 @@ class GenomeXCodeGenerator:
                                     index += 1
                                     while index < len(self.tokens) and self.tokens[index][0] != "}":
                                         if self.tokens[index][1] == "numlit":
-                                            # Normalize the number (remove leading/trailing zeros)
-                                            normalized_value = self._normalize_number(self.tokens[index][0])
+                                            # Handle negative numbers using caret (^)
+                                            if self.tokens[index][0].startswith("^"):
+                                                # Convert ^number to -number
+                                                normalized_value = f"-{self._normalize_number(self.tokens[index][0][1:])}"
+                                            else:
+                                                # Normalize the number (remove leading/trailing zeros)
+                                                normalized_value = self._normalize_number(self.tokens[index][0])
                                             elements.append(normalized_value)
                                             print(f"Added normalized numeric literal to array: {normalized_value} (from {self.tokens[index][0]})")
                                         elif self.tokens[index][0] == "dom":
