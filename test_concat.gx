@@ -1,6 +1,0 @@
-act gene(){
-    _L dose A = 3;
-    _L seq B = "hELLO";
-    express(A + B);  # This should fail - cannot concatenate dose and seq directly
-    express(seq(A) + B);  # This should work - converting dose to seq first
-} 
