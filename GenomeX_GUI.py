@@ -321,7 +321,7 @@ def run_analysis():
         display_with_color(lexical_panel, "⚠️ Lexical Analysis: ", "warning")
         display_with_color(lexical_panel, "Errors found\n", "output")
         # Switch to lexical tab to show the error message
-        notebook.select(0)
+        notebook.select(0)  
     elif not tokens:
         # Only show "No tokens found" message if there are no errors
         display_with_color(lexical_panel, "No tokens found.\n", "warning")
@@ -336,8 +336,8 @@ def run_analysis():
         
         if syntax_errors:
             # If there are syntax errors, switch to syntax tab
-            display_with_color(syntax_panel, "⚠️ Syntax Analysis: ", "warning")
-            display_with_color(syntax_panel, "Errors detected\n", "output")
+            # display_with_color(syntax_panel, "⚠️ Syntax Analysis: ", "warning")
+            # display_with_color(syntax_panel, "Errors detected\n", "output")
             notebook.select(1)  # Index 1 is the syntax tab
 
         else:
@@ -428,7 +428,6 @@ def apply_dark_mode():
     btn_clear.color = "#c62828"
     btn_clear.hover_color = "#f44336"
     btn_clear.itemconfig(btn_clear.rect, fill="#c62828")
-
 def apply_light_mode():
     root.configure(bg="#ffffff")
     style.configure("TFrame", background="#ffffff")
