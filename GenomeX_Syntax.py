@@ -60,7 +60,7 @@ def parseSyntax(tokens, output_text):
             
             # Try to find the last non-empty line in the file
             if display_lines:
-                # Sort by line numlit and find the last non-empty line
+                # Sort by line number and find the last non-empty line
                 sorted_lines = sorted(display_lines, key=lambda line: line["line_number"])
                 last_line = sorted_lines[-1]  # Default to absolute last line
                 
@@ -88,25 +88,19 @@ def parseSyntax(tokens, output_text):
         # Find matching line by looking for the exact token at exact index
         matching_line = None
         for line in display_lines:
-            if current_token[1] in [t for t in line["tokens"]]:
-                if "start_idx" in line:
-                    # If the line already tracks its starting index in the global tokens list
-                    start_of_line = line["start_idx"]
-                    end_of_line = start_of_line + len(line["tokens"])
-                    if start_of_line <= current_token[0] < end_of_line:
-                        matching_line = line
-                        print(f"DEBUG SYNTAX: FOUND CURRENT MATCH: {matching_line}")
-                        break
-                else:
-                    # Alternative approach for lines without start_idx
-                    for i in range(len(tokens) - len(line["tokens"]) + 1):
-                        if all(tokens[i+j] == line["tokens"][j] for j in range(len(line["tokens"]))):
-                            if i <= current_token[0] < i + len(line["tokens"]):
-                                matching_line = line
-                                print(f"DEBUG SYNTAX: FOUND CURRENT MATCH: {matching_line}")
-                                break
-                    if matching_line:
-                        break
+            # Find the start index of this line in the tokens list
+            start_of_line = None
+            for i in range(len(tokens) - len(line["tokens"]) + 1):
+                if all(tokens[i+j] == line["tokens"][j] for j in range(len(line["tokens"]))):
+                    start_of_line = i
+                    break
+            
+            if start_of_line :
+                end_of_line = start_of_line + len(line["tokens"])
+                if start_of_line <= current_token[0] < end_of_line:
+                    matching_line = line
+                    print(f"DEBUG SYNTAX: FOUND CURRENT MATCH: {matching_line}")
+                    continue
 
         if matching_line:
             line_number = matching_line["line_number"]
@@ -120,6 +114,7 @@ def parseSyntax(tokens, output_text):
             line_index = start_idx
         
         return (line_number, line_tokens, line_text, line_index)
+    
     def check_number_sign(token):
         if not token or not token[0]: 
             return None
@@ -169,10 +164,10 @@ def parseSyntax(tokens, output_text):
         return True, token_idx, number_sign
     
     def display_error(line_number, line_text, error_message):
-        if line_number not in reported_error_lines and not hasattr(display_error, 'error_displayed'):
+        # Remove the reported_error_lines check
+        if not hasattr(display_error, 'error_displayed'):
             output_text.insert(tk.END, f"Syntax Error at line {line_number}: {error_message}\n")
             output_text.insert(tk.END, f"Line {line_number}: {line_text}\n")
-            reported_error_lines.add(line_number)
             display_error.error_displayed = True
             return True
         return False
@@ -587,7 +582,7 @@ def parseSyntax(tokens, output_text):
                         print(f"[main_function] Error: Expected 'gene' after 'act' ")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                         if display_error(line_number, line_text, f"Expected gene , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                         return False, None
+                            return False, None
                 
                 # Continue with normal main function parsing
                 if is_token(tokens, start_idx, 'gene'):
@@ -616,7 +611,7 @@ def parseSyntax(tokens, output_text):
                         print(f"[main_function] Error: Expected '(' after 'gene' ")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                         if display_error(line_number, line_text, f"Expected '(' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                         return False, None
+                            return False, None
 
                     start_idx += 1  # Skip '(' token
                     start_idx = skip_spaces(tokens, start_idx)
@@ -626,7 +621,7 @@ def parseSyntax(tokens, output_text):
                         print(f"[main_function] Error: Expected ')' , but found {tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'}")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                         if display_error(line_number, line_text, f"Expected ')' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                         return False, None
+                            return False, None
                     
                     start_idx += 1  # Skip ')' token
                     start_idx = skip_spaces(tokens, start_idx)
@@ -636,7 +631,7 @@ def parseSyntax(tokens, output_text):
                         print("[main_function] Missing opening brace for main function block")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                         if display_error(line_number, line_text, f"Expected '{{' , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                         return False, None
+                            return False, None
                     
                     start_idx += 1  # Skip '{' token
                     start_idx = skip_spaces(tokens, start_idx)
@@ -649,7 +644,7 @@ def parseSyntax(tokens, output_text):
                         print("[main_function] Error in main function body statements")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                         if display_error(line_number, line_text, f"Expected  _L, express, if, prod, Identifier, for, while, func , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                         return False, None
+                            return False, None
                         
                     start_idx = new_idx
                     start_idx = skip_spaces(tokens, start_idx)
@@ -664,13 +659,23 @@ def parseSyntax(tokens, output_text):
                             if display_error(line_number, line_text, f"Expected  _L, express, if, prod, Identifier, for, while, func , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                                 return False, None
                             
-                        return True, start_idx + 1
+                        # Check for any tokens after the closing brace
+                        start_idx += 1  # Skip '}' token
+                        start_idx = skip_spaces(tokens, start_idx)
+                        
+                        if start_idx < len(tokens):
+                            
+                            print("[main_function] Error: Found tokens after main function")
+                            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                            if display_error(line_number, line_text, f"Unexpected tokens found after main function: {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                                return False, None
+                            
+                        return True, start_idx
                     else:
                         print("[main_function] Missing closing brace for main function")
                         line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                         if display_error(line_number, line_text, f"Expected '}}', _L, express, if, prod, Identifier, for, while, func , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                         return False, None
-                
+                            return False, None
                 # Handle user-defined functions
                 else:
                     if program.main_function_seen:
@@ -1670,11 +1675,12 @@ def parseSyntax(tokens, output_text):
             
             
             if not any(is_token(tokens, start_idx, op) for op in assignment_op):
+                start_idx = skip_spaces(tokens, start_idx)
                 # Check if the token itself is an equals sign (for no space case)
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
                 found_token = tokens[start_idx][0] if start_idx < len(tokens) else 'EOF'
                 if display_error(line_number, line_text, f"Expected '=', '+=', '-=', '*=', '/=', '%=', but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
-                        return False, None
+                    return False, None
 
             
             start_idx += 1
@@ -2106,7 +2112,7 @@ def parseSyntax(tokens, output_text):
             # Now check for the required semicolon
             if not is_token(tokens, start_idx, ';'):
                 line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-                if display_error(line_number, line_text, f"Expected ';' after prod value , but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
+                if display_error(line_number, line_text, f"Expected ';','+','-','*','/','%','//','**', '>','<','>=','<=' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}"):
                         return False, None
             
             # Return success and the index after the semicolon
@@ -3349,7 +3355,7 @@ def parseSyntax(tokens, output_text):
                     # If not, report the specific error with the actual token found
                     line_number, line_tokens, line_text, line_index = find_matching_line(tokens, operator_idx, display_lines, get_line_number)
                     found_token = tokens[operator_idx][0] if operator_idx < len(tokens) else 'EOF'
-                    if display_error(line_number, line_text, f"Expected numlit, '(' or Identifier after '{operator}' but found {found_token}"):
+                    if display_error(line_number, line_text, f"Expected numlit, '(' or Identifier but found {found_token}"):
                         return False, None
                 
                 # Otherwise, parse the value after the operator
@@ -3392,8 +3398,7 @@ def parseSyntax(tokens, output_text):
                             start_idx = next_idx
                         
                         # Case 2: Part of arithmetic (followed by arithmetic operators)
-                        elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] in {'+', '-', '*', '/', '%', '//' ,'**'}:
-                            print("Identifier followed by arithmetic operator, parsing as arithmetic_sequence")
+                        elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] in {'+', '-', '*', '/', '%', '//' ,'**'}:            
                             is_valid, new_idx = arithmetic.arithmetic_sequence(tokens, start_idx)
                             if is_valid:
                                 print("Parsed arithmetic sequence in express_value.")
@@ -3403,7 +3408,23 @@ def parseSyntax(tokens, output_text):
                                  
                                 start_idx = lookahead_idx
                         
-                        # Case 3: Part of conditional expression
+                        # Case 3: Handle comma as separator
+                        elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == ',':
+                            # Handle comma as a separator
+                            values.append(tokens[start_idx][0])  # Add the current value
+                            start_idx = lookahead_idx  # Move to the comma
+                            start_idx += 1  # Move past the comma
+                            start_idx = skip_spaces(tokens, start_idx)  # Skip spaces after comma
+                            # Process next value
+                            if start_idx < len(tokens) and tokens[start_idx][1] in exp_literals:
+                                values.append(tokens[start_idx][0])
+                                start_idx += 1
+                            else:
+                                line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
+                                if display_error(line_number, line_text, f"Expected a valid value after comma but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
+                                    return False, None
+                        
+                        # Case 4: Part of conditional expression
                         elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] in {'==', '!=', '<', '>', '<=', '>=', '&&', '||'}:
                             print("Identifier followed by conditional operator, parsing as conditional_block")
                             is_valid, new_idx = conditional.conditional_block(tokens, start_idx)
@@ -3415,7 +3436,7 @@ def parseSyntax(tokens, output_text):
                                  
                                 start_idx = lookahead_idx
                         
-                        # Case 4: Simple identifier
+                        # Case 5: Simple identifier
                         elif lookahead_idx < len(tokens) and tokens[lookahead_idx][0] == ")":
                             start_idx = lookahead_idx
                             
@@ -3424,8 +3445,7 @@ def parseSyntax(tokens, output_text):
                             start_idx = skip_spaces(tokens, start_idx)
                             
                             line_number, line_tokens, line_text, line_index = find_matching_line(tokens, start_idx, display_lines, get_line_number)
-
-                            if display_error(line_number, line_text, f"Expected ')', '==', '!=', '<', '>', '<=', '>=', '&&', '||' ,'+', '-', '*', '/', '%', '//' ,'**' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
+                            if display_error(line_number, line_text, f"Expected ')', '==', '!=', '<', '>', '<=', '>=', '&&', '||' ,'+', '-', '*', '/', '%', '//' ,'**', '[', ',' but found {tokens[start_idx] if start_idx < len(tokens) else 'EOF'}\n"):
                                 return False, None
                     
                     
@@ -4094,6 +4114,7 @@ def parseSyntax(tokens, output_text):
         i = 0
         display_lines = []
         current_display_line = []
+        main_function_found = False  # Add this flag
 
         while i < len(tokens):
             token = tokens[i]
@@ -4109,7 +4130,18 @@ def parseSyntax(tokens, output_text):
                 print(f"PROCESS TOKENS Found 'act' at index {i} with brace_count={brace_count}, ending current statement and starting new one")
                 lines.append(current_statement)
                 current_statement = []
-                # Don't clear current_line because we still need to add the current token to it
+
+            # Check if this is the main function
+            if token[1] == 'gene' and i > 0 and tokens[i-1][1] == 'act':
+                main_function_found = True
+
+            # If we've found the main function and we're outside of it (brace_count == 0)
+            # and we encounter any token that's not a space or newline, it's an error
+            if main_function_found and brace_count == 0 and token[1] not in ["space", "newline", "tab"]:
+                print(f"PROCESS TOKENS Found token after main function: {token}")
+                # Add the token to the current statement to ensure it's included in error reporting
+                current_statement.append(token)
+                break
 
             if token[1] != "newline":
                 current_display_line.append(token)
@@ -4133,38 +4165,12 @@ def parseSyntax(tokens, output_text):
                 elif token[1] == '}':
                     brace_count -= 1
                     print(f"PROCESS TOKENS Closing brace found, brace_count: {brace_count}")
+                
                 current_line.append(token)
-
-                # Only split at '}' if not followed by a semicolon
-                if token[1] == '}' and brace_count == 0:
-                    print("PROCESS TOKENS Closing brace detected, checking for following keywords or semicolon.")
-                    next_index = i + 1
-
-                    # Skip spaces and newlines
-                    while next_index < len(tokens) and tokens[next_index][1] in ["space", "newline"]:
-                        next_index += 1
-
-                    # Debug: print what token is after the closing brace
-                    if next_index < len(tokens):
-                        print(f"PROCESS TOKENS Next token after '}}' is: {tokens[next_index]}")
-                    else:
-                        print("PROCESS TOKENS No token after '}' (end of tokens)")
-
-                    # If next token is a semicolon, include it in current_line
-                    if next_index < len(tokens) and tokens[next_index][1] == ';':
-                        print("PROCESS TOKENS Found semicolon after '}', including it in current_line.")
-                        i = next_index  # move index to semicolon
-                        token = tokens[i]
-                        current_line.append(token)  # add ';' to current_line
-
-                    if next_index >= len(tokens) or tokens[next_index][1] not in ["else", "while", "do", "elif"]:
-                        print(f"PROCESS TOKENS Block end detected at index {i}, adding current_line: {current_line}")
-                        current_statement.extend(current_line)
-                        lines.append(current_statement)
-                        current_statement = []
-                        current_line = []
+            
             i += 1
 
+        # Process any remaining tokens in the current line
         if current_display_line:
             display_lines.append({
                 'tokens': current_display_line,
@@ -4220,22 +4226,31 @@ def parseSyntax(tokens, output_text):
     valid_syntax = True
 
     print("\nTokens Received:")
-    for idx, (token_id, token_value) in enumerate(tokens, start=1):
-        print(f"{idx}. Token: {token_value} (ID: {token_id})")
+    for i, line in enumerate(token_lines):
+        if not line:
+            continue
+        first_few = line[:min(5, len(line))]
+        print(f"  Line {i}: {first_few}")
 
-    # Process all program elements (global declarations and functions) in a unified way
-    print("\nProcessing program declarations and functions:")
-    for line_num, line_tokens in enumerate(token_lines, start=1):
-        line_tokens = [token for token in line_tokens if token[1] != 'newline']
-
+    for line_num, line_tokens in enumerate(token_lines, 1):
         if not line_tokens:
             continue
 
-        first_token = line_tokens[0][1] if line_tokens else None
-        print(f"Checking line {line_num}: First token: {first_token}")
-        
-        # Print the first few tokens to help with debugging
-        first_few = line_tokens[:min(10, len(line_tokens))]
+        print(f"\nProcessing line {line_num}:")
+        print(f"  Tokens: {line_tokens}")
+
+        # Get the first non-space token
+        first_token = None
+        for token in line_tokens:
+            if token[1] not in ["space", "newline", "tab"]:
+                first_token = token[1]
+                break
+
+        if first_token is None:
+            print("  No non-space tokens found, skipping line")
+            continue
+
+        print(f"  First token: {first_token}")
         print(f"  First few tokens: {[(t[0], t[1]) for t in first_few]}")
             
         # Handle comments and multiline comments
@@ -4267,28 +4282,16 @@ def parseSyntax(tokens, output_text):
                 next_token_idx += 1
                 
             # If we've reached the end but didn't find _G or act, just continue to next line
-            if next_token_idx >= len(line_tokens) or not first_token in ["_G", "act"]:
+            if next_token_idx >= len(line_tokens):
                 continue
-                
+
+        # Check if the first token matches any of our program patterns
+        tokens_to_validate = [(t[0], t[1]) for t in line_tokens]
+        print(f"  Validating tokens: {tokens_to_validate}")
+
         if first_token in ["_G", "act"]:
-            print(f"Found {first_token} in line {line_num}")
+            print(f"  Found valid program start token: {first_token}")
             
-            # For global declarations, collect tokens up to semicolon 
-            tokens_to_validate = line_tokens
-            if first_token == "_G":
-                # Check for missing semicolon in global declaration
-                has_semicolon = any(token[1] == ';' for token in line_tokens)
-                if not has_semicolon and line_num < len(token_lines):
-                    next_line = token_lines[line_num]
-                    if next_line and next_line[0][1] == 'act':
-                        # Found act without semicolon - report error
-                        line_text = ' '.join([t[0] for t in line_tokens])
-                        # Use line_num directly instead of find_matching_line since we already know the line numlit
-                        output_text.insert(tk.END, f"Syntax error at line {line_num}: Expected a semicolon but found '{next_line[0][0]}'\n")
-                        output_text.insert(tk.END, f"Line {line_num}: {line_text}\n")
-                        valid_syntax = False
-                        break
- 
             for pattern in program_pattern:
                 is_valid, next_idx, _ = validate_syntax_pattern(tokens_to_validate, pattern)
                 print(f"  Pattern validation: is_valid={is_valid}, next_idx={next_idx}")
@@ -4312,11 +4315,14 @@ def parseSyntax(tokens, output_text):
                     break
         
         else:
-            output_text.insert(tk.END, f"Syntax Error: Unexpected token, expected _G or act\n")
-
+            # Use line_num - 1 as the index since line_num is 1-based
+            current_idx = line_num - 1
+            line_number, line_tokens, line_text, line_index = find_matching_line(tokens, current_idx, display_lines, get_line_number)
+            display_error(line_num, line_text, f"Syntax Error: Unexpected token, expected _G or act but found {first_token}\n")
 
             valid_syntax = False
             break
+
     if valid_syntax:
         output_text.delete('1.0', tk.END)
         # Check if a main function was found in the code
