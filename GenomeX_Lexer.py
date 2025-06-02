@@ -262,7 +262,7 @@ def parseLexer(input_stream):
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
                     lexeme = lookahead_char
                     state = 0
-                elif lookahead_char not in ["e", "o", "s"]:
+                elif lookahead_char not in ["e", "o"]:
                      
                     display_lexical_error(f"Invalid lexeme: {lexeme.strip()} on line {line_number}")
                     found_error = True
